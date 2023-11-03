@@ -14,12 +14,14 @@ Description: Module holding functions developed for Project 1
 
 # %% set-up
 import numpy as np
+import datetime
 from datetime import datetime as dt
 
 def glodap_to_decimal_time(glodap):
     """
     Adds decimal time as "G2dectime" column to GLODAP dataset calculated from
-    G2year, G2month, G2day, G2hour, and G2minute.
+    G2year, G2month, G2day, G2hour, and G2minute. Filters out data with NaN
+    year, month, or day information.
     
     Keyword arguments:
         glodap = pandas dataframe containing glodap dataset with original 
@@ -29,8 +31,21 @@ def glodap_to_decimal_time(glodap):
         glodap_out = same dataframe with additional column containing decimal
                     time
     """
+    # get rid of rows with no year, month, or day
+    glodap = glodap[glodap['G2year'] != np.nan] 
+    glodap = glodap[glodap['G2month'] != np.nan]
+    glodap = glodap[glodap['G2day'] != np.nan]
+    
+    # replace NaN hour or minute with 0
+    glodap['G2hour'] = glodap['G2hour'].replace(np.nan,0)
+    glodap['G2minute'] = glodap['G2minute'].replace(np.nan,0)
+    
+    # reset index
+    glodap = glodap.reset_index(drop=True)
+    
     # allocate decimal year column
-    glodap.insert(0,'G2dectime', 0.0)
+    glodap.insert(0,'dectime', 0.0)
+    glodap.insert(1,'datetime', datetime.date(1,1,1))
     
     for i in range(len(glodap)):
     
@@ -49,19 +64,18 @@ def glodap_to_decimal_time(glodap):
         decimal_time = date.year + fraction
         
         # save to glodap dataset
-        glodap.loc[i,'G2dectime'] = decimal_time
+        glodap.loc[i,'dectime'] = decimal_time
+        glodap.loc[i,'datetime'] = date
         glodap_out = glodap
                 
-        return glodap_out
+    return glodap_out
       
     
-def glodap_qc_reformat(glodap):
+def glodap_qc(glodap):
     """
     1. Selects only measured (not calculated) alkalinity
-    2. Filters out data with insufficient date information
     2. Subsets data to only use open ocean salinity
-    2. Selects columns of interest for use in ESPERs and in comparison with
-    ESPERs outputs
+    3. Eventually --> North Pacific corrections
     
     Keyword arguments:
         glodap = pandas dataframe containing glodap dataset with original
@@ -76,29 +90,12 @@ def glodap_qc_reformat(glodap):
     # only keep rows that have TA flagged as 2
     glodap = glodap[glodap['G2talkf'] == 2]
     
-    # get rid of rows with no year, month, or day
-    glodap = glodap[glodap['G2year'] != np.nan] 
-    glodap = glodap[glodap['G2month'] != np.nan]
-    glodap = glodap[glodap['G2day'] != np.nan]
-    
-    # replace NaN hour or minute with 0
-    glodap['G2hour'] = glodap['G2hour'].replace(np.nan,0)
-    glodap['G2minute'] = glodap['G2minute'].replace(np.nan,0)
-    
     #filter data with salinity to only look at open ocean
     glodap = glodap[(glodap['G2salinity'] >= 29) & (glodap['G2salinity'] <= 37)]
     
     # reset index
-    glodap = glodap.reset_index(drop=True)
+    glodap_out = glodap.reset_index(drop=True)
     
-    # select relevant columns
-    glodap_out = glodap[['G2expocode','G2cruise','G2station','G2region',
-                     'G2cast','G2dectime',
-                     'G2minute','G2latitude','G2longitude','G2depth',
-                     'G2temperature','G2salinity','G2oxygen','G2nitrate',
-                     'G2silicate','G2phosphate','G2talk',
-                     'G2phtsinsitutp']]
-        
     return glodap_out
         
         
