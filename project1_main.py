@@ -294,7 +294,7 @@ ax.set_title('Difference in Measured TA and ESPER-Predicted at 155ºE, 9.5ºN')
 basin = espers[(espers.G2longitude < 12) & (espers.G2longitude > -98) & (espers.G2latitude < 55) & (espers.G2latitude > 0)]
 
 # get rid of outliers (talk to Brendan about what is appropriate for this?)
-basin = basin[((basin.G2talk - basin.NNtalk13) < 50) & ((basin.G2talk - basin.NNtalk13) > -50)]
+basin = basin[((basin.G2talk - basin.NNtalk13) < 20) & ((basin.G2talk - basin.NNtalk13) > -20)]
 
 # extract data
 time = basin.datetime
