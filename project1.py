@@ -14,14 +14,14 @@ Description: Module holding functions developed for Project 1
 
 # %% set-up
 import numpy as np
-import datetime
 from datetime import datetime as dt
+import pandas as pd
 
 def glodap_to_decimal_time(glodap):
     """
-    Adds decimal time as "G2dectime" column to GLODAP dataset calculated from
-    G2year, G2month, G2day, G2hour, and G2minute. Filters out data with NaN
-    year, month, or day information.
+    Adds decimal time as "dectime" column and datetime as "datetime" column to
+    GLODAP dataset calculated from G2year, G2month, G2day, G2hour, and
+    G2minute. Filters out data with NaN year, month, or day information.
     
     Keyword arguments:
         glodap = pandas dataframe containing glodap dataset with original 
@@ -45,7 +45,7 @@ def glodap_to_decimal_time(glodap):
     
     # allocate decimal year column
     glodap.insert(0,'dectime', 0.0)
-    glodap.insert(1,'datetime', datetime.date(1,1,1))
+    #glodap.insert(1,'datetime', datetime.date(1,1,1))
     
     for i in range(len(glodap)):
     
@@ -65,8 +65,16 @@ def glodap_to_decimal_time(glodap):
         
         # save to glodap dataset
         glodap.loc[i,'dectime'] = decimal_time
-        glodap.loc[i,'datetime'] = date
+        #glodap.loc[i,'datetime'] = date
         glodap_out = glodap
+        
+    # create dataframe with correct headers to convert to datetime
+    time = glodap[['G2year','G2month','G2day']]
+    time = time.rename(columns={'G2year':'year','G2month':'month','G2day':'day'})
+    dtime = pd.to_datetime(time)
+    glodap.insert(0,'datetime', dtime)
+    
+    glodap_out = glodap    
                 
     return glodap_out
       
