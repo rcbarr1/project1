@@ -17,7 +17,7 @@ import numpy as np
 from datetime import datetime as dt
 import pandas as pd
 
-def glodap_to_decimal_time(glodap):
+def glodap_reformat_time(glodap):
     """
     Adds decimal time as "dectime" column and datetime as "datetime" column to
     GLODAP dataset calculated from G2year, G2month, G2day, G2hour, and
