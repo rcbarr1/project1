@@ -99,21 +99,21 @@ kl_div.to_csv('kl_div.csv')
 
 # %% USEFUL FOR VISUALIZING DATA LOCATIONS
 # set up map
-fig = plt.figure(figsize=(10,10))
+fig = plt.figure(figsize=(5,3))
 ax = plt.axes(projection=ccrs.PlateCarree())
 ax.coastlines(resolution='110m',color='k')
 g1 = ax.gridlines(crs=ccrs.PlateCarree(),draw_labels=True,alpha=0)
 g1.top_labels = False
 g1.right_labels = False
 ax.add_feature(cfeature.LAND,color='k')
-ax.set_title('Spatial Coverage of Total Alkalinity (GLODAPv2.2023)')
+ax.set_title('North Atlantic Coverage of TA (GLODAPv2.2023)')
 extent = [-98,12,0,55]
 ax.set_extent(extent)
 
 # get data from glodap
 lon = espers.G2longitude
 lat = espers.G2latitude
-plot = ax.scatter(lon,lat,transform=ccrs.PlateCarree(),marker='o',edgecolors='none')
+plot = ax.scatter(lon,lat,transform=ccrs.PlateCarree(),marker='o',edgecolors='none',s=1)
 
 # %% plot change in TA over time
 fig = plt.figure(figsize=(15,10))
@@ -196,7 +196,7 @@ c = plt.colorbar(plot,ax=ax)
 c.set_label('Total Alkalinity ($mmol\;kg^{-1}$)')
 
 # %% plot TA and ESPERs with time
-fig = plt.figure(figsize=(15,10))
+fig = plt.figure(figsize=(7,5))
 ax = plt.axes()
 
 # plot LIR results
@@ -252,7 +252,7 @@ for line in leg.get_lines():
 transect = espers[(espers.G2cruise == 1036) & (espers.G2longitude < -149) & (espers.G2longitude > -152)]
 
 # show transect
-fig = plt.figure(figsize=(10,7))
+fig = plt.figure(figsize=(5,3))
 ax = plt.axes(projection=ccrs.PlateCarree(central_longitude=180))
 ax.coastlines(resolution='110m',color='k')
 g1 = ax.gridlines(crs=ccrs.PlateCarree(),draw_labels=True,alpha=0)
@@ -292,13 +292,13 @@ c.set_label('Total Alkalinity ($mmol\;kg^{-1}$)')
 x_coord = np.linspace(transect1.G2latitude.min(),transect1.G2latitude.max(),500)
 y_coord = np.linspace(transect1.G2depth.min(),transect1.G2depth.max(),500)
 x_grid, y_grid = np.meshgrid(x_coord,y_coord)
-z_gridded = interpolate.griddata((transect1.G2latitude,transect1.G2depth),transect1.G2talk,(x_grid,y_grid),method='linear')
+z_gridded = interpolate.griddata((transect1.G2latitude,transect1.G2depth),transect1.G2talk,(x_grid,y_grid),method='linear',rescale=True)
 
 fig = plt.figure(figsize=(10,7))
 ax = plt.gca()
 ax.invert_yaxis()
 plt.pcolormesh(x_grid,y_grid,z_gridded,cmap=cmocean.cm.matter)
-ax.set_title('Linearly Interpolated TA Measurements Along 2014 Cruise 1036 Transect')
+ax.set_title('TA Measurements: Cruise 1036, 2014')
 ax.set_xlabel('Latitude (ºE)')
 ax.set_ylabel('Depth (m)')
 ax.set_xlim((transect1.G2latitude.min(),transect1.G2latitude.max()))
@@ -307,7 +307,7 @@ ax.invert_yaxis()
 c = plt.colorbar(plot,ax=ax)
 c.set_label('Total Alkalinity ($mmol\;kg^{-1}$)')
 
-# make section plot showing simple difference between GLODAP TA and ESPER LIR TA
+# %% along transect - make section plot showing simple difference between GLODAP TA and ESPER LIR TA
 fig = plt.figure(figsize=(10,7))
 ax = plt.gca()
 del_alk = transect1.G2talk - transect1.NNtalk13 # calculate simple difference
@@ -328,13 +328,13 @@ c.set_label('Difference in Total Alkalinity ($mmol\;kg^{-1}$)')
 x_coord = np.linspace(transect1.G2latitude.min(),transect1.G2latitude.max(),500)
 y_coord = np.linspace(transect1.G2depth.min(),transect1.G2depth.max(),500)
 x_grid, y_grid = np.meshgrid(x_coord,y_coord)
-z_gridded = interpolate.griddata((transect1.G2latitude,transect1.G2depth),del_alk,(x_grid,y_grid),method='linear')
+z_gridded = interpolate.griddata((transect1.G2latitude,transect1.G2depth),del_alk,(x_grid,y_grid),method='linear',rescale=True)
 
 fig = plt.figure(figsize=(10,7))
 ax = plt.gca()
 ax.invert_yaxis()
 plt.pcolormesh(x_grid,y_grid,z_gridded,cmap=newcmap)
-ax.set_title('Linearly Interpolated (Measured TA - ESPER-Predicted TA), 2014 Cruise 1036')
+ax.set_title('(Measured TA - ESPER-Predicted TA): Cruise 1036, 2014')
 ax.set_xlabel('Latitude (ºE)')
 ax.set_ylabel('Depth (m)')
 ax.set_xlim((transect1.G2latitude.min(),transect1.G2latitude.max()))
@@ -386,21 +386,19 @@ ax.set_title('Difference in Measured TA and ESPER-Predicted at 155ºE, 9.5ºN')
 # Sample: North Atlantic
 basin = espers[(espers.G2longitude < 12) & (espers.G2longitude > -98) & (espers.G2latitude < 55) & (espers.G2latitude > 0)]
 
-# get rid of outliers (talk to Brendan about what is appropriate for this?)
-basin = basin[((basin.G2talk - basin.NNtalk13) < 20) & ((basin.G2talk - basin.NNtalk13) > -20)]
+# extract data (CHANGE WHICH EQUATION/ROUTINE CALLED HERE)
+basin['del_alk'] = basin.G2talk - basin.Mtalk16
 
-# extract data
-time = basin.datetime
-depth = basin.G2depth
-del_alk = basin.G2talk - basin.NNtalk13
+# get rid of outliers (talk to Brendan about what is appropriate for this?)
+basin = basin[(basin.del_alk < 50) & (basin.del_alk > -50)]
 
 # create colormap centered at 0
-newcmap = cmocean.tools.crop(cmocean.cm.balance, del_alk.min(), del_alk.max(), 0) # pivot cmap around 0
+newcmap = cmocean.tools.crop(cmocean.cm.balance, basin.del_alk.min(), basin.del_alk.max(), 0) # pivot cmap around 0
 
 # make hovmoller plot
 fig = plt.figure(figsize=(10,7))
 ax = plt.gca()
-plot = ax.scatter(time,depth,c=del_alk,cmap=newcmap)
+plot = ax.scatter(basin.datetime,basin.G2depth,c=basin.del_alk,cmap=newcmap)
 ax.set_xlim((basin.datetime.min(),basin.datetime.max()))
 ax.set_ylim((basin.G2depth.min(),basin.G2depth.max()))
 ax.invert_yaxis()
@@ -410,10 +408,10 @@ ax.set_ylabel('Depth (m)')
 ax.set_title('Difference in Measured and ESPER-Predicted TA in North Atlantic')
 
 # interpolated hovmoller plot
-#x_coord = np.linspace(basin.dectime.min(),basin.dectime.max(),500)
+x_coord = np.linspace(basin.dectime.min(),basin.dectime.max(),500)
 y_coord = np.linspace(basin.G2depth.min(),basin.G2depth.max(),500)
 x_grid, y_grid = np.meshgrid(x_coord,y_coord)
-z_gridded = interpolate.griddata((basin.dectime,basin.G2depth),del_alk,(x_grid,y_grid),method='linear')
+z_gridded = interpolate.griddata((basin.dectime,basin.G2depth),basin.del_alk,(x_grid,y_grid),method='linear',rescale=True)
 
 fig = plt.figure(figsize=(10,7))
 ax = plt.gca()
@@ -427,22 +425,22 @@ c.set_label('Difference in Total Alkalinity ($mmol\;kg^{-1}$)')
 ax.set_ylabel('Depth (m)')
 ax.set_title('Difference in Measured and ESPER-Predicted TA in North Atlantic')
 
-# %%  plot surface values and do regression
-surface_basin = basin[basin.G2depth < 100]
+# plot surface values and do regression
+surface_basin = basin[basin.G2depth < 100].dropna(axis=0)
 x = surface_basin.dectime
-y = surface_basin.G2talk - surface_basin.NNtalk13
+y = surface_basin.del_alk
  
 slope, intercept, rvalue, pvalue, stderr = stats.linregress(x, y, alternative='two-sided')
 
 # make plot
-fig = plt.figure(figsize=(10,7))
+fig = plt.figure(figsize=(7,5))
 ax = plt.gca()
-plt.scatter(surface_basin.datetime,y)
-fig.text(0.62, 0.83, '$y={:.4f}x+{:.4f}$'.format(slope,intercept), fontsize=14)
-fig.text(0.769, 0.79, '$r^2={:.4f}$'.format(rvalue), fontsize=14)
+plt.scatter(surface_basin.datetime,y,s=1)
+fig.text(0.544, 0.83, '$y={:.4f}x+{:.4f}$'.format(slope,intercept), fontsize=14)
+fig.text(0.7, 0.78, '$r^2={:.4f}$'.format(rvalue), fontsize=14)
 ax.plot(surface_basin.datetime, intercept + slope * surface_basin.dectime, color="r", lw=1);
 ax.set_title('Difference in Measured and ESPER-Predicted TA in North Atlantic (< 100 m)')
-ax.set_ylabel('Difference in Measured and Estimated TA ($mmol\;kg^{-1}$)')
+ax.set_ylabel('Measured TA - ESPER-Estimated TA ($mmol\;kg^{-1}$)')
 ax.set_ylim(-70,70)
 
 # %% change in surface alkalinty over time (on map)

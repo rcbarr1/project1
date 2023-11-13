@@ -99,7 +99,7 @@ def glodap_qc(glodap):
     glodap = glodap[glodap['G2talkf'] == 2]
     
     #filter data with salinity to only look at open ocean
-    glodap = glodap[(glodap['G2salinity'] >= 29) & (glodap['G2salinity'] <= 37)]
+    glodap = glodap[(glodap['G2salinity'] >= 30) & (glodap['G2salinity'] <= 37)]
     
     # reset index
     glodap_out = glodap.reset_index(drop=True)
