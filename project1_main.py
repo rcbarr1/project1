@@ -23,6 +23,8 @@ import numpy as np
 from scipy import stats
 from scipy import interpolate
 from scipy import special
+from sklearn.linear_model import LinearRegression, RANSACRegressor
+from sklearn.metrics import r2_score
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 import cmocean
@@ -107,8 +109,8 @@ g1.top_labels = False
 g1.right_labels = False
 ax.add_feature(cfeature.LAND,color='k')
 ax.set_title('North Atlantic Coverage of TA (GLODAPv2.2023)')
-extent = [-98,12,0,55]
-ax.set_extent(extent)
+#extent = [-98,12,0,55]
+#ax.set_extent(extent)
 
 # get data from glodap
 lon = espers.G2longitude
@@ -387,10 +389,12 @@ ax.set_title('Difference in Measured TA and ESPER-Predicted at 155ºE, 9.5ºN')
 basin = espers[(espers.G2longitude < 12) & (espers.G2longitude > -98) & (espers.G2latitude < 55) & (espers.G2latitude > 0)]
 
 # extract data (CHANGE WHICH EQUATION/ROUTINE CALLED HERE)
-basin['del_alk'] = basin.G2talk - basin.Mtalk16
+if 'del_alk' in basin.columns:
+    basin.drop(columns=['del_alk'])
+basin['del_alk'] = basin.G2talk - basin.Mtalk1
 
 # get rid of outliers (talk to Brendan about what is appropriate for this?)
-basin = basin[(basin.del_alk < 50) & (basin.del_alk > -50)]
+#basin = basin[(basin.del_alk < 50) & (basin.del_alk > -50)]
 
 # create colormap centered at 0
 newcmap = cmocean.tools.crop(cmocean.cm.balance, basin.del_alk.min(), basin.del_alk.max(), 0) # pivot cmap around 0
@@ -425,11 +429,12 @@ c.set_label('Difference in Total Alkalinity ($mmol\;kg^{-1}$)')
 ax.set_ylabel('Depth (m)')
 ax.set_title('Difference in Measured and ESPER-Predicted TA in North Atlantic')
 
-# plot surface values and do regression
-surface_basin = basin[basin.G2depth < 100].dropna(axis=0)
+# plot surface values and do linear regression
+surface_basin = basin[basin.G2depth < 25]
+surface_basin = surface_basin[['dectime','datetime','del_alk']].dropna(axis=0)
 x = surface_basin.dectime
 y = surface_basin.del_alk
- 
+
 slope, intercept, rvalue, pvalue, stderr = stats.linregress(x, y, alternative='two-sided')
 
 # make plot
@@ -439,19 +444,83 @@ plt.scatter(surface_basin.datetime,y,s=1)
 fig.text(0.544, 0.83, '$y={:.4f}x+{:.4f}$'.format(slope,intercept), fontsize=14)
 fig.text(0.7, 0.78, '$r^2={:.4f}$'.format(rvalue), fontsize=14)
 ax.plot(surface_basin.datetime, intercept + slope * surface_basin.dectime, color="r", lw=1);
-ax.set_title('Difference in Measured and ESPER-Predicted TA in North Atlantic (< 100 m)')
+ax.set_title('Difference in Measured and ESPER-Predicted TA in North Atlantic (< 25 m)')
 ax.set_ylabel('Measured TA - ESPER-Estimated TA ($mmol\;kg^{-1}$)')
 ax.set_ylim(-70,70)
 
-# %% change in surface alkalinty over time (on map)
+# %% do robust regression to take care of outliers
+
+# SET ESPER ROUTINE HERE
+esper_type = 'M' # LIR, NN, or M
+equation_num = 1 # 1 through 16
+
+# subset if desired
+esper_sel = espers
+# try arctic only
+esper_sel = espers[(espers.G2latitude < 55)]
+esper_sel = esper_sel[esper_sel.G2depth < 25] # do surface values (< 25 m) only 
+
+# extract data (CHANGE WHICH EQUATION/ROUTINE CALLED HERE)
+if 'del_alk' in esper_sel.columns:
+    esper_sel.drop(columns=['del_alk'])
+esper_sel['del_alk'] = esper_sel.G2talk - esper_sel[esper_type + 'talk' + str(equation_num)]
+esper_sel = esper_sel[['dectime','datetime','del_alk','G2expocode']].dropna(axis=0)
+
+# apply robust regression
+x = esper_sel['dectime'].to_numpy().reshape(-1, 1) 
+y = esper_sel['del_alk'].to_numpy().reshape(-1, 1) 
+
+ransac = RANSACRegressor(estimator=LinearRegression(), min_samples=round(esper_sel.shape[0]/2),
+                         loss='absolute_error', random_state=42,
+                         residual_threshold=10)
+
+ransac.fit(x,y)
+
+# get inlier mask and create outlier mask
+inlier_mask = ransac.inlier_mask_
+outlier_mask = np.logical_not(inlier_mask)
+
+# create scatter plot for inlier dataset
+fig = plt.figure(figsize=(7.5,5))
+plt.scatter(x[inlier_mask], y[inlier_mask], c='steelblue', marker='o', label='Inliers', alpha=0.3, s=10)
+
+# create scatter plot for outlier dataset
+plt.scatter(x[outlier_mask], y[outlier_mask], c='lightgreen', marker='o', label='Outliers', alpha=0.3, s=10)
+
+# draw best fit line
+line_x = np.arange(x.min(), x.max(), 1)
+line_y_ransac = ransac.predict(line_x[:, np.newaxis])
+plt.plot(line_x, line_y_ransac, color='black', lw=2)
+
+# output slope, intercept, and r2 (assuming time 0 is the first measurement )
+slope = (line_y_ransac[-1][0] - line_y_ransac[0][0]) / (line_x[-1] - line_x[0])
+intercept = line_y_ransac[0][0]
+r2 = r2_score(y,ransac.predict(x))
+
+# formatting
+ax = fig.gca()
+if esper_type == 'M':
+    esper_type = 'Mixed'
+ax.set_title('Difference in Measured and ESPER-Predicted (' + esper_type + ' Eqn. ' + str(equation_num) + ') TA \n with RANSAC Regression (GLODAPv2.2023 < 25 m, < 55º Latitude)')
+ax.set_ylabel('Measured TA - ESPER-Estimated TA ($mmol\;kg^{-1}$)')
+ax.set_ylim((-50,50))
+plt.legend(loc='upper center', bbox_to_anchor=(0.5, -0.07), ncol=2)
+
+# add box showing slope and r2
+fig.text(0.14, 0.83, '$y={:.4f}x+{:.4f}$'.format(slope,intercept), fontsize=12)
+fig.text(0.14, 0.78, '$r^2={:.4f}$'.format(r2), fontsize=12)
+
+# do histogram to see where data is
+fig = plt.figure(figsize=(7,5))
+ax = fig.gca()
+esper_sel.hist(column='del_alk', bins = 200, ax=ax)
+ax.set_title('GLODAPv2.2023 < 25 m, < 55º Latitude, ' + esper_type + ' Eqn. ' + str(equation_num))
+ax.set_xlabel('Measured TA - ESPER-Estimated TA ($mmol\;kg^{-1}$)')
+#ax.set_xlim((-50,50))
 
 
-
-# %% something else looking at specific locations?
-
-
-
-
+# calculate percent of data that is an inlier
+percent_inlier = len(x[inlier_mask])/len(x) * 100
 
 
 
