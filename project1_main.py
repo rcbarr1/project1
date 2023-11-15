@@ -451,8 +451,8 @@ ax.set_ylim(-70,70)
 # %% do robust regression to take care of outliers
 
 # SET ESPER ROUTINE HERE
-esper_type = 'M' # LIR, NN, or M
-equation_num = 1 # 1 through 16
+esper_type = 'NN' # LIR, NN, or M
+equation_num = 7 # 1 through 16
 
 # subset if desired
 esper_sel = espers
@@ -460,7 +460,7 @@ esper_sel = espers
 esper_sel = espers[(espers.G2latitude < 55)]
 esper_sel = esper_sel[esper_sel.G2depth < 25] # do surface values (< 25 m) only 
 
-# extract data (CHANGE WHICH EQUATION/ROUTINE CALLED HERE)
+# extract data
 if 'del_alk' in esper_sel.columns:
     esper_sel.drop(columns=['del_alk'])
 esper_sel['del_alk'] = esper_sel.G2talk - esper_sel[esper_type + 'talk' + str(equation_num)]
@@ -495,7 +495,16 @@ plt.plot(line_x, line_y_ransac, color='black', lw=2)
 # output slope, intercept, and r2 (assuming time 0 is the first measurement )
 slope = (line_y_ransac[-1][0] - line_y_ransac[0][0]) / (line_x[-1] - line_x[0])
 intercept = line_y_ransac[0][0]
-r2 = r2_score(y,ransac.predict(x))
+y_pred = ransac.predict(x)
+r2 = r2_score(y,y_pred)
+
+# calculate p value with two sample t test
+# check if variances are equal - they are most definitely not
+#print(np.var(y))
+#print(np.var(y_pred))
+result = stats.ttest_ind(a=y,b=y_pred,equal_var=False)
+pvalue = result.pvalue
+
 
 # formatting
 ax = fig.gca()
@@ -508,7 +517,7 @@ plt.legend(loc='upper center', bbox_to_anchor=(0.5, -0.07), ncol=2)
 
 # add box showing slope and r2
 fig.text(0.14, 0.83, '$y={:.4f}x+{:.4f}$'.format(slope,intercept), fontsize=12)
-fig.text(0.14, 0.78, '$r^2={:.4f}$'.format(r2), fontsize=12)
+fig.text(0.14, 0.78, '$p-value={:.3e}$'.format(pvalue[0]), fontsize=12)
 
 # do histogram to see where data is
 fig = plt.figure(figsize=(7,5))
@@ -518,12 +527,52 @@ ax.set_title('GLODAPv2.2023 < 25 m, < 55º Latitude, ' + esper_type + ' Eqn. ' +
 ax.set_xlabel('Measured TA - ESPER-Estimated TA ($mmol\;kg^{-1}$)')
 #ax.set_xlim((-50,50))
 
-
 # calculate percent of data that is an inlier
 percent_inlier = len(x[inlier_mask])/len(x) * 100
 
+# %% find slope and p-value for RANSAC regression for all 3 methods, 16 equations
 
+ransac_slope = np.zeros([16,3])
+ransac_pvalue = np.zeros([16,3])
 
+for j in range(0,3):
+    if j == 0:
+        esper_type = 'LIRtalk'
+    elif j == 1:
+        esper_type = 'NNtalk'
+    else:
+        esper_type = 'Mtalk'
+        
+    for i in range(1,17):
+        
+        # subset if desired
+        esper_sel = espers
+        # try arctic only
+        #esper_sel = esper_sel[(esper_sel.G2latitude < 55)]
+        esper_sel = esper_sel[esper_sel.G2depth < 25] # do surface values (< 25 m) only 
+        esper_sel['del_alk'] = esper_sel.G2talk - esper_sel[esper_type + str(i)]
+        esper_sel = esper_sel[['dectime','datetime','del_alk','G2expocode']].dropna(axis=0)
+    
+        # apply robust regression
+        x = esper_sel['dectime'].to_numpy().reshape(-1, 1) 
+        y = esper_sel['del_alk'].to_numpy().reshape(-1, 1) 
+    
+        ransac = RANSACRegressor(estimator=LinearRegression(), min_samples=round(esper_sel.shape[0]/2),
+                             loss='absolute_error', random_state=42)#, residual_threshold=10)
+        ransac.fit(x,y)
+        
+        # output slope, intercept, and p-value (assuming time 0 is the first measurement )
+        line_x = np.arange(x.min(), x.max(), 1)
+        line_y_ransac = ransac.predict(line_x[:, np.newaxis])
+        slope = (line_y_ransac[-1][0] - line_y_ransac[0][0]) / (line_x[-1] - line_x[0])
+        intercept = line_y_ransac[0][0]
+        y_pred = ransac.predict(x)
+        result = stats.ttest_ind(a=y,b=y_pred,equal_var=False)
+        pvalue = result.pvalue
+        
+        # assign to table
+        ransac_slope[i-1,j] = slope
+        ransac_pvalue[i-1,j] = pvalue
 
 
 
