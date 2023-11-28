@@ -42,17 +42,29 @@ glodap = pd.read_csv(filepath + input_GLODAP_file, na_values = -9999)
 go_ship_nums = {'A02':[37,43,24,49,2027],'A05':[225,341,695,699,1030],'A10':[34,487,347,2105,1008],'A12':[6,11,13,385,14,15,18,19,20,1004],'A135':[239,346,1004],'A16':[242,338,342,343,1041,1042],'A17':[297],'A20':[260,264,330],'A22':[261,265,329],
                 'AR07E':[672,666,667,1108,1103],'AR07W':[159,160,161,158,162,167,163,166,165,164,1028,1026,1027,1029,1025],'ARC01E':[708,1040],'ARC01W':[197,1040],'Davis':[201,2014,2015,2016,2017,2018,2009,2019,2021,2022,2023],
                 'I01':[255],'I03':[252,253,488],'I05':[251,253,355],'I06':[374,354,3033],'I07':[253,254,3034,3041],'I08N':[251,339],'I08S_I09N':[249,250,352,353,1046,3035],'I09S':[249,72],'I10':[256,1054],'MED01':[52,64],
-                'P01':[461,116,502,504,1053],'P02':[459,272,1035],'P03':[2098],'P04':[319,2099],'P06':[243,486,273,3029,3030],'P09':[515,571,604,412,595,581,554,600,599,596,552,2002,559,549,556,555,558,547,608,1058,2087,1079,1067,1090,1071,2099,2080,2067,2075,412,2062,1093,2047,2041,2057,1101],
+                'P01':[461,116,502,504,1053],'P02':[459,272,1035],'P03':[2098],'P04':[319,2099],'P06':[243,486,273,3029,3030],'P09':[515,571,604,412,595,581,554,600,599,596,552,2002,559,549,556,555,558,547,608,1058,2087,1079,1067,1090,1071,2099,2080,2067,2075,2062,1093,2047,2041,2057,1101],
                 'P10':[302,495,563,2087,2050,1099],'P13':[296,517,1081,1058,1063,1066,1069,1071,2432,2094,2047,2103,1076,2038,2041,2054,2064],'P14':[301,280,504,505],'P15':[280,84,1020],'P16':[285,286,245,277,350,206,1036,1043,1044],'P17':[1055],'P17N':[300,477],'P18':[279,345,1045],'P21':[270,507],
                 'S04I':[67,288,1050,1051],'S04A':[8,11,13,15,19,20],'S04P':[717,295,3031],'SR03':[67,1021,68,75,2008]}
 
-# test specific segment
-#nums = go_ship_nums['P16']
-#go_ship = glodap[glodap["G2cruise"].isin(nums)]
+go_ship_nums_2023 = {'A02':[37,43,24,49,2027,57,1006],'A05':[225,341,695,699,1030,1109],'A10':[34,487,347,2105,1008,676]}
+                
+
+
+# test specific transect
+nums = go_ship_nums['A12']
+#nums = [30]
+go_ship = glodap[glodap["G2cruise"].isin(nums)]
+
+# see data minus a transects (check if any are missing)
+#go_ship = glodap[~glodap["G2cruise"].isin(nums)]
 
 # see all transects
-flat_nums = [element for sublist in (list(go_ship_nums.values())) for element in sublist]
-go_ship = glodap[glodap["G2cruise"].isin(flat_nums)]
+#flat_nums = [element for sublist in (list(go_ship_nums.values())) for element in sublist]
+#go_ship = glodap[glodap["G2cruise"].isin(flat_nums)]
+
+# see data minus all transects (check if any are missing)
+#flat_nums = [element for sublist in (list(go_ship_nums.values())) for element in sublist]
+#go_ship = glodap[~glodap["G2cruise"].isin(flat_nums)]
 
 # %% do quality control
 glodap = p1.glodap_qc(glodap)
@@ -124,7 +136,9 @@ g1.top_labels = False
 g1.right_labels = False
 ax.add_feature(cfeature.LAND,color='k')
 #ax.set_title('North Atlantic Coverage of TA (GLODAPv2.2023)')
-extent = [-180,180,-90,90]
+#extent = [-5,0,-22,-18]
+#extent = [-60, 30, -45, -15]
+extent = [-180, 180, -90, 90]
 ax.set_extent(extent)
 
 # get data from glodap
@@ -133,6 +147,9 @@ ax.set_extent(extent)
 lon = go_ship.G2longitude
 lat = go_ship.G2latitude
 plot = ax.scatter(lon,lat,transform=ccrs.PlateCarree(),marker='o',edgecolors='none',s=1)
+# turn on to see what cruises are within the "extent" set above
+matches = go_ship[(go_ship.G2longitude > extent[0]) & (go_ship.G2longitude < extent[1]) & (go_ship.G2latitude > extent[2]) & (go_ship.G2latitude < extent[3])]
+print(matches.G2cruise)
 
 # %% plot change in TA over time
 fig = plt.figure(figsize=(15,10))
