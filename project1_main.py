@@ -46,17 +46,18 @@ go_ship_nums = {'A02':[37,43,24,49,2027],'A05':[225,341,695,699,1030],'A10':[34,
                 'P10':[302,495,563,2087,2050,1099],'P13':[296,517,1081,1058,1063,1066,1069,1071,2432,2094,2047,2103,1076,2038,2041,2054,2064],'P14':[301,280,504,505],'P15':[280,84,1020],'P16':[285,286,245,277,350,206,1036,1043,1044],'P17':[1055],'P17N':[300,477],'P18':[279,345,1045],'P21':[270,507],
                 'S04I':[67,288,1050,1051],'S04A':[8,11,13,15,19,20],'S04P':[717,295,3031],'SR03':[67,1021,68,75,2008]}
 
-go_ship_nums_2023 = {'A02':[37,43,24,49,2027,57,1006],'A05':[225,341,695,699,1030,1109],'A10':[34,487,347,2105,1008,676]}
+go_ship_nums_2023 = {'A02':[37,43,24,49,2027,57,1006],'A05':[225,341,695,699,1030,1109],'A10':[34,487,347,2105,1008,676],'A12':[6,11,13,385,14,15,18,19,20,1004,4],'A135':[239,346],
+                     'SR04':[4,5,8,11,13,15,19,20]}
                 
 
 
 # test specific transect
-nums = go_ship_nums['A12']
-#nums = [30]
-go_ship = glodap[glodap["G2cruise"].isin(nums)]
+nums = go_ship_nums['A16']
+#nums = [1042]
+#go_ship = glodap[glodap["G2cruise"].isin(nums)]
 
 # see data minus a transects (check if any are missing)
-#go_ship = glodap[~glodap["G2cruise"].isin(nums)]
+go_ship = glodap[~glodap["G2cruise"].isin(nums)]
 
 # see all transects
 #flat_nums = [element for sublist in (list(go_ship_nums.values())) for element in sublist]
@@ -65,6 +66,7 @@ go_ship = glodap[glodap["G2cruise"].isin(nums)]
 # see data minus all transects (check if any are missing)
 #flat_nums = [element for sublist in (list(go_ship_nums.values())) for element in sublist]
 #go_ship = glodap[~glodap["G2cruise"].isin(flat_nums)]
+
 
 # %% do quality control
 glodap = p1.glodap_qc(glodap)
@@ -136,8 +138,8 @@ g1.top_labels = False
 g1.right_labels = False
 ax.add_feature(cfeature.LAND,color='k')
 #ax.set_title('North Atlantic Coverage of TA (GLODAPv2.2023)')
-#extent = [-5,0,-22,-18]
-#extent = [-60, 30, -45, -15]
+#extent = [5, 15, -52.5, -52]
+#extent = [-30, 30, -80, 10]
 extent = [-180, 180, -90, 90]
 ax.set_extent(extent)
 
