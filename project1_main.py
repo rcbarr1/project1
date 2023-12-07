@@ -22,7 +22,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy import stats
 from scipy import interpolate
-from scipy import special
 from sklearn.linear_model import LinearRegression, RANSACRegressor
 from sklearn.metrics import r2_score
 import cartopy.crs as ccrs
@@ -36,45 +35,17 @@ input_GLODAP_file = 'GLODAPv2.2023_Merged_Master_File.csv' # GLODAP data filenam
 # %% import GLODAP data file
 glodap = pd.read_csv(filepath + input_GLODAP_file, na_values = -9999)
 
-# %% filter data for only GO-SHIP cruises
-#glodap = go_ship_only(glodap)
-# I skipped WCOA (327 & 2025) and OVIDE (392,393,394,25,395,1032,1047,2011), included in the script Brendan sent but I don't think they're GO-SHIP cruises
-go_ship_nums = {'A02':[37,43,24,49,2027],'A05':[225,341,695,699,1030],'A10':[34,487,347,2105,1008],'A12':[6,11,13,385,14,15,18,19,20,1004],'A135':[239,346,1004],'A16':[242,338,342,343,1041,1042],'A17':[297],'A20':[260,264,330],'A22':[261,265,329],
-                'AR07E':[672,666,667,1108,1103],'AR07W':[159,160,161,158,162,167,163,166,165,164,1028,1026,1027,1029,1025],'ARC01E':[708,1040],'ARC01W':[197,1040],'Davis':[201,2014,2015,2016,2017,2018,2009,2019,2021,2022,2023],
-                'I01':[255],'I03':[252,253,488],'I05':[251,253,355],'I06':[374,354,3033],'I07':[253,254,3034,3041],'I08N':[251,339],'I08S_I09N':[249,250,352,353,1046,3035],'I09S':[249,72],'I10':[256,1054],'MED01':[52,64],
-                'P01':[461,116,502,504,1053],'P02':[459,272,1035],'P03':[2098],'P04':[319,2099],'P06':[243,486,273,3029,3030],'P09':[515,571,604,412,595,581,554,600,599,596,552,2002,559,549,556,555,558,547,608,1058,2087,1079,1067,1090,1071,2099,2080,2067,2075,2062,1093,2047,2041,2057,1101],
-                'P10':[302,495,563,2087,2050,1099],'P13':[296,517,1081,1058,1063,1066,1069,1071,2432,2094,2047,2103,1076,2038,2041,2054,2064],'P14':[301,280,504,505],'P15':[280,84,1020],'P16':[285,286,245,277,350,206,1036,1043,1044],'P17':[1055],'P17N':[300,477],'P18':[279,345,1045],'P21':[270,507],
-                'S04I':[67,288,1050,1051],'S04A':[8,11,13,15,19,20],'S04P':[717,295,3031],'SR03':[67,1021,68,75,2008]}
+# %% filter data for only GO-SHIP + associated cruises
+glodap, go_ship_cruise_nums_2023 = p1.go_ship_only(glodap)
 
-go_ship_nums_2023 = {'A02':[37,43,24,49,2027,57,1006],'A05':[225,341,695,699,1030,1109],'A10':[34,487,347,2105,1008,676],'A12':[6,11,13,385,14,15,18,19,20,1004,4],'A135':[239,346],
-                     'SR04':[4,5,8,11,13,15,19,20]}
-                
-
-
-# test specific transect
-nums = go_ship_nums['A16']
-#nums = [1042]
-#go_ship = glodap[glodap["G2cruise"].isin(nums)]
-
-# see data minus a transects (check if any are missing)
-go_ship = glodap[~glodap["G2cruise"].isin(nums)]
-
-# see all transects
-#flat_nums = [element for sublist in (list(go_ship_nums.values())) for element in sublist]
-#go_ship = glodap[glodap["G2cruise"].isin(flat_nums)]
-
-# see data minus all transects (check if any are missing)
-#flat_nums = [element for sublist in (list(go_ship_nums.values())) for element in sublist]
-#go_ship = glodap[~glodap["G2cruise"].isin(flat_nums)]
-
+# %% trim GO-SHIP + associated cruises to pick out data points on the standard transect
+# glodap = p1.trim_go_ship(glodap)
 
 # %% do quality control
 glodap = p1.glodap_qc(glodap)
 
 # %% convert time to decimal time and datetime for use in ESPERs
 glodap = p1.glodap_reformat_time(glodap)
-
-# %% combine year, date, month columns into datetime
 
 # %% call ESPERs
 # this is done in MATLAB for now, will update when code is translated
@@ -95,39 +66,14 @@ glodap_out.to_csv(filepath + 'GLODAPv2.2023_for_ESPERs.csv', index=False) # for 
 espers = pd.read_csv(filepath + 'GLODAP_with_ESPER_TA.csv')
 espers['datetime'] = pd.to_datetime(espers['datetime']) # recast datetime as datetime data type
 
+# %% use KL divergence to determine which equations predict best (lower KL divergence = two datasets are closer)
+kl_div = p1.kl_divergence(espers)
+#kl_div.to_csv('kl_div.csv')
+
 # %% start data visualization
 
 # organize data by decimal time
 espers = espers.sort_values(by=['dectime'],ascending=True)
-
-# %% use KL divergence to determine which equations predict best
-# lower KL divergence = two datasets are closer
-
-kl_div = np.zeros([16,3])
-
-for j in range(0,3):
-    if j == 0:
-        esper_type = 'LIRtalk'
-    elif j == 1:
-        esper_type = 'NNtalk'
-    else:
-        esper_type = 'Mtalk'
-        
-    for i in range(1,17):
-        LIR_name = esper_type + str(i)
-        ab = espers[['G2talk', LIR_name]].dropna(axis=0)
-        a = np.asarray(ab.G2talk, dtype=float)
-        a /= np.sum(a)
-        b = np.asarray(ab[LIR_name], dtype=float)
-        b /= np.sum(b)
-    
-        vec = special.rel_entr(a,b)
-        kl_div[i-1,j] = np.sum(vec)
-        
-kl_div = pd.DataFrame(kl_div, columns = ['LIR','NN','Mixed'])
-kl_div.index += 1
-kl_div.to_csv('kl_div.csv')
-
 # %% USEFUL FOR VISUALIZING DATA LOCATIONS
 # set up map
 fig = plt.figure(figsize=(15,10))
@@ -144,15 +90,9 @@ extent = [-180, 180, -90, 90]
 ax.set_extent(extent)
 
 # get data from glodap
-#lon = espers.G2longitude
-#lat = espers.G2latitude
-lon = go_ship.G2longitude
-lat = go_ship.G2latitude
+lon = espers.G2longitude
+lat = espers.G2latitude
 plot = ax.scatter(lon,lat,transform=ccrs.PlateCarree(),marker='o',edgecolors='none',s=1)
-# turn on to see what cruises are within the "extent" set above
-matches = go_ship[(go_ship.G2longitude > extent[0]) & (go_ship.G2longitude < extent[1]) & (go_ship.G2latitude > extent[2]) & (go_ship.G2latitude < extent[3])]
-print(matches.G2cruise)
-
 # %% plot change in TA over time
 fig = plt.figure(figsize=(15,10))
 axs = plt.axes()
