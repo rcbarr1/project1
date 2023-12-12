@@ -36,16 +36,13 @@ input_GLODAP_file = 'GLODAPv2.2023_Merged_Master_File.csv' # GLODAP data filenam
 glodap = pd.read_csv(filepath + input_GLODAP_file, na_values = -9999)
 
 # %% filter data for only GO-SHIP + associated cruises
-glodap, go_ship_cruise_nums_2023 = p1.go_ship_only(glodap)
-
-# %% trim GO-SHIP + associated cruises to pick out data points on the standard transect
-# glodap = p1.trim_go_ship(glodap)
+go_ship, go_ship_cruise_nums_2023 = p1.go_ship_only(glodap)
 
 # %% do quality control
-glodap = p1.glodap_qc(glodap)
+go_ship = p1.glodap_qc(go_ship)
 
 # %% convert time to decimal time and datetime for use in ESPERs
-glodap = p1.glodap_reformat_time(glodap)
+go_ship = p1.glodap_reformat_time(go_ship)
 
 # %% call ESPERs
 # this is done in MATLAB for now, will update when code is translated
@@ -54,7 +51,7 @@ glodap = p1.glodap_reformat_time(glodap)
 # step 1: save processed_glodap
 
 # select relevant columns
-glodap_out = glodap[['G2expocode','G2cruise','G2station','G2region','G2cast',
+glodap_out = go_ship[['G2expocode','G2cruise','G2station','G2region','G2cast',
                  'dectime','datetime','G2latitude','G2longitude','G2depth',
                  'G2temperature','G2salinity','G2oxygen','G2nitrate',
                  'G2silicate','G2phosphate','G2talk','G2phtsinsitutp']]
@@ -70,6 +67,9 @@ espers['datetime'] = pd.to_datetime(espers['datetime']) # recast datetime as dat
 kl_div = p1.kl_divergence(espers)
 #kl_div.to_csv('kl_div.csv')
 
+# %% trim GO-SHIP + associated cruises to pick out data points on the standard transect
+# glodap = p1.trim_go_ship(glodap)
+
 # %% start data visualization
 
 # organize data by decimal time
@@ -77,7 +77,8 @@ espers = espers.sort_values(by=['dectime'],ascending=True)
 # %% USEFUL FOR VISUALIZING DATA LOCATIONS
 # set up map
 fig = plt.figure(figsize=(15,10))
-ax = plt.axes(projection=ccrs.PlateCarree())
+#ax = plt.axes(projection=ccrs.PlateCarree()) # atlantic-centered view
+ax = plt.axes(projection=ccrs.PlateCarree(central_longitude=180)) # paciifc-centered view
 ax.coastlines(resolution='110m',color='k')
 g1 = ax.gridlines(crs=ccrs.PlateCarree(),draw_labels=True,alpha=0)
 g1.top_labels = False
