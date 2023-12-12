@@ -68,7 +68,7 @@ kl_div = p1.kl_divergence(espers)
 #kl_div.to_csv('kl_div.csv')
 
 # %% trim GO-SHIP + associated cruises to pick out data points on the standard transect
-# glodap = p1.trim_go_ship(glodap)
+trimmed = p1.trim_go_ship(espers, go_ship_cruise_nums_2023)
 
 # %% start data visualization
 
@@ -76,7 +76,7 @@ kl_div = p1.kl_divergence(espers)
 espers = espers.sort_values(by=['dectime'],ascending=True)
 # %% USEFUL FOR VISUALIZING DATA LOCATIONS
 # set up map
-fig = plt.figure(figsize=(15,10))
+fig = plt.figure(figsize=(12,10))
 #ax = plt.axes(projection=ccrs.PlateCarree()) # atlantic-centered view
 ax = plt.axes(projection=ccrs.PlateCarree(central_longitude=180)) # paciifc-centered view
 ax.coastlines(resolution='110m',color='k')
@@ -91,9 +91,17 @@ extent = [-180, 180, -90, 90]
 ax.set_extent(extent)
 
 # get data from glodap
-lon = espers.G2longitude
-lat = espers.G2latitude
-plot = ax.scatter(lon,lat,transform=ccrs.PlateCarree(),marker='o',edgecolors='none',s=1)
+#lon = espers.G2longitude
+#lat = espers.G2latitude
+#plot = ax.scatter(lon,lat,transform=ccrs.PlateCarree(),marker='o',edgecolors='none',color='C0',s=1)
+
+# or, plot all trimmed transects
+for key in trimmed:
+    df = trimmed[key]
+    lon = df.G2longitude
+    lat = df.G2latitude
+    plot = ax.scatter(lon,lat,transform=ccrs.PlateCarree(),marker='o',edgecolors='none',s=1)
+    
 # %% plot change in TA over time
 fig = plt.figure(figsize=(15,10))
 axs = plt.axes()
@@ -428,14 +436,15 @@ ax.set_ylim(-70,70)
 # %% do robust regression to take care of outliers
 
 # SET ESPER ROUTINE HERE
-esper_type = 'NN' # LIR, NN, or M
-equation_num = 7 # 1 through 16
+esper_type = 'LIR' # LIR, NN, or M
+equation_num = 1 # 1 through 16
 
 # subset if desired
 esper_sel = espers
+#esper_sel = trimmed['P06']
 # try arctic only
-esper_sel = espers[(espers.G2latitude < 55)]
-esper_sel = esper_sel[esper_sel.G2depth < 25] # do surface values (< 25 m) only 
+#esper_sel = espers[(espers.G2latitude < 55)]
+#esper_sel = esper_sel[esper_sel.G2depth < 25] # do surface values (< 25 m) only 
 
 # extract data
 if 'del_alk' in esper_sel.columns:
@@ -487,8 +496,9 @@ pvalue = result.pvalue
 ax = fig.gca()
 if esper_type == 'M':
     esper_type = 'Mixed'
-ax.set_title('Difference in Measured and ESPER-Predicted (' + esper_type + ' Eqn. ' + str(equation_num) + ') TA \n with RANSAC Regression (GLODAPv2.2023 < 25 m, < 55º Latitude)')
-ax.set_ylabel('Measured TA - ESPER-Estimated TA ($mmol\;kg^{-1}$)')
+#ax.set_title('Difference in Measured and ESPER-Predicted (' + esper_type + ' Eqn. ' + str(equation_num) + ') TA \n with RANSAC Regression (GLODAPv2.2023 < 25 m, < 55º Latitude)')
+ax.set_title('Difference in Measured and ESPER-Predicted (' + esper_type + ' Eqn. ' + str(equation_num) + ') TA \n with RANSAC Regression (GLODAPv2.2023 Transect P06 < 25 m)')
+#ax.set_ylabel('Measured TA - ESPER-Estimated TA ($mmol\;kg^{-1}$)')
 ax.set_ylim((-50,50))
 plt.legend(loc='upper center', bbox_to_anchor=(0.5, -0.07), ncol=2)
 
@@ -500,7 +510,8 @@ fig.text(0.14, 0.78, '$p-value={:.3e}$'.format(pvalue[0]), fontsize=12)
 fig = plt.figure(figsize=(7,5))
 ax = fig.gca()
 esper_sel.hist(column='del_alk', bins = 200, ax=ax)
-ax.set_title('GLODAPv2.2023 < 25 m, < 55º Latitude, ' + esper_type + ' Eqn. ' + str(equation_num))
+ax.set_title('GLODAPv2.2023 Transect P06 ' + esper_type + ' Eqn. ' + str(equation_num))
+#ax.set_title('GLODAPv2.2023 < 25 m, < 55º Latitude, ' + esper_type + ' Eqn. ' + str(equation_num))
 ax.set_xlabel('Measured TA - ESPER-Estimated TA ($mmol\;kg^{-1}$)')
 #ax.set_xlim((-50,50))
 

@@ -237,7 +237,6 @@ for i in range(811,856):
 for i in range(112,125):
     I07 = I07[~((I07.G2cruise == 3034) & (I07.G2station == i))] # 3034.[112:124]
 
-# %%
 I08N = espers[espers["G2cruise"].isin(go_ship_cruise_nums_2023['I08N'])]
 for i in range(355,441):
     I08N = I08N[~((I08N.G2cruise == 251) & (I08N.G2station == i))] # 251.[355:440]
@@ -270,10 +269,117 @@ I10 = espers[espers["G2cruise"].isin(go_ship_cruise_nums_2023['I10'])]
 for i in range(45,144):
     I10 = I10[~((I10.G2cruise == 82) & (I10.G2station == i))] # 82.[45:143]
 
-# %%
+P01 = espers[espers["G2cruise"].isin(go_ship_cruise_nums_2023['P01'])]
+for i in range(1,5):
+    P01 = P01[~((P01.G2cruise == 461) & (P01.G2station == i))] # 461.[1:4]
+P01 = P01[~((P01.G2cruise == 461) & (P01.G2station == 135))] # 461.135
+for i in range(2,129):
+    P01 = P01[~((P01.G2cruise == 504) & (P01.G2station == i))] # 504.[37:128]
+P01 = P01[~((P01.G2cruise == 504) & (P01.G2station == 1002))] # 504.1002
+P01 = P01[~((P01.G2cruise == 504) & (P01.G2station == 1004))] # 504.1004
+P01 = P01[~((P01.G2cruise == 1053) & (P01.G2station == 151))] # 1053.151
+
+P02 = espers[espers["G2cruise"].isin(go_ship_cruise_nums_2023['P02'])] # no trimming needed
+
 P03 = espers[espers["G2cruise"].isin(go_ship_cruise_nums_2023['P03'])] # no trimming needed
 
+P04 = espers[espers["G2cruise"].isin(go_ship_cruise_nums_2023['P04'])] # no trimming needed
+
 P06 = espers[espers["G2cruise"].isin(go_ship_cruise_nums_2023['P06'])] # no trimming needed
+
+P09 = espers[espers["G2cruise"].isin(go_ship_cruise_nums_2023['P09'])]
+for i in range(71,80):
+    P09 = P09[~((P09.G2cruise == 609) & (P09.G2station == i))] # 609.[71:79]
+for i in range(5486,5549):
+    P09 = P09[~((P09.G2cruise == 1100) & (P09.G2station == i))] # 1100.[5486:5548]
+for i in range(4974,5006):
+    P09 = P09[~((P09.G2cruise == 2075) & (P09.G2station == i))] # 2075.[4974:5005]
+
+P10 = espers[espers["G2cruise"].isin(go_ship_cruise_nums_2023['P10'])]
+for i in range(80,91):
+    P10 = P10[~((P10.G2cruise == 302) & (P10.G2station == i))] # 302.[80:90]
+
+P13 = espers[espers["G2cruise"].isin(go_ship_cruise_nums_2023['P13'])]
+for i in range(1,4):
+    P13 = P13[~((P13.G2cruise == 431) & (P13.G2station == i))] # 431.[1:3]
+for i in range(5,47):
+    P13 = P13[~((P13.G2cruise == 431) & (P13.G2station == i))] # 431.[5:36]
+for i in range(62,65):
+    P13 = P13[~((P13.G2cruise == 431) & (P13.G2station == i))] # 431.[62:64]
+for i in range(252,255):
+    P13 = P13[~((P13.G2cruise == 431) & (P13.G2station == i))] # 431.[252:254]
+for i in range(1,3):
+    P13 = P13[~((P13.G2cruise == 439) & (P13.G2station == i))] # 439.[1:2]
+P13 = P13[~((P13.G2cruise == 439) & (P13.G2station == 16))] # 439.16
+P13 = P13[~((P13.G2cruise == 439) & (P13.G2station == 24))] # 439.24
+P13 = P13[~((P13.G2cruise == 439) & (P13.G2station == 71))] # 439.71
+P13 = P13[~((P13.G2cruise == 440) & (P13.G2station == 0))] # 440.0
+for i in range(1,43):
+    P13 = P13[~((P13.G2cruise == 517) & (P13.G2station == i))] # 517.[1:42]
+P13 = P13[~((P13.G2cruise == 598) & (P13.G2station == 2428))] # 598.2428
+P13 = P13[~((P13.G2cruise == 598) & (P13.G2station == 2432))] # 598.2432
+
+P14 = espers[espers["G2cruise"].isin(go_ship_cruise_nums_2023['P14'])]
+for i in range(201,214):
+    P14 = P14[~((P14.G2cruise == 268) & (P14.G2station == i))] # 268.[201:213]
+for i in range(220,240):
+    P14 = P14[~((P14.G2cruise == 268) & (P14.G2station == i))] # 268.[220:239]
+for i in range(253,348):
+    P14 = P14[~((P14.G2cruise == 268) & (P14.G2station == i))] # 268.[253:347]
+for i in range(1,5):
+    P14 = P14[~((P14.G2cruise == 280) & (P14.G2station == i))] # 280.[1:4]
+for i in range(22,183):
+    P14 = P14[~((P14.G2cruise == 280) & (P14.G2station == i))] # 280.[22:182]
+for i in range(128,160):
+    P14 = P14[~((P14.G2cruise == 504) & (P14.G2station == i))] # 504.[128:159]
+P14 = P14[~((P14.G2cruise == 504) & (P14.G2station == 1113))] # 504.1113
+for i in range(50,88):
+    P14 = P14[~((P14.G2cruise == 1050) & (P14.G2station == i))] # 1050.[50:87]
+for i in range(404,411):
+    P14 = P14[~((P14.G2cruise == 1050) & (P14.G2station == i))] # 1050.[404:410]
+for i in range(501,504):
+    P14 = P14[~((P14.G2cruise == 1050) & (P14.G2station == i))] # 1050.[501:503]
+
+P15 = espers[espers["G2cruise"].isin(go_ship_cruise_nums_2023['P15'])]
+for i in range(74,84):
+    P15 = P15[~((P15.G2cruise == 83) & (P15.G2station == i))] # 83.[74:83]
+P15 = P15[~((P15.G2cruise == 83) & (P15.G2station == 129))] # 83.129
+for i in range(119,129):
+    P15 = P15[~((P15.G2cruise == 84) & (P15.G2station == i))] # 84.[119:128]
+for i in range(11,33):
+    P15 = P15[~((P15.G2cruise == 280) & (P15.G2station == i))] # 280.[11:32]
+
+P16N = espers[espers["G2cruise"].isin(go_ship_cruise_nums_2023['P16N'])]
+for i in range(24,29):
+    P16N = P16N[~((P16N.G2cruise == 304) & (P16N.G2station == i))] # 304.[24:28]
+for i in range(1,16):
+    P16N = P16N[~((P16N.G2cruise == 307) & (P16N.G2station == i))] # 307.[1:15]
+P16N = P16N[~((P16N.G2cruise == 307) & (P16N.G2station == 999))] # 307.999
+for i in range(191,208):
+    P16N = P16N[~((P16N.G2cruise == 1044) & (P16N.G2station == i))] # 1044.[191:207]
+
+P16S = espers[espers["G2cruise"].isin(go_ship_cruise_nums_2023['P16S'])]
+for i in range(1,5):
+    P16S = P16S[~((P16S.G2cruise == 1036) & (P16S.G2station == i))] # 1036.[1:4]
+
+P17E = espers[espers["G2cruise"].isin(go_ship_cruise_nums_2023['P17E'])] # no trimming needed
+
+P17N = espers[espers["G2cruise"].isin(go_ship_cruise_nums_2023['P17N'])]
+for i in range(10,26):
+    P17N = P17N[~((P17N.G2cruise == 300) & (P17N.G2station == i))] # 300.[10:25]
+for i in range(122,139):
+    P17N = P17N[~((P17N.G2cruise == 300) & (P17N.G2station == i))] # 300.[122:138]
+
+P18 = espers[espers["G2cruise"].isin(go_ship_cruise_nums_2023['P18'])]
+for i in range(173,175):
+    P18 = P18[~((P18.G2cruise == 345) & (P18.G2station == i))] # 345.[173:174]
+P18 = P18[~((P18.G2cruise == 345) & (P18.G2station == 996))] # 345.996
+for i in range(117,126):
+    P18 = P18[~((P18.G2cruise == 1045) & (P18.G2station == i))] # 1045.[117:125]
+for i in range(209,213):
+    P18 = P18[~((P18.G2cruise == 1045) & (P18.G2station == i))] # 1045.[209:212]
+
+P21 = espers[espers["G2cruise"].isin(go_ship_cruise_nums_2023['P21'])] # no trimming needed
 
 S04I = espers[espers["G2cruise"].isin(go_ship_cruise_nums_2023['S04I'])]
 for i in range(6,14):
@@ -344,25 +450,25 @@ for i in range(61,107):
    SR03 = SR03[~((SR03.G2cruise == 2008) & (SR03.G2station == i))] # 2008.[61:106]
 
 # %% test with P06, no trimming, to figure out what type of figures would be useful and how to store trimmed output
-nums = go_ship_cruise_nums_2023['I03']
-#nums = [82]
+nums = go_ship_cruise_nums_2023['P16S']
+#nums = [1050]
 #transect = espers[espers["G2cruise"].isin(nums)]
 #transect = glodap[glodap["G2cruise"].isin(nums)]
 #transect = transect[(transect.G2talkf == 2)]
-transect = I10
+transect = P21
 
 # set up map
-fig = plt.figure(figsize=(10,7))
-ax = plt.axes(projection=ccrs.PlateCarree()) # atlantic-centered view 
-#ax = plt.axes(projection=ccrs.PlateCarree(central_longitude=180)) # paciifc-centered view
+fig = plt.figure(figsize=(12,7))
+#ax = plt.axes(projection=ccrs.PlateCarree()) # atlantic-centered view 
+ax = plt.axes(projection=ccrs.PlateCarree(central_longitude=180)) # paciifc-centered view
 ax.coastlines(resolution='110m',color='k')
 g1 = ax.gridlines(crs=ccrs.PlateCarree(),draw_labels=True,alpha=0)
 g1.top_labels = False
 g1.right_labels = False
 ax.add_feature(cfeature.LAND,color='k')
-ax.set_title('Transect SR03')
-#extent = [105, 120, -30, 0]
-extent = [90, 150, -60, 0]
+#ax.set_title('Transect P06')
+#extent = [-102.5, -90, -75, -20]
+extent = [120, -60, -45, -0]
 #extent = [-180, 180, -90, 90]
 ax.set_extent(extent)
 
@@ -370,7 +476,6 @@ ax.set_extent(extent)
 lon = transect.G2longitude
 lat = transect.G2latitude
 plot = ax.scatter(lon,lat,transform=ccrs.PlateCarree(),marker='x',s=20)
-
 # %% return station number that is inside of lat/lon bounds
 bad_area = extent
 bad_points = transect[(transect.G2longitude > bad_area[0]) & (transect.G2longitude < bad_area[1]) & (transect.G2latitude > bad_area[2]) & (transect.G2latitude < bad_area[3])]
