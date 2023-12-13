@@ -88,12 +88,6 @@ A17 = A17[~((A17.G2cruise == 229) & (A17.G2station == 26))] # trim 229.26
 A17 = A17[~((A17.G2cruise == 229) & (A17.G2station == 27))] # trim 229.27
 for i in range(63,66):
     A17 = A17[~((A17.G2cruise == 235) & (A17.G2station == i))] # trim 235.[63:65]
-for i in range(19,49):
-    A17 = A17[~((A17.G2cruise == 236) & (A17.G2station == i))] # 236.[19:48]
-for i in range(67,95):
-    A17 = A17[~((A17.G2cruise == 236) & (A17.G2station == i))] # 236.[67:94]
-for i in range(100,122):
-    A17 = A17[~((A17.G2cruise == 236) & (A17.G2station == i))] # 236.[100:121]
 for i in range(42,59):
     A17 = A17[~((A17.G2cruise == 297) & (A17.G2station == i))] # trim 297.[42:58]
 for i in range(118,142):
@@ -103,14 +97,7 @@ for i in range(172,236):
 for i in range(77,82):
     A17 = A17[~((A17.G2cruise == 2013) & (A17.G2station == i))] # trim 2013.[77:81]
 
-A20 = espers[espers["G2cruise"].isin(go_ship_cruise_nums_2023['A20'])]
-for i in range(1,30):
-    A20 = A20[~((A20.G2cruise == 236) & (A20.G2station == i))] # 236.[1:29]
-A20 = A20[~((A20.G2cruise == 236) & (A20.G2station == 35))] # 236.35
-for i in range(38,119):
-    A20 = A20[~((A20.G2cruise == 236) & (A20.G2station == i))] # 236.[38:118]
-for i in range(120,122):
-    A20 = A20[~((A20.G2cruise == 236) & (A20.G2station == i))] # 236.[120:121]
+A20 = espers[espers["G2cruise"].isin(go_ship_cruise_nums_2023['A20'])] # no trimming needed
 
 A22 = espers[espers["G2cruise"].isin(go_ship_cruise_nums_2023['A22'])]
 A22 = A22[~((A22.G2cruise == 261) & (A22.G2station == 1))]  # trim 261.1
@@ -300,14 +287,6 @@ for i in range(80,91):
     P10 = P10[~((P10.G2cruise == 302) & (P10.G2station == i))] # 302.[80:90]
 
 P13 = espers[espers["G2cruise"].isin(go_ship_cruise_nums_2023['P13'])]
-for i in range(1,4):
-    P13 = P13[~((P13.G2cruise == 431) & (P13.G2station == i))] # 431.[1:3]
-for i in range(5,47):
-    P13 = P13[~((P13.G2cruise == 431) & (P13.G2station == i))] # 431.[5:36]
-for i in range(62,65):
-    P13 = P13[~((P13.G2cruise == 431) & (P13.G2station == i))] # 431.[62:64]
-for i in range(252,255):
-    P13 = P13[~((P13.G2cruise == 431) & (P13.G2station == i))] # 431.[252:254]
 for i in range(1,3):
     P13 = P13[~((P13.G2cruise == 439) & (P13.G2station == i))] # 439.[1:2]
 P13 = P13[~((P13.G2cruise == 439) & (P13.G2station == 16))] # 439.16
@@ -320,12 +299,6 @@ P13 = P13[~((P13.G2cruise == 598) & (P13.G2station == 2428))] # 598.2428
 P13 = P13[~((P13.G2cruise == 598) & (P13.G2station == 2432))] # 598.2432
 
 P14 = espers[espers["G2cruise"].isin(go_ship_cruise_nums_2023['P14'])]
-for i in range(201,214):
-    P14 = P14[~((P14.G2cruise == 268) & (P14.G2station == i))] # 268.[201:213]
-for i in range(220,240):
-    P14 = P14[~((P14.G2cruise == 268) & (P14.G2station == i))] # 268.[220:239]
-for i in range(253,348):
-    P14 = P14[~((P14.G2cruise == 268) & (P14.G2station == i))] # 268.[253:347]
 for i in range(1,5):
     P14 = P14[~((P14.G2cruise == 280) & (P14.G2station == i))] # 280.[1:4]
 for i in range(22,183):
