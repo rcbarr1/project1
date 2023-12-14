@@ -89,8 +89,8 @@ go_ship_nums_2023 = {'A02' : [24, 37, 43, 1006, 2027],
 
 # test specific transect
 #nums = go_ship_nums['ARC01E']
-nums = go_ship_nums_2023['P03']
-#nums = [233]
+#nums = go_ship_nums_2023['P03']
+nums = [2013]
 go_ship = glodap[glodap["G2cruise"].isin(nums)]
 
 # see data minus a transect (check if any are missing)
@@ -108,8 +108,8 @@ g1.right_labels = False
 ax.add_feature(cfeature.LAND,color='k')
 ax.set_title('P03')
 #extent = [136, 137.5, 10, 20]
-extent = [110, -100, 0, 60]
-#extent = [-180, 180, -90, 90]
+#extent = [110, -100, 0, 60]
+extent = [-180, 180, -90, 90]
 ax.set_extent(extent)
 
 # get data from glodap

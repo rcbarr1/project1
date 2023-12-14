@@ -281,6 +281,11 @@ P03 = espers[espers["G2cruise"].isin(go_ship_cruise_nums_2023['P03'])] # no trim
 P03_J = espers[espers["G2cruise"].isin(go_ship_cruise_nums_2023['P03_J'])] # no trimming needed
 for i in range(209,219):
     P03_J = P03_J[~((P03_J.G2cruise == 497) & (P03_J.G2station == i))] # 497.[209:218]
+for i in range(3851,3867):
+    P03_J = P03_J[~((P03_J.G2cruise == 1086) & (P03_J.G2station == i))] # 1086.[3851:3866]
+for i in range(4867,4878):
+    P03_J = P03_J[~((P03_J.G2cruise == 1096) & (P03_J.G2station == i))] # 1096.[4867:4877]
+
 
 P06 = espers[espers["G2cruise"].isin(go_ship_cruise_nums_2023['P06'])] # no trimming needed
 
@@ -556,19 +561,19 @@ for i in range(61,107):
 #transect = espers[espers["G2cruise"].isin(nums)]
 #transect = glodap[glodap["G2cruise"].isin(nums)]
 #transect = transect[(transect.G2talkf == 2)]
-transect = P13_J
+transect = P03_J
 
 # set up map
 fig = plt.figure(figsize=(12,7))
 #ax = plt.axes(projection=ccrs.PlateCarree()) # atlantic-centered view 
-ax = plt.axes(projection=ccrs.PlateCarree(central_longitude=180)) # paciifc-centered view
+ax = plt.axes(projection=ccrs.PlateCarree(central_longitude=180)) # pacific-centered view
 ax.coastlines(resolution='110m',color='k')
 g1 = ax.gridlines(crs=ccrs.PlateCarree(),draw_labels=True,alpha=0)
 g1.top_labels = False
 g1.right_labels = False
 ax.add_feature(cfeature.LAND,color='k')
 #ax.set_title('Transect P06')
-#extent = [140, 164, 13, 50]
+#extent = [130, 150, 25, 40]
 extent = [120, 180, -15, 60]
 #extent = [-180, 180, -90, 90]
 ax.set_extent(extent)

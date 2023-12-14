@@ -517,6 +517,10 @@ def trim_go_ship(espers, go_ship_cruise_nums_2023):
     P03_J = espers[espers["G2cruise"].isin(go_ship_cruise_nums_2023['P03_J'])] # no trimming needed
     for i in range(209,219):
         P03_J = P03_J[~((P03_J.G2cruise == 497) & (P03_J.G2station == i))] # 497.[209:218]
+    for i in range(3851,3867):
+        P03_J = P03_J[~((P03_J.G2cruise == 1086) & (P03_J.G2station == i))] # 1086.[3851:3866]
+    for i in range(4867,4878):
+        P03_J = P03_J[~((P03_J.G2cruise == 1096) & (P03_J.G2station == i))] # 1096.[4867:4877]
 
     P06 = espers[espers["G2cruise"].isin(go_ship_cruise_nums_2023['P06'])] # no trimming needed
 

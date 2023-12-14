@@ -79,9 +79,13 @@ trimmed = p1.trim_go_ship(espers, go_ship_cruise_nums_2023)
 espers = espers.sort_values(by=['dectime'],ascending=True)
 # %% USEFUL FOR VISUALIZING DATA LOCATIONS
 # set up map
-fig = plt.figure(figsize=(12,10))
-#ax = plt.axes(projection=ccrs.PlateCarree()) # atlantic-centered view
-ax = plt.axes(projection=ccrs.PlateCarree(central_longitude=180)) # paciifc-centered view
+# atlantic-centered view
+fig = plt.figure(figsize=(6.2,4.1))
+ax = plt.axes(projection=ccrs.PlateCarree())
+# pacific-centered view
+#fig = plt.figure(figsize=(6.3,4.1))
+#ax = plt.axes(projection=ccrs.PlateCarree(central_longitude=180)) # paciifc-centered view
+#ax = plt.axes(projection=ccrs.Orthographic(0,90)) # arctic-centered view (turn off "extent" variable)
 ax.coastlines(resolution='110m',color='k')
 g1 = ax.gridlines(crs=ccrs.PlateCarree(),draw_labels=True,alpha=0)
 g1.top_labels = False
@@ -103,7 +107,13 @@ for key in trimmed:
     df = trimmed[key]
     lon = df.G2longitude
     lat = df.G2latitude
-    plot = ax.scatter(lon,lat,transform=ccrs.PlateCarree(),marker='o',edgecolors='none',s=1)
+    plot = ax.scatter(lon,lat,transform=ccrs.PlateCarree(),marker='o',edgecolors='none',s=1,color='steelblue')
+
+# plot one cruise colored
+df = trimmed['SR04']
+lon = df.G2longitude
+lat = df.G2latitude
+plot = ax.scatter(lon,lat,transform=ccrs.PlateCarree(),marker='o',edgecolors='none',s=1,color='crimson')
 
 # %% plot global ensemble mean regression for all trimmed GO-SHIP 
 
@@ -111,14 +121,14 @@ all_trimmed = pd.concat(trimmed.values(), ignore_index=True)
 
 # plot surface values and do linear regression
 surface = all_trimmed[all_trimmed.G2depth < 25]
-#surface = all_trimmed
+surface = all_trimmed
 x = surface.dectime
 y = surface.G2talk - surface.Ensemble_Mean_TA
 
 slope, intercept, rvalue, pvalue, stderr = stats.linregress(x, y, alternative='two-sided')
 
 # make plot
-fig = plt.figure(figsize=(9,6))
+fig = plt.figure(figsize=(9.5,6.5))
 ax = plt.gca()
 plt.scatter(surface.datetime,y,s=1)
 fig.text(0.6, 0.83, '$y={:.4f}x+{:.4f}$'.format(slope,intercept), fontsize=14)
@@ -132,45 +142,62 @@ ax.set_xlim(all_trimmed.datetime.min(),all_trimmed.datetime.max())
 # %% plot global ensemble mean regression for each GO-SHIP transect
 
 # plot surface values and do linear regression
+slopes = np.zeros(len(trimmed.keys()))
+pvalues = np.zeros(len(trimmed.keys()))
+i = 0
 
 for keys in trimmed:
-    transect = trimmed[keys]
-    surface = transect[transect.G2depth < 25]
-    x = surface.dectime
-    y = surface.G2talk - surface.Ensemble_Mean_TA
+    if len(trimmed[keys]) > 0: # if dictionary key is not empty 
+        transect = trimmed[keys]
+        surface = transect[transect.G2depth < 25]
+        x = surface.dectime
+        y = surface.G2talk - surface.Ensemble_Mean_TA
+        
+        slope, intercept, rvalue, pvalue, stderr = stats.linregress(x, y, alternative='two-sided')
+        slopes[i] = slope
+        pvalues[i] = pvalue
+        
+        # make regression of surface values
+        fig = plt.figure(figsize=(9,6))
+        ax = plt.gca()
+        plt.scatter(surface.datetime,y,s=1)
+        fig.text(0.6, 0.83, '$y={:.4f}x+{:.4f}$'.format(slope,intercept), fontsize=14)
+        fig.text(0.6, 0.78, '$p-value={:.4e}$'.format(pvalue), fontsize=14)
+        ax.plot(surface.datetime, intercept + slope * surface.dectime, color="r", lw=1);
+        ax.set_title(str(keys) + ': Difference in Measured and ESPER-Predicted TA (< 25 m)')
+        ax.set_ylabel('Measured TA - ESPER-Estimated TA ($mmol\;kg^{-1}$)')
+        ax.set_ylim(-70,70)
+        ax.set_xlim(all_trimmed.datetime.min(),all_trimmed.datetime.max())
     
-    slope, intercept, rvalue, pvalue, stderr = stats.linregress(x, y, alternative='two-sided')
+        transect = trimmed[keys]
+        x = transect.dectime
+        y = transect.G2talk - transect.Ensemble_Mean_TA
     
-    # make plot
-    fig = plt.figure(figsize=(9,6))
-    ax = plt.gca()
-    plt.scatter(surface.datetime,y,s=1)
-    fig.text(0.6, 0.83, '$y={:.4f}x+{:.4f}$'.format(slope,intercept), fontsize=14)
-    fig.text(0.6, 0.78, '$p-value={:.4e}$'.format(pvalue), fontsize=14)
-    ax.plot(surface.datetime, intercept + slope * surface.dectime, color="r", lw=1);
-    ax.set_title(str(keys) + ': Difference in Measured and ESPER-Predicted TA (< 25 m)')
-    ax.set_ylabel('Measured TA - ESPER-Estimated TA ($mmol\;kg^{-1}$)')
-    ax.set_ylim(-70,70)
-    ax.set_xlim(all_trimmed.datetime.min(),all_trimmed.datetime.max())
-
-    transect = trimmed[keys]
-    x = transect.dectime
-    y = transect.G2talk - transect.Ensemble_Mean_TA
-
-    slope, intercept, rvalue, pvalue, stderr = stats.linregress(x, y, alternative='two-sided')
-
-    # make plot
-    fig = plt.figure(figsize=(9,6))
-    ax = plt.gca()
-    plt.scatter(transect.datetime,y,s=1)
-    fig.text(0.6, 0.83, '$y={:.4f}x+{:.4f}$'.format(slope,intercept), fontsize=14)
-    fig.text(0.6, 0.78, '$p-value={:.4e}$'.format(pvalue), fontsize=14)
-    ax.plot(transect.datetime, intercept + slope * transect.dectime, color="r", lw=1);
-    ax.set_title(str(keys) + ': Difference in Measured and ESPER-Predicted TA (Full Depth)')
-    ax.set_ylabel('Measured TA - ESPER-Estimated TA ($mmol\;kg^{-1}$)')
-    ax.set_ylim(-70,70)
-    ax.set_xlim(all_trimmed.datetime.min(),all_trimmed.datetime.max())
-
+        slope, intercept, rvalue, pvalue, stderr = stats.linregress(x, y, alternative='two-sided')
+    
+        # make regression for full depth values
+        fig = plt.figure(figsize=(9,6))
+        ax = plt.gca()
+        plt.scatter(transect.datetime,y,s=1)
+        fig.text(0.6, 0.83, '$y={:.4f}x+{:.4f}$'.format(slope,intercept), fontsize=14)
+        fig.text(0.6, 0.78, '$p-value={:.4e}$'.format(pvalue), fontsize=14)
+        ax.plot(transect.datetime, intercept + slope * transect.dectime, color="r", lw=1);
+        ax.set_title(str(keys) + ': Difference in Measured and ESPER-Predicted TA (Full Depth)')
+        ax.set_ylabel('Measured TA - ESPER-Estimated TA ($mmol\;kg^{-1}$)')
+        ax.set_ylim(-70,70)
+        ax.set_xlim(all_trimmed.datetime.min(),all_trimmed.datetime.max())
+        i += 1
+    else:
+        slopes[i] = np.nan
+        pvalues[i] = np.nan
+        i += 1
+#%%    
+num_repeats = np.zeros(len(go_ship_cruise_nums_2023.keys()))
+i = 0
+for keys in trimmed:
+    num_repeats[i] = len(trimmed[keys].G2cruise.unique())
+    i += 1
+    
 # %% do robust regression to take care of outliers
 
 # SET ESPER ROUTINE HERE
