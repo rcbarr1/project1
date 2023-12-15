@@ -83,8 +83,8 @@ def glodap_reformat_time(glodap):
 
 def go_ship_only(glodap):
     """
-    Subsets GLODAPv2.2023 for data that is along a WOCE, CLIVAR, GO-SHIP,
-    SOCCOM, TTO, GEOSECS, or OVIDE transect. Additionally, outputs a dictionary
+    Subsets GLODAPv2.2023 for data that is along a WOCE, CLIVAR, GO-SHIP, or
+    SOCCOM transect. Additionally, outputs a dictionary
     with all transects as keys where associated values are the GLODAPv2.2023
     G2cruise numbers of all cruises that contain data along all or part of that
     transect. Marks cruises in Northwest Pacific conducted by Japanese
@@ -97,7 +97,7 @@ def go_ship_only(glodap):
         
     Returns:
         go_ship = subset of "glodap" dataframe that only contains entries from
-                 WOCE, CLIVAR, GO-SHIP, SOCCOM, TTO, GEOSECS, or OVIDE cruises
+                 WOCE, CLIVAR, GO-SHIP, or SOCCOM cruises
                  
         go_ship_cruise_nums_2023 = dictionary where keys are transects and
                  values are G2cruise numbers, as defined by GLODAPv2.2023, that

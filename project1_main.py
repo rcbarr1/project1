@@ -28,7 +28,7 @@ import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 import cmocean
 
-filepath = '/Users/Reese/Documents/project1/data/' # where GLODAP data is stored
+filepath = '/Users/Reese/Documents/Research Projects/project1/data/' # where GLODAP data is stored
 #input_GLODAP_file = 'GLODAPv2.2022_Merged_Master_File.csv' # GLODAP data filename (2022)
 input_GLODAP_file = 'GLODAPv2.2023_Merged_Master_File.csv' # GLODAP data filename (2023)
 
@@ -118,17 +118,18 @@ plot = ax.scatter(lon,lat,transform=ccrs.PlateCarree(),marker='o',edgecolors='no
 # %% plot global ensemble mean regression for all trimmed GO-SHIP 
 
 all_trimmed = pd.concat(trimmed.values(), ignore_index=True)
+all_trimmed = all_trimmed.drop_duplicates(ignore_index=True)
 
-# plot surface values and do linear regression
+# plot surface values and do regular linear regression
 surface = all_trimmed[all_trimmed.G2depth < 25]
-surface = all_trimmed
+#surface = all_trimmed
 x = surface.dectime
 y = surface.G2talk - surface.Ensemble_Mean_TA
 
 slope, intercept, rvalue, pvalue, stderr = stats.linregress(x, y, alternative='two-sided')
 
 # make plot
-fig = plt.figure(figsize=(9.5,6.5))
+fig = plt.figure(figsize=(9,6))
 ax = plt.gca()
 plt.scatter(surface.datetime,y,s=1)
 fig.text(0.6, 0.83, '$y={:.4f}x+{:.4f}$'.format(slope,intercept), fontsize=14)
@@ -138,6 +139,61 @@ ax.set_title('Difference in Measured and ESPER-Predicted TA along GO-SHIP Transe
 ax.set_ylabel('Measured TA - ESPER-Estimated TA ($mmol\;kg^{-1}$)')
 ax.set_ylim(-70,70)
 ax.set_xlim(all_trimmed.datetime.min(),all_trimmed.datetime.max())
+
+# apply robust regression
+x = x.to_numpy().reshape(-1, 1) 
+y = y.to_numpy().reshape(-1, 1) 
+
+ransac = RANSACRegressor(estimator=LinearRegression(), min_samples=round(surface.shape[0]/2),
+                         loss='absolute_error', random_state=42)
+
+ransac.fit(x,y)
+
+# get inlier mask and create outlier mask
+inlier_mask = ransac.inlier_mask_
+outlier_mask = np.logical_not(inlier_mask)
+
+# create scatter plot for inlier dataset
+fig = plt.figure(figsize=(9.5,6.5))
+plt.scatter(x[inlier_mask], y[inlier_mask], c='steelblue', marker='o', label='Inliers', alpha=0.3, s=10)
+
+# create scatter plot for outlier dataset
+plt.scatter(x[outlier_mask], y[outlier_mask], c='lightgreen', marker='o', label='Outliers', alpha=0.3, s=10)
+
+# draw best fit line
+line_x = np.arange(x.min(), x.max(), 1)
+line_y_ransac = ransac.predict(line_x[:, np.newaxis])
+plt.plot(line_x, line_y_ransac, color='black', lw=2)
+
+# output slope, intercept, and r2 (assuming time 0 is the first measurement )
+slope = (line_y_ransac[-1][0] - line_y_ransac[0][0]) / (line_x[-1] - line_x[0])
+intercept = line_y_ransac[0][0]
+y_pred = ransac.predict(x)
+r2 = r2_score(y,y_pred)
+
+# calculate p value with two sample t test
+# check if variances are equal - they are most definitely not
+#print(np.var(y))
+#print(np.var(y_pred))
+result = stats.ttest_ind(a=y,b=y_pred,equal_var=False)
+pvalue = result.pvalue
+
+
+# formatting
+ax = fig.gca()
+ax.set_title('Difference in Measured and ESPER-Predicted TA along GO-SHIP Transects (< 25 m)')
+ax.set_ylabel('Measured TA - ESPER-Estimated TA ($mmol\;kg^{-1}$)')
+ax.set_ylim(-70,70)
+ax.set_xlim(all_trimmed.dectime.min(),all_trimmed.dectime.max())
+plt.legend(loc='upper right', ncol=1)
+
+# add box showing slope and r2
+fig.text(0.14, 0.83, '$y={:.4f}x+{:.4f}$'.format(slope,intercept), fontsize=12)
+fig.text(0.14, 0.78, '$p-value={:.3e}$'.format(pvalue[0]), fontsize=12)
+
+# calculate percent of data that is an inlier
+percent_inlier = len(x[inlier_mask])/len(x) * 100
+print(percent_inlier)
 
 # %% plot global ensemble mean regression for each GO-SHIP transect
 

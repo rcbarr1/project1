@@ -17,7 +17,7 @@ import project1 as p1
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 
-filepath = '/Users/Reese/Documents/project1/data/' # where GLODAP data is stored
+filepath = '/Users/Reese/Documents/Research Projects/project1/data/' # where GLODAP data is stored
 #input_GLODAP_file = 'GLODAPv2.2022_Merged_Master_File.csv' # GLODAP data filename (2022)
 input_GLODAP_file = 'GLODAPv2.2023_Merged_Master_File.csv' # GLODAP data filename (2023)
 

@@ -7,7 +7,7 @@ Date: 2023-11-28
 
 Description: Used to search for GO-SHIP cruises within GLODAP dataset. This
 code became part of the "go_ship_only" function that is now in project1.py.
-Contains WOCE, CLIVAR, GO-SHIP, GEOSECS, TTO, SOCCOM, and OVIDE data.
+Contains WOCE, CLIVAR, GO-SHIP, and SOCCOM data.
     
 """
 
@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 
-filepath = '/Users/Reese/Documents/project1/data/' # where GLODAP data is stored
+filepath = '/Users/Reese/Documents/Research Projects/project1/data/' # where GLODAP data is stored
 #input_GLODAP_file = 'GLODAPv2.2022_Merged_Master_File.csv' # GLODAP data filename (2022)
 input_GLODAP_file = 'GLODAPv2.2023_Merged_Master_File.csv' # GLODAP data filename (2023)
 
