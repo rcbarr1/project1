@@ -31,6 +31,7 @@ import cmocean
 filepath = '/Users/Reese/Documents/Research Projects/project1/data/' # where GLODAP data is stored
 #input_GLODAP_file = 'GLODAPv2.2022_Merged_Master_File.csv' # GLODAP data filename (2022)
 input_GLODAP_file = 'GLODAPv2.2023_Merged_Master_File.csv' # GLODAP data filename (2023)
+input_mc_file = 'G2talk_mc_simulated.csv' # MC (per cruise) simulated data
 
 # %% import GLODAP data file
 glodap = pd.read_csv(filepath + input_GLODAP_file, na_values = -9999)
@@ -72,6 +73,17 @@ espers = p1.ensemble_mean(espers)
 
 # %% trim GO-SHIP + associated cruises to pick out data points on the standard transect
 trimmed = p1.trim_go_ship(espers, go_ship_cruise_nums_2023)
+all_trimmed = pd.concat(trimmed.values(), ignore_index=True) # flatten from dict of dataframes into one large dataframe
+all_trimmed = all_trimmed.drop_duplicates(ignore_index=True) # drop duplicates
+
+# %% run (or upload) MC simulation to create array of simulated G2talk values
+#num_mc_runs = 1000
+#G2talk_mc = p1.create_mc_cruise_offset(all_trimmed, num_mc_runs)
+# export dataframe of simulated G2talk columns as .csv to put back with go_ship dataframe and run through espers        
+#G2talk_mc = pd.DataFrame(G2talk_mc)
+#G2talk_mc.to_csv(filepath + 'G2talk_mc_simulated.csv', index=False)
+
+G2talk_mc = pd.read_csv(filepath + input_mc_file, na_values = -9999)
 
 # %% start data visualization
 
@@ -117,9 +129,6 @@ plot = ax.scatter(lon,lat,transform=ccrs.PlateCarree(),marker='o',edgecolors='no
 
 # %% plot global ensemble mean regression for all trimmed GO-SHIP 
 
-all_trimmed = pd.concat(trimmed.values(), ignore_index=True)
-all_trimmed = all_trimmed.drop_duplicates(ignore_index=True)
-
 # plot surface values and do regular linear regression
 surface = all_trimmed[all_trimmed.G2depth < 25]
 #surface = all_trimmed
@@ -140,60 +149,42 @@ ax.set_ylabel('Measured TA - ESPER-Estimated TA ($mmol\;kg^{-1}$)')
 ax.set_ylim(-70,70)
 ax.set_xlim(all_trimmed.datetime.min(),all_trimmed.datetime.max())
 
-# apply robust regression
-x = x.to_numpy().reshape(-1, 1) 
-y = y.to_numpy().reshape(-1, 1) 
+# %% loop through monte carlo simulation-produced G2talk to do global ensemble mean regression
 
-ransac = RANSACRegressor(estimator=LinearRegression(), min_samples=round(surface.shape[0]/2),
-                         loss='absolute_error', random_state=42)
+# plot surface values and do regular linear regression
+all_trimmed_mc = pd.concat([all_trimmed, G2talk_mc], axis=1)
+all_trimmed_mc = all_trimmed_mc[all_trimmed_mc.G2depth < 25]
+x = surface.dectime
 
-ransac.fit(x,y)
+# preallocate arrays for storing slope and p-values
+slopes = np.zeros(G2talk_mc.shape[1])
+pvalues = np.zeros(G2talk_mc.shape[1])
 
-# get inlier mask and create outlier mask
-inlier_mask = ransac.inlier_mask_
-outlier_mask = np.logical_not(inlier_mask)
+for i in range(0,G2talk_mc.shape[1]): 
+#for i in range(0,2):
+    y = all_trimmed_mc[str(i)] - all_trimmed_mc.Ensemble_Mean_TA
 
-# create scatter plot for inlier dataset
-fig = plt.figure(figsize=(9.5,6.5))
-plt.scatter(x[inlier_mask], y[inlier_mask], c='steelblue', marker='o', label='Inliers', alpha=0.3, s=10)
+    slope, intercept, rvalue, pvalue, stderr = stats.linregress(x, y, alternative='two-sided')
+    
+    slopes[i] = slope
+    pvalues[i] = pvalue
 
-# create scatter plot for outlier dataset
-plt.scatter(x[outlier_mask], y[outlier_mask], c='lightgreen', marker='o', label='Outliers', alpha=0.3, s=10)
+# make histogram of slopes
+fig = plt.figure(figsize=(9,6))
+ax = plt.gca()
+plt.hist(slopes, bins=100)
+ax.set_title('Monte Carlo Simulation: Slopes of Linear Regressions\n(1000 runs, normally-distributed error of 2 µmol/kg added to each cruise)')
+ax.set_xlabel('Slope of Measured TA - ESPER-Estimated TA over Time ($mmol\;kg^{-1}$)')
+ax.set_ylabel('Count')
 
-# draw best fit line
-line_x = np.arange(x.min(), x.max(), 1)
-line_y_ransac = ransac.predict(line_x[:, np.newaxis])
-plt.plot(line_x, line_y_ransac, color='black', lw=2)
-
-# output slope, intercept, and r2 (assuming time 0 is the first measurement )
-slope = (line_y_ransac[-1][0] - line_y_ransac[0][0]) / (line_x[-1] - line_x[0])
-intercept = line_y_ransac[0][0]
-y_pred = ransac.predict(x)
-r2 = r2_score(y,y_pred)
-
-# calculate p value with two sample t test
-# check if variances are equal - they are most definitely not
-#print(np.var(y))
-#print(np.var(y_pred))
-result = stats.ttest_ind(a=y,b=y_pred,equal_var=False)
-pvalue = result.pvalue
-
-
-# formatting
-ax = fig.gca()
-ax.set_title('Difference in Measured and ESPER-Predicted TA along GO-SHIP Transects (< 25 m)')
-ax.set_ylabel('Measured TA - ESPER-Estimated TA ($mmol\;kg^{-1}$)')
-ax.set_ylim(-70,70)
-ax.set_xlim(all_trimmed.dectime.min(),all_trimmed.dectime.max())
-plt.legend(loc='upper right', ncol=1)
-
-# add box showing slope and r2
-fig.text(0.14, 0.83, '$y={:.4f}x+{:.4f}$'.format(slope,intercept), fontsize=12)
-fig.text(0.14, 0.78, '$p-value={:.3e}$'.format(pvalue[0]), fontsize=12)
-
-# calculate percent of data that is an inlier
-percent_inlier = len(x[inlier_mask])/len(x) * 100
-print(percent_inlier)
+# scatter slopes and p values to see if any <0 are significant
+fig = plt.figure(figsize=(9,6))
+ax = plt.gca()
+plt.scatter(slopes,pvalues)
+plt.axhline(y = 0.05, color = 'r', linestyle = '--') 
+ax.set_title('Monte Carlo Simulation: Slopes of Linear Regressions & Associated p-Values\n(1000 runs, normally-distributed error of 2 µmol/kg added to each cruise)')
+ax.set_xlabel('Slope of Measured TA - ESPER-Estimated TA over Time ($mmol\;kg^{-1}$)')
+ax.set_ylabel('p-Value')
 
 # %% plot global ensemble mean regression for each GO-SHIP transect
 
@@ -247,12 +238,6 @@ for keys in trimmed:
         slopes[i] = np.nan
         pvalues[i] = np.nan
         i += 1
-#%%    
-num_repeats = np.zeros(len(go_ship_cruise_nums_2023.keys()))
-i = 0
-for keys in trimmed:
-    num_repeats[i] = len(trimmed[keys].G2cruise.unique())
-    i += 1
     
 # %% do robust regression to take care of outliers
 

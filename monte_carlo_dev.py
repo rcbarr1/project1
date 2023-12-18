@@ -18,19 +18,19 @@ filepath = '/Users/Reese/Documents/Research Projects/project1/data/' # where GLO
 # import GLODAP data files
 glodap = pd.read_csv(filepath + 'GLODAPv2.2023_Merged_Master_File.csv', na_values = -9999)
 
-# %% process glodap data
+_ , go_ship_cruise_nums_2023 = p1.go_ship_only(glodap) # get list of go_ship cruise numbers
 
-# filter data for only GO-SHIP + associated cruises
-go_ship, go_ship_cruise_nums_2023 = p1.go_ship_only(glodap)
+# %% upload & process espers data
 
-# do quality control
-go_ship = p1.glodap_qc(go_ship)
+# upload ESPERs outputs to here
+espers = pd.read_csv(filepath + 'GLODAP_with_ESPER_TA.csv')
+espers['datetime'] = pd.to_datetime(espers['datetime']) # recast datetime as datetime data type
 
-# convert time to decimal time and datetime for use in ESPERs
-go_ship = p1.glodap_reformat_time(go_ship)
+# calculate ensemble mean TA for each data point
+espers = p1.ensemble_mean(espers)
 
 # trim cruises to get rid of extraneous points not along transects
-trimmed = p1.trim_go_ship(go_ship, go_ship_cruise_nums_2023)
+trimmed = p1.trim_go_ship(espers, go_ship_cruise_nums_2023)
 all_trimmed = pd.concat(trimmed.values(), ignore_index=True) # flatten from dict of dataframes into one large dataframe
 all_trimmed = all_trimmed.drop_duplicates(ignore_index=True) # drop duplicates
 
@@ -63,10 +63,14 @@ all_trimmed.to_csv(filepath + 'go_ship_trimmed_for_ESPERs.csv', index=False) # m
 G2talk_mc_df = pd.DataFrame(G2talk_mc)
 G2talk_mc_df.to_csv(filepath + 'G2talk_mc_simulated.csv', index=False)
 
-# %%run through ESPERs
 
 
 
-# %% calculate ensemble mean TA for each data point
-#espers = p1.ensemble_mean(espers)
+
+
+
+
+
+
+
 
