@@ -885,7 +885,44 @@ def create_mc_cruise_offset(all_trimmed, num_mc_runs):
         G2talk_mc[:,j] = go_ship_offset['G2talk'].to_numpy()
     
     return G2talk_mc
+
+
+def create_mc_individual_offset(all_trimmed, num_mc_runs):
+    """
+    Uses KL divergence to determine which equations predict best, where a lower
+    KL divergence means that the two datasets are closer.
     
+    Keyword arguments:
+        all_trimmed = flattened dataframe of trimmed go-ship/clivar/woce
+        cruises (not in dictionary form by transect)
+        
+        num_mc_runs = number of times to repeat Monte Carlo simulation
+        
+    Returns:
+        G2talk_mc = array where rows are each data point, columns are each one
+        MC simulation, and in each column cruises are offset by an amount
+        selected randomly from a normal distribution with a standard deviation
+        of 2 µmol/kg
+
+    """
+
+    G2talk_mc = np.empty((len(all_trimmed.G2talk),num_mc_runs))
+
+    for j in range(0,num_mc_runs): # loop to repeat x times for MC analysis
+        go_ship_offset = all_trimmed.copy()
+        
+        # loop through all data points
+        for i in range(0,len(all_trimmed.G2talk)):
+            # get random number between from normal distribution with mean at 0 and
+            # standard deviation at 2, representing ± 2 µmol/kg alkalinity
+            offset = np.random.normal(loc = 0.0, scale = 2)
+            offset = np.round(offset, decimals=1)
+            
+            # add offset to all rows tagged with cruise number i
+            G2talk_mc[i,j] = go_ship_offset.loc[i,'G2talk'] + offset
+        print(j)
+    
+    return G2talk_mc
     
     
         

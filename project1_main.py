@@ -31,7 +31,8 @@ import cmocean
 filepath = '/Users/Reese/Documents/Research Projects/project1/data/' # where GLODAP data is stored
 #input_GLODAP_file = 'GLODAPv2.2022_Merged_Master_File.csv' # GLODAP data filename (2022)
 input_GLODAP_file = 'GLODAPv2.2023_Merged_Master_File.csv' # GLODAP data filename (2023)
-input_mc_file = 'G2talk_mc_simulated.csv' # MC (per cruise) simulated data
+input_mc_cruise_file = 'G2talk_mc_simulated.csv' # MC (per cruise) simulated data
+input_mc_individual_file = 'G2talk_mc_individual_simulated.csv' # MC (per cruise) simulated data
 
 # %% import GLODAP data file
 glodap = pd.read_csv(filepath + input_GLODAP_file, na_values = -9999)
@@ -76,14 +77,23 @@ trimmed = p1.trim_go_ship(espers, go_ship_cruise_nums_2023)
 all_trimmed = pd.concat(trimmed.values(), ignore_index=True) # flatten from dict of dataframes into one large dataframe
 all_trimmed = all_trimmed.drop_duplicates(ignore_index=True) # drop duplicates
 
-# %% run (or upload) MC simulation to create array of simulated G2talk values
+# %% run (or upload) MC simulation to create array of simulated G2talk values (by cruise offset)
 #num_mc_runs = 1000
 #G2talk_mc = p1.create_mc_cruise_offset(all_trimmed, num_mc_runs)
 # export dataframe of simulated G2talk columns as .csv to put back with go_ship dataframe and run through espers        
 #G2talk_mc = pd.DataFrame(G2talk_mc)
-#G2talk_mc.to_csv(filepath + 'G2talk_mc_simulated.csv', index=False)
+#G2talk_mc.to_csv(filepath + input_mc_cruise_file, index=False)
 
-G2talk_mc = pd.read_csv(filepath + input_mc_file, na_values = -9999)
+G2talk_mc = pd.read_csv(filepath + input_mc_cruise_file, na_values = -9999)
+
+# %% run (or upload) MC simulation to create array of simulated G2talk values (individual point offset)
+#num_mc_runs = 1000
+#G2talk_mc = p1.create_mc_individual_offset(all_trimmed, num_mc_runs)
+# export dataframe of simulated G2talk columns as .csv to put back with go_ship dataframe and run through espers        
+#G2talk_mc = pd.DataFrame(G2talk_mc)
+#G2talk_mc.to_csv(filepath + input_mc_individual_file, index=False)
+
+G2talk_mc = pd.read_csv(filepath + input_mc_individual_file, na_values = -9999)
 
 # %% start data visualization
 
@@ -154,7 +164,7 @@ ax.set_xlim(all_trimmed.datetime.min(),all_trimmed.datetime.max())
 # plot surface values and do regular linear regression
 all_trimmed_mc = pd.concat([all_trimmed, G2talk_mc], axis=1)
 all_trimmed_mc = all_trimmed_mc[all_trimmed_mc.G2depth < 25]
-x = surface.dectime
+x = all_trimmed_mc.dectime
 
 # preallocate arrays for storing slope and p-values
 slopes = np.zeros(G2talk_mc.shape[1])
@@ -162,7 +172,8 @@ pvalues = np.zeros(G2talk_mc.shape[1])
 
 for i in range(0,G2talk_mc.shape[1]): 
 #for i in range(0,2):
-    y = all_trimmed_mc[str(i)] - all_trimmed_mc.Ensemble_Mean_TA
+    y = all_trimmed_mc[str(i)] - all_trimmed_mc.Ensemble_Mean_TA # this works for per cruise offsets
+    #y = all_trimmed_mc[i] - all_trimmed_mc.Ensemble_Mean_TA # this works for individual offsets
 
     slope, intercept, rvalue, pvalue, stderr = stats.linregress(x, y, alternative='two-sided')
     
@@ -173,7 +184,7 @@ for i in range(0,G2talk_mc.shape[1]):
 fig = plt.figure(figsize=(9,6))
 ax = plt.gca()
 plt.hist(slopes, bins=100)
-ax.set_title('Monte Carlo Simulation: Slopes of Linear Regressions\n(1000 runs, normally-distributed error of 2 µmol/kg added to each cruise)')
+ax.set_title('Monte Carlo Simulation: Slopes of Linear Regressions\n(1000 runs, normally-distributed error of 2 µmol/kg added to each point)')
 ax.set_xlabel('Slope of Measured TA - ESPER-Estimated TA over Time ($mmol\;kg^{-1}$)')
 ax.set_ylabel('Count')
 
@@ -182,9 +193,66 @@ fig = plt.figure(figsize=(9,6))
 ax = plt.gca()
 plt.scatter(slopes,pvalues)
 plt.axhline(y = 0.05, color = 'r', linestyle = '--') 
-ax.set_title('Monte Carlo Simulation: Slopes of Linear Regressions & Associated p-Values\n(1000 runs, normally-distributed error of 2 µmol/kg added to each cruise)')
+ax.set_title('Monte Carlo Simulation: Slopes of Linear Regressions & Associated p-Values\n(1000 runs, normally-distributed error of 2 µmol/kg added to each point)')
 ax.set_xlabel('Slope of Measured TA - ESPER-Estimated TA over Time ($mmol\;kg^{-1}$)')
 ax.set_ylabel('p-Value')
+
+# %% make box plot graph of transect slopes from mc simulation
+
+# pull surface values
+all_trimmed_mc = pd.concat([all_trimmed, G2talk_mc], axis=1)
+all_trimmed_mc = all_trimmed_mc[all_trimmed_mc.G2depth < 25]
+
+# turn into dict with transects as keys
+trimmed_mc = p1.trim_go_ship(all_trimmed_mc, go_ship_cruise_nums_2023)
+
+# get rid of empty dict entries
+del_keys = []
+for key in trimmed_mc:
+    if trimmed_mc[key].empty:
+        del_keys.append(key)
+
+for key in del_keys:
+    del trimmed_mc[key]
+
+# %% set up plot
+fig = plt.figure(figsize=(15,7))
+ax = plt.gca()
+
+# preallocate np array to save slopes data in
+all_slopes = [np.zeros(G2talk_mc.shape[1]) for i in range(0, len(trimmed_mc.keys()))] # number of transects by number of mc simulations
+
+# loop through transects
+j = 0
+for key in trimmed_mc:
+    transect = trimmed_mc[key]
+    transect = transect[transect.G2depth < 25] # pull out surface points only
+    x = transect.dectime
+    
+    transect_mc = transect.iloc[:,116:] # pull only mc simulated G2talk for this transect
+    
+    # calculate slope and p value for each mc run
+    slopes = np.zeros(transect_mc.shape[1])
+    pvalues = np.zeros(transect_mc.shape[1])
+    
+    # loop through mc simulations for this transect
+    for i in range(0,transect_mc.shape[1]):
+        y = transect_mc.iloc[:,i] - transect.Ensemble_Mean_TA
+    
+        slope, _, _, pvalue, _ = stats.linregress(x, y, alternative='two-sided')
+        slopes[i] = slope
+        pvalues[i] = pvalue
+    
+    all_slopes[j] = slopes
+    j += 1
+
+# make box plot
+plt.boxplot(all_slopes, vert=True, labels=list(trimmed_mc.keys()))
+plt.axhline(y=0, color='r', linestyle='--')
+plt.xticks(rotation=90)
+ax.set_ylabel('Slope of Measured TA - ESPER-Estimated TA over Time ($mmol\;kg^{-1}$)')
+ax.set_title('Monte Carlo Simulation: Slopes of Linear Regressions & Associated p-Values by Transect\n(1000 runs, normally-distributed error of 2 µmol/kg added to each point)')
+ax.set_ylim(-2, 2)
 
 # %% plot global ensemble mean regression for each GO-SHIP transect
 

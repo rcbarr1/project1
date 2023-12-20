@@ -63,7 +63,23 @@ all_trimmed.to_csv(filepath + 'go_ship_trimmed_for_ESPERs.csv', index=False) # m
 G2talk_mc_df = pd.DataFrame(G2talk_mc)
 G2talk_mc_df.to_csv(filepath + 'G2talk_mc_simulated.csv', index=False)
 
+# %%
+num_mc_runs = 2
+G2talk_mc = np.empty((len(all_trimmed.G2talk),num_mc_runs))
 
+for j in range(0,num_mc_runs): # loop to repeat x times for MC analysis
+    go_ship_offset = all_trimmed.copy()
+     
+    # loop through all data points
+    for i in range(0,len(all_trimmed.G2talk)):
+        # get random number between from normal distribution with mean at 0 and
+        # standard deviation at 2, representing ± 2 µmol/kg alkalinity
+        offset = np.random.normal(loc = 0.0, scale = 2)
+        offset = np.round(offset, decimals=1)
+         
+        # add offset to all rows tagged with cruise number i
+        G2talk_mc[i,j] = go_ship_offset.loc[i,'G2talk'] + offset
+    print(j)
 
 
 
