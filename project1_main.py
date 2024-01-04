@@ -9,7 +9,6 @@ Description: Main script for Project 1, calls functions written in project1.py
     for data analysis
     
 To-Do:
-    - write go_ship_only function to subset for GO-SHIP code
     - write function to do corrections in North Pacific (add to glodap_qc)
     - translate call_ESPERs.m to python once ESPERs in Python are released
 """
@@ -21,12 +20,12 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy import stats
-from scipy import interpolate
+#from scipy import interpolate
 from sklearn.linear_model import LinearRegression, RANSACRegressor
 from sklearn.metrics import r2_score
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
-import cmocean
+#import cmocean
 
 filepath = '/Users/Reese/Documents/Research Projects/project1/data/' # where GLODAP data is stored
 #input_GLODAP_file = 'GLODAPv2.2022_Merged_Master_File.csv' # GLODAP data filename (2022)
@@ -201,10 +200,22 @@ ax.set_ylabel('p-Value')
 
 # pull surface values
 all_trimmed_mc = pd.concat([all_trimmed, G2talk_mc], axis=1)
-all_trimmed_mc = all_trimmed_mc[all_trimmed_mc.G2depth < 25]
+#all_trimmed_mc = all_trimmed_mc[all_trimmed_mc.G2depth < 25]
 
 # turn into dict with transects as keys
 trimmed_mc = p1.trim_go_ship(all_trimmed_mc, go_ship_cruise_nums_2023)
+
+# remove transects that have 0 or 1 repeats
+# I01, P02_J, P03, P09, P10, P13, P17E, ARC01W, MED01
+del trimmed_mc['I01']
+del trimmed_mc['P02_J']
+del trimmed_mc['P03']
+del trimmed_mc['P09']
+del trimmed_mc['P10']
+del trimmed_mc['P13']
+del trimmed_mc['P17E']
+del trimmed_mc['ARC01W']
+del trimmed_mc['MED01']
 
 # get rid of empty dict entries
 del_keys = []
@@ -215,18 +226,16 @@ for key in trimmed_mc:
 for key in del_keys:
     del trimmed_mc[key]
 
-# %% set up plot
-fig = plt.figure(figsize=(15,7))
-ax = plt.gca()
-
-# preallocate np array to save slopes data in
+# %% preallocate np array to save slopes & p-values data in
 all_slopes = [np.zeros(G2talk_mc.shape[1]) for i in range(0, len(trimmed_mc.keys()))] # number of transects by number of mc simulations
+all_sig_slopes = [np.zeros(G2talk_mc.shape[1]) for i in range(0, len(trimmed_mc.keys()))] # number of transects by number of mc simulations (only to store statistically significant slopes)
+all_pvalues = [np.zeros(G2talk_mc.shape[1]) for i in range(0, len(trimmed_mc.keys()))] # number of transects by number of mc simulations
+
 
 # loop through transects
 j = 0
 for key in trimmed_mc:
     transect = trimmed_mc[key]
-    transect = transect[transect.G2depth < 25] # pull out surface points only
     x = transect.dectime
     
     transect_mc = transect.iloc[:,116:] # pull only mc simulated G2talk for this transect
@@ -234,6 +243,7 @@ for key in trimmed_mc:
     # calculate slope and p value for each mc run
     slopes = np.zeros(transect_mc.shape[1])
     pvalues = np.zeros(transect_mc.shape[1])
+    sig_slopes = np.zeros(transect_mc.shape[1])
     
     # loop through mc simulations for this transect
     for i in range(0,transect_mc.shape[1]):
@@ -242,17 +252,51 @@ for key in trimmed_mc:
         slope, _, _, pvalue, _ = stats.linregress(x, y, alternative='two-sided')
         slopes[i] = slope
         pvalues[i] = pvalue
+        if pvalue < 0.05:
+            sig_slopes[i] = slope
+        else:
+            sig_slopes[i] = np.nan
     
     all_slopes[j] = slopes
+    all_pvalues[j] = pvalues
+    all_sig_slopes[j] = sig_slopes
+    
     j += 1
 
-# make box plot
-plt.boxplot(all_slopes, vert=True, labels=list(trimmed_mc.keys()))
+# make box plot for slope
+#fig = plt.figure(figsize=(15,7))
+#ax = plt.gca()
+#plt.boxplot(all_slopes, vert=True, labels=list(trimmed_mc.keys()))
+#plt.axhline(y=0, color='r', linestyle='--')
+#plt.xticks(rotation=90)
+#ax.set_ylabel('Slope of Measured TA - ESPER-Estimated TA over Time ($mmol\;kg^{-1}$)')
+#ax.set_title('Monte Carlo Simulation: Slopes of Linear Regressions by Transect\n(1000 runs, normally-distributed error of 2 µmol/kg added to each cruise)')
+#ax.set_ylim(-2, 2)
+
+# make box plot for p values
+#fig = plt.figure(figsize=(15,7))
+#ax = plt.gca()
+#plt.boxplot(all_pvalues, vert=True, labels=list(trimmed_mc.keys()))
+#plt.axhline(y=0.05, color='r', linestyle='--')
+#plt.xticks(rotation=90)
+#ax.set_ylabel('P-Value for Measured TA - ESPER-Estimated TA over Time ($mmol\;kg^{-1}$)')
+#ax.set_title('Monte Carlo Simulation: P-Values of Linear Regressions by Transect\n(1000 runs, normally-distributed error of 2 µmol/kg added to each point)')
+#ax.set_ylim(0, 1)
+
+#%% make box plot for only slopes that have significant p-value
+# filter to get rid of NaNs
+all_sig_slopes_arr = np.array(all_sig_slopes)
+mask = ~np.isnan(all_sig_slopes_arr)
+filtered_data = [d[m] for d, m in zip(all_sig_slopes_arr, mask)]
+# plot box plot
+fig = plt.figure(figsize=(15,7))
+ax = plt.gca()
+plt.boxplot(filtered_data, vert=True, labels=list(trimmed_mc.keys()))
 plt.axhline(y=0, color='r', linestyle='--')
 plt.xticks(rotation=90)
-ax.set_ylabel('Slope of Measured TA - ESPER-Estimated TA over Time ($mmol\;kg^{-1}$)')
-ax.set_title('Monte Carlo Simulation: Slopes of Linear Regressions & Associated p-Values by Transect\n(1000 runs, normally-distributed error of 2 µmol/kg added to each point)')
-ax.set_ylim(-2, 2)
+ax.set_ylabel(' Slope of Measured TA - ESPER-Estimated TA over Time ($mmol\;kg^{-1}$)')
+ax.set_title('Monte Carlo Simulation: Significant Slopes of Linear Regressions by Transect\n(1000 runs, normally-distributed error of 2 µmol/kg added to each point)')
+#ax.set_ylim(-2, 2)
 
 # %% plot global ensemble mean regression for each GO-SHIP transect
 
