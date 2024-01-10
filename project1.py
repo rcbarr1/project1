@@ -209,44 +209,55 @@ def ensemble_mean(espers):
         
     """
     
-    talk_subset = espers[['LIRtalk1', 'LIRtalk2', 'LIRtalk3', 'LIRtalk4',
-                          'LIRtalk5', 'LIRtalk6', 'LIRtalk7', 'LIRtalk8',
-                          'LIRtalk9', 'LIRtalk10', 'LIRtalk11', 'LIRtalk12',
-                          'LIRtalk13', 'LIRtalk14', 'LIRtalk15', 'LIRtalk16',
-                          'NNtalk1', 'NNtalk2', 'NNtalk3', 'NNtalk4', 'NNtalk5',
-                          'NNtalk6', 'NNtalk7', 'NNtalk8', 'NNtalk9', 'NNtalk10',
-                          'NNtalk11', 'NNtalk12', 'NNtalk13', 'NNtalk14',
-                          'NNtalk15', 'NNtalk16', 'Mtalk1', 'Mtalk2', 'Mtalk3',
-                          'Mtalk4', 'Mtalk5', 'Mtalk6', 'Mtalk7', 'Mtalk8',
-                          'Mtalk9', 'Mtalk10', 'Mtalk11', 'Mtalk12',  'Mtalk13',
-                          'Mtalk14', 'Mtalk15', 'Mtalk16']]
+    talk_subset_LIR = espers[['LIRtalk1', 'LIRtalk2', 'LIRtalk3', 'LIRtalk4', 
+                              'LIRtalk5', 'LIRtalk6', 'LIRtalk7', 'LIRtalk8',
+                              'LIRtalk9', 'LIRtalk10', 'LIRtalk11',
+                              'LIRtalk12', 'LIRtalk13', 'LIRtalk14',
+                              'LIRtalk15', 'LIRtalk16']]
+    
+    talk_subset_NN = espers[['NNtalk1', 'NNtalk2', 'NNtalk3', 'NNtalk4',
+                             'NNtalk5', 'NNtalk6', 'NNtalk7', 'NNtalk8',
+                             'NNtalk9', 'NNtalk10', 'NNtalk11', 'NNtalk12',
+                             'NNtalk13', 'NNtalk14', 'NNtalk15', 'NNtalk16']]
+    
+    talk_subset_M = espers[['Mtalk1', 'Mtalk2', 'Mtalk3', 'Mtalk4',
+                                'Mtalk5', 'Mtalk6', 'Mtalk7', 'Mtalk8', 
+                                'Mtalk9', 'Mtalk10', 'Mtalk11', 'Mtalk12',
+                                'Mtalk13', 'Mtalk14', 'Mtalk15', 'Mtalk16']]
 
-    uncertainty_subset = espers[['LIRtalk_uncert1', 'LIRtalk_uncert2',
-                                 'LIRtalk_uncert3', 'LIRtalk_uncert4',
-                                 'LIRtalk_uncert5', 'LIRtalk_uncert6',
-                                 'LIRtalk_uncert7', 'LIRtalk_uncert8',
-                                 'LIRtalk_uncert9', 'LIRtalk_uncert10',
-                                 'LIRtalk_uncert11', 'LIRtalk_uncert12',
-                                 'LIRtalk_uncert13', 'LIRtalk_uncert14',
-                                 'LIRtalk_uncert15', 'LIRtalk_uncert16',
-                                 'NNtalk_uncert1', 'NNtalk_uncert2',
-                                 'NNtalk_uncert3', 'NNtalk_uncert4',
-                                 'NNtalk_uncert5', 'NNtalk_uncert6',
-                                 'NNtalk_uncert7', 'NNtalk_uncert8',
-                                 'NNtalk_uncert9', 'NNtalk_uncert10',
-                                 'NNtalk_uncert11', 'NNtalk_uncert12',
-                                 'NNtalk_uncert13', 'NNtalk_uncert14',
-                                 'NNtalk_uncert15', 'NNtalk_uncert16',
-                                 'Mtalk_uncert1', 'Mtalk_uncert2', 'Mtalk_uncert3',
-                                 'Mtalk_uncert4', 'Mtalk_uncert5', 'Mtalk_uncert6',
-                                 'Mtalk_uncert7', 'Mtalk_uncert8', 'Mtalk_uncert9',
-                                 'Mtalk_uncert10', 'Mtalk_uncert11',
-                                 'Mtalk_uncert12',  'Mtalk_uncert13',
-                                 'Mtalk_uncert14', 'Mtalk_uncert15',
-                                 'Mtalk_uncert16']]
+    uncertainty_subset_LIR = espers[['LIRtalk_uncert1', 'LIRtalk_uncert2',
+                                     'LIRtalk_uncert3', 'LIRtalk_uncert4',
+                                     'LIRtalk_uncert5', 'LIRtalk_uncert6',
+                                     'LIRtalk_uncert7', 'LIRtalk_uncert8',
+                                     'LIRtalk_uncert9', 'LIRtalk_uncert10',
+                                     'LIRtalk_uncert11', 'LIRtalk_uncert12',
+                                     'LIRtalk_uncert13', 'LIRtalk_uncert14',
+                                     'LIRtalk_uncert15', 'LIRtalk_uncert16']]
+    
+    uncertainty_subset_NN = espers[['NNtalk_uncert1', 'NNtalk_uncert2',
+                                    'NNtalk_uncert3', 'NNtalk_uncert4',
+                                    'NNtalk_uncert5', 'NNtalk_uncert6',
+                                    'NNtalk_uncert7', 'NNtalk_uncert8',
+                                    'NNtalk_uncert9', 'NNtalk_uncert10',
+                                    'NNtalk_uncert11', 'NNtalk_uncert12',
+                                    'NNtalk_uncert13', 'NNtalk_uncert14',
+                                    'NNtalk_uncert15', 'NNtalk_uncert16']]
+    
+    uncertainty_subset_M = espers[['Mtalk_uncert1', 'Mtalk_uncert2',
+                                   'Mtalk_uncert3', 'Mtalk_uncert4',
+                                   'Mtalk_uncert5', 'Mtalk_uncert6',
+                                   'Mtalk_uncert7', 'Mtalk_uncert8',
+                                   'Mtalk_uncert9', 'Mtalk_uncert10',
+                                   'Mtalk_uncert11', 'Mtalk_uncert12', 
+                                   'Mtalk_uncert13', 'Mtalk_uncert14',
+                                   'Mtalk_uncert15', 'Mtalk_uncert16']]
 
-    espers['Ensemble_Mean_TA'] = talk_subset.mean(axis=1)
-    espers['Ensemble_Mean_TA_Uncert'] = uncertainty_subset.mean(axis=1)
+    espers['Ensemble_Mean_TA_LIR'] = talk_subset_LIR.mean(axis=1)
+    espers['Ensemble_Mean_TA_Uncert_LIR'] = uncertainty_subset_LIR.mean(axis=1)
+    espers['Ensemble_Mean_TA_NN'] = talk_subset_NN.mean(axis=1)
+    espers['Ensemble_Mean_TA_Uncert_NN'] = uncertainty_subset_NN.mean(axis=1)
+    espers['Ensemble_Mean_TA_Mixed'] = talk_subset_M.mean(axis=1)
+    espers['Ensemble_Mean_TA_Uncert_Mixed'] = uncertainty_subset_M.mean(axis=1)
     
     espers_out = espers
     
@@ -848,8 +859,7 @@ def kl_divergence(espers):
 
 def create_mc_cruise_offset(all_trimmed, num_mc_runs):
     """
-    Uses KL divergence to determine which equations predict best, where a lower
-    KL divergence means that the two datasets are closer.
+    Creates Monte Carlo simulation of 2 µmol/kg offset for each cruise
     
     Keyword arguments:
         all_trimmed = flattened dataframe of trimmed go-ship/clivar/woce

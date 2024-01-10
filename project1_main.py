@@ -124,14 +124,15 @@ ax.set_extent(extent)
 #plot = ax.scatter(lon,lat,transform=ccrs.PlateCarree(),marker='o',edgecolors='none',color='C0',s=1)
 
 # or, plot all trimmed transects
-for key in trimmed:
-    df = trimmed[key]
-    lon = df.G2longitude
-    lat = df.G2latitude
-    plot = ax.scatter(lon,lat,transform=ccrs.PlateCarree(),marker='o',edgecolors='none',s=1,color='steelblue')
+#for key in trimmed:
+#    df = trimmed[key]
+#    lon = df.G2longitude
+#    lat = df.G2latitude
+#    plot = ax.scatter(lon,lat,transform=ccrs.PlateCarree(),marker='o',edgecolors='none',s=1,color='steelblue')
 
 # plot one cruise colored
-df = trimmed['SR04']
+df = trimmed['A17']
+df = df.loc[df.G2cruise == 230]
 lon = df.G2longitude
 lat = df.G2latitude
 plot = ax.scatter(lon,lat,transform=ccrs.PlateCarree(),marker='o',edgecolors='none',s=1,color='crimson')
@@ -142,7 +143,7 @@ plot = ax.scatter(lon,lat,transform=ccrs.PlateCarree(),marker='o',edgecolors='no
 surface = all_trimmed[all_trimmed.G2depth < 25]
 #surface = all_trimmed
 x = surface.dectime
-y = surface.G2talk - surface.Ensemble_Mean_TA
+y = surface.G2talk - surface.Ensemble_Mean_TA_LIR
 
 slope, intercept, rvalue, pvalue, stderr = stats.linregress(x, y, alternative='two-sided')
 
@@ -153,8 +154,9 @@ plt.scatter(surface.datetime,y,s=1)
 fig.text(0.6, 0.83, '$y={:.4f}x+{:.4f}$'.format(slope,intercept), fontsize=14)
 fig.text(0.6, 0.78, '$p-value={:.4e}$'.format(pvalue), fontsize=14)
 ax.plot(surface.datetime, intercept + slope * surface.dectime, color="r", lw=1);
-ax.set_title('Difference in Measured and ESPER-Predicted TA along GO-SHIP Transects (< 25 m)')
-ax.set_ylabel('Measured TA - ESPER-Estimated TA ($mmol\;kg^{-1}$)')
+ax.set_title('Difference in Measured and ESPER LIR-Predicted TA along GO-SHIP Transects (< 25 m)')
+#ax.set_title('Difference in Measured and ESPER LIR-Predicted TA along GO-SHIP Transects')
+ax.set_ylabel('Measured TA - ESPER Mixed-Estimated TA ($mmol\;kg^{-1}$)')
 ax.set_ylim(-70,70)
 ax.set_xlim(all_trimmed.datetime.min(),all_trimmed.datetime.max())
 
@@ -171,8 +173,8 @@ pvalues = np.zeros(G2talk_mc.shape[1])
 
 for i in range(0,G2talk_mc.shape[1]): 
 #for i in range(0,2):
-    y = all_trimmed_mc[str(i)] - all_trimmed_mc.Ensemble_Mean_TA # this works for per cruise offsets
-    #y = all_trimmed_mc[i] - all_trimmed_mc.Ensemble_Mean_TA # this works for individual offsets
+    y = all_trimmed_mc[str(i)] - all_trimmed_mc.Ensemble_Mean_TA_LIR # this works for per cruise offsets, change ESPER method here
+    #y = all_trimmed_mc[i] - all_trimmed_mc.Ensemble_Mean_TA_LIR # this works for individual offsets, change ESPER method here
 
     slope, intercept, rvalue, pvalue, stderr = stats.linregress(x, y, alternative='two-sided')
     
@@ -184,7 +186,7 @@ fig = plt.figure(figsize=(9,6))
 ax = plt.gca()
 plt.hist(slopes, bins=100)
 ax.set_title('Monte Carlo Simulation: Slopes of Linear Regressions\n(1000 runs, normally-distributed error of 2 µmol/kg added to each point)')
-ax.set_xlabel('Slope of Measured TA - ESPER-Estimated TA over Time ($mmol\;kg^{-1}$)')
+ax.set_xlabel('Slope of Measured TA - ESPER LIR-Estimated TA over Time ($mmol\;kg^{-1}$)')
 ax.set_ylabel('Count')
 
 # scatter slopes and p values to see if any <0 are significant
@@ -193,8 +195,9 @@ ax = plt.gca()
 plt.scatter(slopes,pvalues)
 plt.axhline(y = 0.05, color = 'r', linestyle = '--') 
 ax.set_title('Monte Carlo Simulation: Slopes of Linear Regressions & Associated p-Values\n(1000 runs, normally-distributed error of 2 µmol/kg added to each point)')
-ax.set_xlabel('Slope of Measured TA - ESPER-Estimated TA over Time ($mmol\;kg^{-1}$)')
+ax.set_xlabel('Slope of Measured TA - ESPER LIR-Estimated TA over Time ($mmol\;kg^{-1}$)')
 ax.set_ylabel('p-Value')
+ax.set_ylim([-0.05, 1])
 
 # %% make box plot graph of transect slopes from mc simulation
 
@@ -247,7 +250,7 @@ for key in trimmed_mc:
     
     # loop through mc simulations for this transect
     for i in range(0,transect_mc.shape[1]):
-        y = transect_mc.iloc[:,i] - transect.Ensemble_Mean_TA
+        y = transect_mc.iloc[:,i] - transect.Ensemble_Mean_TA_Mixed # change ESPER method here
     
         slope, _, _, pvalue, _ = stats.linregress(x, y, alternative='two-sided')
         slopes[i] = slope
@@ -264,14 +267,14 @@ for key in trimmed_mc:
     j += 1
 
 # make box plot for slope
-#fig = plt.figure(figsize=(15,7))
-#ax = plt.gca()
-#plt.boxplot(all_slopes, vert=True, labels=list(trimmed_mc.keys()))
-#plt.axhline(y=0, color='r', linestyle='--')
-#plt.xticks(rotation=90)
-#ax.set_ylabel('Slope of Measured TA - ESPER-Estimated TA over Time ($mmol\;kg^{-1}$)')
-#ax.set_title('Monte Carlo Simulation: Slopes of Linear Regressions by Transect\n(1000 runs, normally-distributed error of 2 µmol/kg added to each cruise)')
-#ax.set_ylim(-2, 2)
+fig = plt.figure(figsize=(15,7))
+ax = plt.gca()
+plt.boxplot(all_slopes, vert=True, labels=list(trimmed_mc.keys()))
+plt.axhline(y=0, color='r', linestyle='--')
+plt.xticks(rotation=90)
+ax.set_ylabel('Slope of Measured TA - ESPER-Estimated TA over Time ($mmol\;kg^{-1}$)')
+ax.set_title('Monte Carlo Simulation: Slopes of Linear Regressions by Transect\n(1000 runs, normally-distributed error of 2 µmol/kg added to each cruise)')
+ax.set_ylim(-5, 5)
 
 # make box plot for p values
 #fig = plt.figure(figsize=(15,7))
