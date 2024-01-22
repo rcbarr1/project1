@@ -186,6 +186,9 @@ def glodap_qc(glodap):
     # only keep rows that have TA flagged as 2
     glodap = glodap[glodap['G2talkf'] == 2]
     
+    # ignore rows that have TA qc as 0
+    glodap = glodap[glodap['G2talkqc'] != 0]
+    
     #filter data with salinity to only look at open ocean
     glodap = glodap[(glodap['G2salinity'] >= 30) & (glodap['G2salinity'] <= 37)]
     
@@ -893,6 +896,7 @@ def create_mc_cruise_offset(all_trimmed, num_mc_runs):
         
         # select relevant column and store in numpy array
         G2talk_mc[:,j] = go_ship_offset['G2talk'].to_numpy()
+        print(j)
     
     return G2talk_mc
 

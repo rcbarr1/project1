@@ -21,7 +21,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy import stats
 #from scipy import interpolate
-from sklearn.linear_model import LinearRegression, RANSACRegressor
+from sklearn.linear_model import LinearRegression, RANSACRegressor, HuberRegressor, TheilSenRegressor
 from sklearn.metrics import r2_score
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
@@ -60,6 +60,21 @@ glodap_out = go_ship[['G2expocode','G2cruise','G2station','G2region','G2cast',
 # glodap.to_csv(filepath + 'GLODAPv2.2022_for_ESPERs.csv', index=False) # for 2022
 glodap_out.to_csv(filepath + 'GLODAPv2.2023_for_ESPERs.csv', index=False) # for 2023
 
+# %% output for Brendan to re-train LIR
+# select relevant columns
+glodap_out = go_ship[['G2expocode','G2cruise','G2station','G2region','G2cast',
+                      'dectime','datetime','G2latitude','G2longitude',
+                      'G2depth','G2temperature','G2salinity','G2salinityf',
+                      'G2salinityqc','G2oxygen', 'G2oxygenf','G2oxygenqc',
+                      'G2nitrate','G2nitratef','G2nitrateqc','G2silicate',
+                      'G2silicatef','G2silicateqc','G2phosphate',
+                      'G2phosphatef','G2phosphateqc','G2talk', 'G2talkf',
+                      'G2talkqc','G2phtsinsitutp','G2phtsinsitutpf',
+                      'G2phtsqc']]
+        
+# glodap.to_csv(filepath + 'GLODAPv2.2022_for_ESPERs.csv', index=False) # for 2022
+glodap_out.to_csv(filepath + 'GLODAPv2.2023_for_Brendan.csv', index=False) # for 2023
+ 
 # %%step 3: upload ESPERs outputs to here
 espers = pd.read_csv(filepath + 'GLODAP_with_ESPER_TA.csv')
 espers['datetime'] = pd.to_datetime(espers['datetime']) # recast datetime as datetime data type
@@ -154,9 +169,9 @@ plt.scatter(surface.datetime,y,s=1)
 fig.text(0.6, 0.83, '$y={:.4f}x+{:.4f}$'.format(slope,intercept), fontsize=14)
 fig.text(0.6, 0.78, '$p-value={:.4e}$'.format(pvalue), fontsize=14)
 ax.plot(surface.datetime, intercept + slope * surface.dectime, color="r", lw=1);
-ax.set_title('Difference in Measured and ESPER LIR-Predicted TA along GO-SHIP Transects (< 25 m)')
-#ax.set_title('Difference in Measured and ESPER LIR-Predicted TA along GO-SHIP Transects')
-ax.set_ylabel('Measured TA - ESPER Mixed-Estimated TA ($mmol\;kg^{-1}$)')
+#ax.set_title('Difference in Measured and ESPER LIR-Predicted TA along GO-SHIP Transects (< 25 m)')
+ax.set_title('Difference in Measured and ESPER LIR-Predicted TA along GO-SHIP Transects')
+ax.set_ylabel('Measured TA - ESPER LIR-Estimated TA ($mmol\;kg^{-1}$)')
 ax.set_ylim(-70,70)
 ax.set_xlim(all_trimmed.datetime.min(),all_trimmed.datetime.max())
 
@@ -174,7 +189,7 @@ pvalues = np.zeros(G2talk_mc.shape[1])
 for i in range(0,G2talk_mc.shape[1]): 
 #for i in range(0,2):
     y = all_trimmed_mc[str(i)] - all_trimmed_mc.Ensemble_Mean_TA_LIR # this works for per cruise offsets, change ESPER method here
-    #y = all_trimmed_mc[i] - all_trimmed_mc.Ensemble_Mean_TA_LIR # this works for individual offsets, change ESPER method here
+    #y = all_trimmed_mc[str(i)] - all_trimmed_mc.Ensemble_Mean_TA_LIR # this works for individual offsets, change ESPER method here
 
     slope, intercept, rvalue, pvalue, stderr = stats.linregress(x, y, alternative='two-sided')
     
@@ -185,7 +200,7 @@ for i in range(0,G2talk_mc.shape[1]):
 fig = plt.figure(figsize=(9,6))
 ax = plt.gca()
 plt.hist(slopes, bins=100)
-ax.set_title('Monte Carlo Simulation: Slopes of Linear Regressions\n(1000 runs, normally-distributed error of 2 µmol/kg added to each point)')
+ax.set_title('Monte Carlo Simulation: Slopes of Linear Regressions\n(1000 runs, normally-distributed error of 2 µmol/kg added to each cruise)')
 ax.set_xlabel('Slope of Measured TA - ESPER LIR-Estimated TA over Time ($mmol\;kg^{-1}$)')
 ax.set_ylabel('Count')
 
@@ -194,7 +209,7 @@ fig = plt.figure(figsize=(9,6))
 ax = plt.gca()
 plt.scatter(slopes,pvalues)
 plt.axhline(y = 0.05, color = 'r', linestyle = '--') 
-ax.set_title('Monte Carlo Simulation: Slopes of Linear Regressions & Associated p-Values\n(1000 runs, normally-distributed error of 2 µmol/kg added to each point)')
+ax.set_title('Monte Carlo Simulation: Slopes of Linear Regressions & Associated p-Values\n(1000 runs, normally-distributed error of 2 µmol/kg added to each cruise)')
 ax.set_xlabel('Slope of Measured TA - ESPER LIR-Estimated TA over Time ($mmol\;kg^{-1}$)')
 ax.set_ylabel('p-Value')
 ax.set_ylim([-0.05, 1])
@@ -229,7 +244,7 @@ for key in trimmed_mc:
 for key in del_keys:
     del trimmed_mc[key]
 
-# %% preallocate np array to save slopes & p-values data in
+# preallocate np array to save slopes & p-values data in
 all_slopes = [np.zeros(G2talk_mc.shape[1]) for i in range(0, len(trimmed_mc.keys()))] # number of transects by number of mc simulations
 all_sig_slopes = [np.zeros(G2talk_mc.shape[1]) for i in range(0, len(trimmed_mc.keys()))] # number of transects by number of mc simulations (only to store statistically significant slopes)
 all_pvalues = [np.zeros(G2talk_mc.shape[1]) for i in range(0, len(trimmed_mc.keys()))] # number of transects by number of mc simulations
@@ -250,7 +265,7 @@ for key in trimmed_mc:
     
     # loop through mc simulations for this transect
     for i in range(0,transect_mc.shape[1]):
-        y = transect_mc.iloc[:,i] - transect.Ensemble_Mean_TA_Mixed # change ESPER method here
+        y = transect_mc.iloc[:,i] - transect.Ensemble_Mean_TA_LIR # change ESPER method here
     
         slope, _, _, pvalue, _ = stats.linregress(x, y, alternative='two-sided')
         slopes[i] = slope
@@ -273,8 +288,8 @@ plt.boxplot(all_slopes, vert=True, labels=list(trimmed_mc.keys()))
 plt.axhline(y=0, color='r', linestyle='--')
 plt.xticks(rotation=90)
 ax.set_ylabel('Slope of Measured TA - ESPER-Estimated TA over Time ($mmol\;kg^{-1}$)')
-ax.set_title('Monte Carlo Simulation: Slopes of Linear Regressions by Transect\n(1000 runs, normally-distributed error of 2 µmol/kg added to each cruise)')
-ax.set_ylim(-5, 5)
+ax.set_title('Monte Carlo Simulation: Slopes of Linear Regressions by Transect\n(1000 runs, normally-distributed error of 2 µmol/kg added to each point)')
+ax.set_ylim(-2, 2)
 
 # make box plot for p values
 #fig = plt.figure(figsize=(15,7))
@@ -283,7 +298,7 @@ ax.set_ylim(-5, 5)
 #plt.axhline(y=0.05, color='r', linestyle='--')
 #plt.xticks(rotation=90)
 #ax.set_ylabel('P-Value for Measured TA - ESPER-Estimated TA over Time ($mmol\;kg^{-1}$)')
-#ax.set_title('Monte Carlo Simulation: P-Values of Linear Regressions by Transect\n(1000 runs, normally-distributed error of 2 µmol/kg added to each point)')
+#ax.set_title('Monte Carlo Simulation: P-Values of Linear Regressions by Transect\n(1000 runs, normally-distributed error of 2 µmol/kg added to each cruise)')
 #ax.set_ylim(0, 1)
 
 #%% make box plot for only slopes that have significant p-value
@@ -297,7 +312,7 @@ ax = plt.gca()
 plt.boxplot(filtered_data, vert=True, labels=list(trimmed_mc.keys()))
 plt.axhline(y=0, color='r', linestyle='--')
 plt.xticks(rotation=90)
-ax.set_ylabel(' Slope of Measured TA - ESPER-Estimated TA over Time ($mmol\;kg^{-1}$)')
+ax.set_ylabel('Slope of Measured TA - ESPER-Estimated TA over Time ($mmol\;kg^{-1}$)')
 ax.set_title('Monte Carlo Simulation: Significant Slopes of Linear Regressions by Transect\n(1000 runs, normally-distributed error of 2 µmol/kg added to each point)')
 #ax.set_ylim(-2, 2)
 
@@ -354,7 +369,119 @@ for keys in trimmed:
         pvalues[i] = np.nan
         i += 1
     
-# %% do robust regression to take care of outliers
+    
+# %% do global mean ensemble robust regression (RANSAC)
+# SET ESPER ROUTINE HERE
+esper_type = 'Ensemble_Mean_TA_LIR' # LIR, NN, or Mixed
+
+# subset if desired
+esper_sel = espers
+esper_sel = espers[espers.G2depth < 25] # do surface values (< 25 m) only 
+
+# extract data
+if 'del_alk' in esper_sel.columns:
+    esper_sel.drop(columns=['del_alk'])
+
+esper_sel.loc[:,'del_alk'] = esper_sel.loc[:,'G2talk'] - esper_sel.loc[:,'Ensemble_Mean_TA_LIR']
+esper_sel = esper_sel[['dectime','datetime','del_alk','G2expocode']].dropna(axis=0)
+
+# apply robust regression
+x = esper_sel['dectime'].to_numpy().reshape(-1, 1) 
+y = esper_sel['del_alk'].to_numpy().reshape(-1, 1) 
+
+ransac = RANSACRegressor(estimator=LinearRegression(), random_state=42)
+
+ransac.fit(x,y)
+
+# get inlier mask and create outlier mask
+inlier_mask = ransac.inlier_mask_
+outlier_mask = np.logical_not(inlier_mask)
+
+# create scatter plot for inlier dataset
+fig = plt.figure(figsize=(7.5,5))
+ax = fig.gca()
+x_in = x[inlier_mask]
+y_in = y[inlier_mask]
+ax.scatter(x_in, y_in, c='steelblue', marker='o', label='Inliers', alpha=0.3, s=10)
+
+# create scatter plot for outlier dataset
+x_out = x[outlier_mask]
+y_out = y[outlier_mask]
+ax.scatter(x_out, y_out, c='lightgreen', marker='o', label='Outliers', alpha=0.3, s=10)
+
+# do linear regression with inliers
+x_in = pd.Series(x_in[:,0]) # recast as Series for use in regression
+y_in = pd.Series(y_in[:,0]) # recast as Series for use in regression
+slope, intercept, rvalue, pvalue, stderr = stats.linregress(x_in, y_in, alternative='two-sided')
+ax.plot(x_in, intercept + slope * x_in, color="black", lw=1);
+
+# add legend, labels, and text with slope and p-value
+ax.set_title('Difference in Measured and ESPER LIR-Predicted TA  (< 25 m)')
+ax.set_ylabel('Measured TA - ESPER-Estimated TA ($mmol\;kg^{-1}$)')
+ax.set_ylim((-50,50))
+plt.legend(loc='upper right')
+fig.text(0.14, 0.83, '$y={:.4f}x+{:.4f}$'.format(slope,intercept), fontsize=12)
+fig.text(0.14, 0.78, '$p-value={:.3e}$'.format(pvalue), fontsize=12)
+
+# %% do global mean ensemble robust regression (HUBER & Theil-Sen)
+# SET ESPER ROUTINE HERE
+esper_type = 'Ensemble_Mean_TA_LIR' # LIR, NN, or Mixed
+
+# subset if desired
+esper_sel = espers
+esper_sel = espers[espers.G2depth < 25] # do surface values (< 25 m) only 
+
+# extract data
+if 'del_alk' in esper_sel.columns:
+    esper_sel.drop(columns=['del_alk'])
+
+esper_sel.loc[:,'del_alk'] = esper_sel.loc[:,'G2talk'] - esper_sel.loc[:,'Ensemble_Mean_TA_LIR']
+esper_sel = esper_sel[['dectime','datetime','del_alk','G2expocode']].dropna(axis=0)
+
+# apply robust regression
+x = esper_sel['dectime'].to_numpy().reshape(-1, 1) 
+y = esper_sel['del_alk'].to_numpy().reshape(-1, 1) 
+
+huber = HuberRegressor()
+theilsen = TheilSenRegressor()
+
+huber.fit(x,y)
+theilsen.fit(x,y)
+
+line_x = np.arange(x.min(), x.max(), 0.01)
+line_y_huber = huber.predict(line_x.reshape((len(line_x), 1)))
+line_y_theilsen= theilsen.predict(line_x.reshape((len(line_x), 1)))
+
+# set up figure (huber)
+fig = plt.figure(figsize=(7,5))
+ax = fig.gca()
+ax.scatter(x, y, c='steelblue', marker='o', alpha=0.3, s=10)
+ax.plot(line_x, line_y_huber, color='r')
+ax.set_ylabel('Measured TA - ESPER-Estimated TA ($mmol\;kg^{-1}$)')
+ax.set_ylim((-50,50))
+
+# calculate and display slope and intercept (huber)
+slope = (line_y_huber[-1] - line_y_huber[0]) / (line_x[-1] - line_x[0])
+intercept = line_y_huber[0]
+fig.text(0.14, 0.83, '$y={:.4f}x+{:.4f}$'.format(slope,intercept), fontsize=12)
+fig.text(0.14, 0.78, '$R^2={:.4f}$'.format(huber.score(x,y)), fontsize=12)
+
+# set up figure (theil-sen)
+fig = plt.figure(figsize=(7,5))
+ax = fig.gca()
+ax.scatter(x, y, c='steelblue', marker='o', alpha=0.3, s=10)
+ax.plot(line_x, line_y_theilsen, color='r')
+ax.set_ylabel('Measured TA - ESPER-Estimated TA ($mmol\;kg^{-1}$)')
+ax.set_ylim((-50,50))
+
+# calculate and display slope and intercept (theil-sen)
+slope = (line_y_theilsen[-1] - line_y_theilsen[0]) / (line_x[-1] - line_x[0])
+intercept = line_y_theilsen[0]
+fig.text(0.14, 0.83, '$y={:.4f}x+{:.4f}$'.format(slope,intercept), fontsize=12)
+fig.text(0.14, 0.78, '$R^2={:.4f}$'.format(theilsen.score(x,y)), fontsize=12)
+
+
+# %% do robust regression to take care of outliers (per transect)
 
 # SET ESPER ROUTINE HERE
 esper_type = 'LIR' # LIR, NN, or M
