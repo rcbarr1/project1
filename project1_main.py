@@ -76,7 +76,8 @@ glodap_out = go_ship[['G2expocode','G2cruise','G2station','G2region','G2cast',
 glodap_out.to_csv(filepath + 'GLODAPv2.2023_for_Brendan.csv', index=False) # for 2023
  
 # %%step 3: upload ESPERs outputs to here
-espers = pd.read_csv(filepath + 'GLODAP_with_ESPER_TA.csv')
+#espers = pd.read_csv(filepath + 'GLODAP_with_ESPER_TA.csv') # to do the normal ESPER
+espers = pd.read_csv(filepath + 'GLODAP_with_ESPER_TA_GO-SHIP_LIR.csv') # to do the GO-SHIP trained ESPER
 espers['datetime'] = pd.to_datetime(espers['datetime']) # recast datetime as datetime data type
 
 # %% use KL divergence to determine which equations predict best (lower KL divergence = two datasets are closer)
@@ -169,8 +170,8 @@ plt.scatter(surface.datetime,y,s=1)
 fig.text(0.6, 0.83, '$y={:.4f}x+{:.4f}$'.format(slope,intercept), fontsize=14)
 fig.text(0.6, 0.78, '$p-value={:.4e}$'.format(pvalue), fontsize=14)
 ax.plot(surface.datetime, intercept + slope * surface.dectime, color="r", lw=1);
-#ax.set_title('Difference in Measured and ESPER LIR-Predicted TA along GO-SHIP Transects (< 25 m)')
-ax.set_title('Difference in Measured and ESPER LIR-Predicted TA along GO-SHIP Transects')
+ax.set_title('Difference in Measured and ESPER LIR-Predicted TA along GO-SHIP Transects (< 25 m)')
+#ax.set_title('Difference in Measured and ESPER LIR-Predicted TA along GO-SHIP Transects')
 ax.set_ylabel('Measured TA - ESPER LIR-Estimated TA ($mmol\;kg^{-1}$)')
 ax.set_ylim(-70,70)
 ax.set_xlim(all_trimmed.datetime.min(),all_trimmed.datetime.max())
@@ -218,7 +219,7 @@ ax.set_ylim([-0.05, 1])
 
 # pull surface values
 all_trimmed_mc = pd.concat([all_trimmed, G2talk_mc], axis=1)
-#all_trimmed_mc = all_trimmed_mc[all_trimmed_mc.G2depth < 25]
+all_trimmed_mc = all_trimmed_mc[all_trimmed_mc.G2depth < 25]
 
 # turn into dict with transects as keys
 trimmed_mc = p1.trim_go_ship(all_trimmed_mc, go_ship_cruise_nums_2023)
@@ -288,8 +289,8 @@ plt.boxplot(all_slopes, vert=True, labels=list(trimmed_mc.keys()))
 plt.axhline(y=0, color='r', linestyle='--')
 plt.xticks(rotation=90)
 ax.set_ylabel('Slope of Measured TA - ESPER-Estimated TA over Time ($mmol\;kg^{-1}$)')
-ax.set_title('Monte Carlo Simulation: Slopes of Linear Regressions by Transect\n(1000 runs, normally-distributed error of 2 µmol/kg added to each point)')
-ax.set_ylim(-2, 2)
+ax.set_title('Monte Carlo Simulation: Slopes of Linear Regressions by Transect\n(1000 runs, normally-distributed error of 2 µmol/kg added to each cruise)')
+ax.set_ylim(-4, 4)
 
 # make box plot for p values
 #fig = plt.figure(figsize=(15,7))

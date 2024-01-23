@@ -17,6 +17,7 @@ filepath = '/Users/Reese/Documents/Research Projects/project1/data/';
 % input_file = 'GLODAPv2.2022_for_ESPERs.csv';
 input_file = 'GLODAPv2.2023_for_ESPERs.csv';
 output_file = 'GLODAP_with_ESPER_TA.csv';
+output_file1 = 'GLODAP_with_ESPER_TA_GO-SHIP_LIR.csv';
 
 glodap = readtable([filepath input_file]);
 
@@ -33,8 +34,7 @@ glodap = readtable([filepath input_file]);
     'Equations', [1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16], ...
     'EstDates',[glodap.dectime]);
 
-
-%% format ESPER_LIR output
+% format ESPER_LIR output
 
 % create output table
 output_LIR = table;
@@ -48,8 +48,6 @@ for i = 1:16
     output_LIR.(TA_uncert_col_name) = uncertainty_estimates_LIR.TA(:,i);
 end
 
-% format output from ESPER LIR
-
 %% call ESPER_NN
 
 [output_estimates_NN, uncertainty_estimates_NN] = ESPER_NN(1, ...
@@ -59,7 +57,7 @@ end
     'Equations', [1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16], ...
     'EstDates',[glodap.dectime]);
 
-%% format ESPER_NN output
+% format ESPER_NN output
 
 % create output table
 output_NN = table;
@@ -73,8 +71,6 @@ for i = 1:16
     output_NN.(TA_uncert_col_name) = uncertainty_estimates_NN.TA(:,i);
 end
 
-% format output from ESPER NN
-
 %% call ESPER_Mixed
 
 [output_estimates_Mixed, uncertainty_estimates_Mixed] = ESPER_Mixed(1, ...
@@ -84,7 +80,7 @@ end
     'Equations', [1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16], ...
     'EstDates',[glodap.dectime]);
 
-%% format ESPER_Mixed output
+% format ESPER_Mixed output
 
 % create output table
 output_Mixed = table;
@@ -102,7 +98,32 @@ end
 output = [glodap output_LIR output_NN output_Mixed];
 writetable(output,[filepath output_file])
 
+%% call ESPER_LIR_ReeseTest
+% calls all 16 equations representing all possible combinations of input
+% variables used to calculate TA (Salinity, Temperature, Nitrate, Silicate,
+% and Oxygen)
+[output_estimates_LIR_ReeseTest, uncertainty_estimates_LIR_ReeseTest] = ESPER_LIR_ReeseTest(1, ...
+    [glodap.G2longitude, glodap.G2latitude, glodap.G2depth], ...
+    [glodap.G2salinity, glodap.G2temperature, glodap.G2nitrate, ...
+    glodap.G2silicate, glodap.G2oxygen], [1 2 4 5 6], ...
+    'Equations', [1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16], ...
+    'EstDates',[glodap.dectime]);
 
+% format ESPER_LIR_ReeseTest output
 
+% create output table
+output_LIR_ReeseTest = table;
 
+% store outputs in table with each column representing the TA estimate
+% and uncertainty created by the corresponding equation number
+for i = 1:16
+    TA_col_name = 'LIRtalk' + string(i);
+    TA_uncert_col_name = 'LIRtalk_uncert' + string(i);
+    output_LIR_ReeseTest.(TA_col_name) = output_estimates_LIR_ReeseTest.TA(:,i);
+    output_LIR_ReeseTest.(TA_uncert_col_name) = uncertainty_estimates_LIR_ReeseTest.TA(:,i);
+end
+
+% concatenate tables together and output as a .csv file for analysis in Python
+output = [glodap output_LIR_ReeseTest];
+writetable(output,[filepath output_file1])
 

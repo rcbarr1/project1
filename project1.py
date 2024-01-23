@@ -218,12 +218,13 @@ def ensemble_mean(espers):
                               'LIRtalk12', 'LIRtalk13', 'LIRtalk14',
                               'LIRtalk15', 'LIRtalk16']]
     
-    talk_subset_NN = espers[['NNtalk1', 'NNtalk2', 'NNtalk3', 'NNtalk4',
-                             'NNtalk5', 'NNtalk6', 'NNtalk7', 'NNtalk8',
-                             'NNtalk9', 'NNtalk10', 'NNtalk11', 'NNtalk12',
-                             'NNtalk13', 'NNtalk14', 'NNtalk15', 'NNtalk16']]
+    if 'NNtalk1' in espers.columns:
+        talk_subset_NN = espers[['NNtalk1', 'NNtalk2', 'NNtalk3', 'NNtalk4',
+                                 'NNtalk5', 'NNtalk6', 'NNtalk7', 'NNtalk8',
+                                 'NNtalk9', 'NNtalk10', 'NNtalk11', 'NNtalk12',
+                                 'NNtalk13', 'NNtalk14', 'NNtalk15', 'NNtalk16']]
     
-    talk_subset_M = espers[['Mtalk1', 'Mtalk2', 'Mtalk3', 'Mtalk4',
+        talk_subset_M = espers[['Mtalk1', 'Mtalk2', 'Mtalk3', 'Mtalk4',
                                 'Mtalk5', 'Mtalk6', 'Mtalk7', 'Mtalk8', 
                                 'Mtalk9', 'Mtalk10', 'Mtalk11', 'Mtalk12',
                                 'Mtalk13', 'Mtalk14', 'Mtalk15', 'Mtalk16']]
@@ -237,30 +238,32 @@ def ensemble_mean(espers):
                                      'LIRtalk_uncert13', 'LIRtalk_uncert14',
                                      'LIRtalk_uncert15', 'LIRtalk_uncert16']]
     
-    uncertainty_subset_NN = espers[['NNtalk_uncert1', 'NNtalk_uncert2',
-                                    'NNtalk_uncert3', 'NNtalk_uncert4',
-                                    'NNtalk_uncert5', 'NNtalk_uncert6',
-                                    'NNtalk_uncert7', 'NNtalk_uncert8',
-                                    'NNtalk_uncert9', 'NNtalk_uncert10',
-                                    'NNtalk_uncert11', 'NNtalk_uncert12',
-                                    'NNtalk_uncert13', 'NNtalk_uncert14',
-                                    'NNtalk_uncert15', 'NNtalk_uncert16']]
+    if 'NNtalk_uncert1' in espers.columns:
+        uncertainty_subset_NN = espers[['NNtalk_uncert1', 'NNtalk_uncert2',
+                                        'NNtalk_uncert3', 'NNtalk_uncert4',
+                                        'NNtalk_uncert5', 'NNtalk_uncert6',
+                                        'NNtalk_uncert7', 'NNtalk_uncert8',
+                                        'NNtalk_uncert9', 'NNtalk_uncert10',
+                                        'NNtalk_uncert11', 'NNtalk_uncert12',
+                                        'NNtalk_uncert13', 'NNtalk_uncert14',
+                                        'NNtalk_uncert15', 'NNtalk_uncert16']]
     
-    uncertainty_subset_M = espers[['Mtalk_uncert1', 'Mtalk_uncert2',
-                                   'Mtalk_uncert3', 'Mtalk_uncert4',
-                                   'Mtalk_uncert5', 'Mtalk_uncert6',
-                                   'Mtalk_uncert7', 'Mtalk_uncert8',
-                                   'Mtalk_uncert9', 'Mtalk_uncert10',
-                                   'Mtalk_uncert11', 'Mtalk_uncert12', 
-                                   'Mtalk_uncert13', 'Mtalk_uncert14',
-                                   'Mtalk_uncert15', 'Mtalk_uncert16']]
+        uncertainty_subset_M = espers[['Mtalk_uncert1', 'Mtalk_uncert2',
+                                       'Mtalk_uncert3', 'Mtalk_uncert4',
+                                       'Mtalk_uncert5', 'Mtalk_uncert6',
+                                       'Mtalk_uncert7', 'Mtalk_uncert8',
+                                       'Mtalk_uncert9', 'Mtalk_uncert10',
+                                       'Mtalk_uncert11', 'Mtalk_uncert12', 
+                                       'Mtalk_uncert13', 'Mtalk_uncert14',
+                                       'Mtalk_uncert15', 'Mtalk_uncert16']]
 
     espers['Ensemble_Mean_TA_LIR'] = talk_subset_LIR.mean(axis=1)
     espers['Ensemble_Mean_TA_Uncert_LIR'] = uncertainty_subset_LIR.mean(axis=1)
-    espers['Ensemble_Mean_TA_NN'] = talk_subset_NN.mean(axis=1)
-    espers['Ensemble_Mean_TA_Uncert_NN'] = uncertainty_subset_NN.mean(axis=1)
-    espers['Ensemble_Mean_TA_Mixed'] = talk_subset_M.mean(axis=1)
-    espers['Ensemble_Mean_TA_Uncert_Mixed'] = uncertainty_subset_M.mean(axis=1)
+    if 'NNtalk1' in espers.columns:
+        espers['Ensemble_Mean_TA_NN'] = talk_subset_NN.mean(axis=1)
+        espers['Ensemble_Mean_TA_Uncert_NN'] = uncertainty_subset_NN.mean(axis=1)
+        espers['Ensemble_Mean_TA_Mixed'] = talk_subset_M.mean(axis=1)
+        espers['Ensemble_Mean_TA_Uncert_Mixed'] = uncertainty_subset_M.mean(axis=1)
     
     espers_out = espers
     
