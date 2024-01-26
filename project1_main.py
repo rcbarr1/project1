@@ -21,10 +21,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy import stats
 #from scipy import interpolate
-from sklearn.linear_model import LinearRegression, RANSACRegressor, HuberRegressor, TheilSenRegressor
+from sklearn.linear_model import LinearRegression, RANSACRegressor
 from sklearn.metrics import r2_score
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
+import statsmodels.api as sm
 #import cmocean
 
 filepath = '/Users/Reese/Documents/Research Projects/project1/data/' # where GLODAP data is stored
@@ -76,8 +77,8 @@ glodap_out = go_ship[['G2expocode','G2cruise','G2station','G2region','G2cast',
 glodap_out.to_csv(filepath + 'GLODAPv2.2023_for_Brendan.csv', index=False) # for 2023
  
 # %%step 3: upload ESPERs outputs to here
-#espers = pd.read_csv(filepath + 'GLODAP_with_ESPER_TA.csv') # to do the normal ESPER
-espers = pd.read_csv(filepath + 'GLODAP_with_ESPER_TA_GO-SHIP_LIR.csv') # to do the GO-SHIP trained ESPER
+espers = pd.read_csv(filepath + 'GLODAP_with_ESPER_TA.csv') # to do the normal ESPER
+#espers = pd.read_csv(filepath + 'GLODAP_with_ESPER_TA_GO-SHIP_LIR.csv') # to do the GO-SHIP trained ESPER
 espers['datetime'] = pd.to_datetime(espers['datetime']) # recast datetime as datetime data type
 
 # %% use KL divergence to determine which equations predict best (lower KL divergence = two datasets are closer)
@@ -156,8 +157,8 @@ plot = ax.scatter(lon,lat,transform=ccrs.PlateCarree(),marker='o',edgecolors='no
 # %% plot global ensemble mean regression for all trimmed GO-SHIP 
 
 # plot surface values and do regular linear regression
-surface = all_trimmed[all_trimmed.G2depth < 25]
-#surface = all_trimmed
+#surface = all_trimmed[all_trimmed.G2depth < 25]
+surface = all_trimmed
 x = surface.dectime
 y = surface.G2talk - surface.Ensemble_Mean_TA_LIR
 
@@ -369,119 +370,59 @@ for keys in trimmed:
         slopes[i] = np.nan
         pvalues[i] = np.nan
         i += 1
-    
-    
-# %% do global mean ensemble robust regression (RANSAC)
+
+# %% do global mean ensemble robust regression (statsmodels rlm)
 # SET ESPER ROUTINE HERE
 esper_type = 'Ensemble_Mean_TA_LIR' # LIR, NN, or Mixed
 
 # subset if desired
-esper_sel = espers
-esper_sel = espers[espers.G2depth < 25] # do surface values (< 25 m) only 
+#esper_sel = espers
+esper_sel = espers[espers.G2depth < 25] # do surface values (< 25 m) only
+ 
+# sort by time
+esper_sel = esper_sel.sort_values(by=['dectime'],ascending=True)
 
-# extract data
-if 'del_alk' in esper_sel.columns:
-    esper_sel.drop(columns=['del_alk'])
+# calculate the difference in TA betwen GLODAP and ESPERS, store for regression
+del_alk = esper_sel.loc[:,'G2talk'] - esper_sel.loc[:,esper_type]
+x = esper_sel['dectime'].to_numpy()
+y = del_alk.to_numpy()
 
-esper_sel.loc[:,'del_alk'] = esper_sel.loc[:,'G2talk'] - esper_sel.loc[:,'Ensemble_Mean_TA_LIR']
-esper_sel = esper_sel[['dectime','datetime','del_alk','G2expocode']].dropna(axis=0)
+# fit model and print summary
+x = sm.add_constant(x) # this is required in statsmodels to get an intercept
+rlm_model = sm.RLM(y, x, M=sm.robust.norms.HuberT())
+rlm_results = rlm_model.fit()
 
-# apply robust regression
-x = esper_sel['dectime'].to_numpy().reshape(-1, 1) 
-y = esper_sel['del_alk'].to_numpy().reshape(-1, 1) 
+ols_model = sm.OLS(y, x)
+ols_results = ols_model.fit()
 
-ransac = RANSACRegressor(estimator=LinearRegression(), random_state=42)
+print(rlm_results.params)
+print(rlm_results.bse)
+print(
+    rlm_results.summary(
+        yname="y", xname=["var_%d" % i for i in range(len(rlm_results.params))]
+    )
+)
 
-ransac.fit(x,y)
+print(ols_results.params)
+print(ols_results.bse)
+print(
+    ols_results.summary(
+        yname="y", xname=["var_%d" % i for i in range(len(ols_results.params))]
+    )
+)
 
-# get inlier mask and create outlier mask
-inlier_mask = ransac.inlier_mask_
-outlier_mask = np.logical_not(inlier_mask)
-
-# create scatter plot for inlier dataset
-fig = plt.figure(figsize=(7.5,5))
-ax = fig.gca()
-x_in = x[inlier_mask]
-y_in = y[inlier_mask]
-ax.scatter(x_in, y_in, c='steelblue', marker='o', label='Inliers', alpha=0.3, s=10)
-
-# create scatter plot for outlier dataset
-x_out = x[outlier_mask]
-y_out = y[outlier_mask]
-ax.scatter(x_out, y_out, c='lightgreen', marker='o', label='Outliers', alpha=0.3, s=10)
-
-# do linear regression with inliers
-x_in = pd.Series(x_in[:,0]) # recast as Series for use in regression
-y_in = pd.Series(y_in[:,0]) # recast as Series for use in regression
-slope, intercept, rvalue, pvalue, stderr = stats.linregress(x_in, y_in, alternative='two-sided')
-ax.plot(x_in, intercept + slope * x_in, color="black", lw=1);
-
-# add legend, labels, and text with slope and p-value
-ax.set_title('Difference in Measured and ESPER LIR-Predicted TA  (< 25 m)')
-ax.set_ylabel('Measured TA - ESPER-Estimated TA ($mmol\;kg^{-1}$)')
-ax.set_ylim((-50,50))
-plt.legend(loc='upper right')
-fig.text(0.14, 0.83, '$y={:.4f}x+{:.4f}$'.format(slope,intercept), fontsize=12)
-fig.text(0.14, 0.78, '$p-value={:.3e}$'.format(pvalue), fontsize=12)
-
-# %% do global mean ensemble robust regression (HUBER & Theil-Sen)
-# SET ESPER ROUTINE HERE
-esper_type = 'Ensemble_Mean_TA_LIR' # LIR, NN, or Mixed
-
-# subset if desired
-esper_sel = espers
-esper_sel = espers[espers.G2depth < 25] # do surface values (< 25 m) only 
-
-# extract data
-if 'del_alk' in esper_sel.columns:
-    esper_sel.drop(columns=['del_alk'])
-
-esper_sel.loc[:,'del_alk'] = esper_sel.loc[:,'G2talk'] - esper_sel.loc[:,'Ensemble_Mean_TA_LIR']
-esper_sel = esper_sel[['dectime','datetime','del_alk','G2expocode']].dropna(axis=0)
-
-# apply robust regression
-x = esper_sel['dectime'].to_numpy().reshape(-1, 1) 
-y = esper_sel['del_alk'].to_numpy().reshape(-1, 1) 
-
-huber = HuberRegressor()
-theilsen = TheilSenRegressor()
-
-huber.fit(x,y)
-theilsen.fit(x,y)
-
-line_x = np.arange(x.min(), x.max(), 0.01)
-line_y_huber = huber.predict(line_x.reshape((len(line_x), 1)))
-line_y_theilsen= theilsen.predict(line_x.reshape((len(line_x), 1)))
-
-# set up figure (huber)
+# make figure
 fig = plt.figure(figsize=(7,5))
 ax = fig.gca()
-ax.scatter(x, y, c='steelblue', marker='o', alpha=0.3, s=10)
-ax.plot(line_x, line_y_huber, color='r')
-ax.set_ylabel('Measured TA - ESPER-Estimated TA ($mmol\;kg^{-1}$)')
-ax.set_ylim((-50,50))
+ax.plot(x[:,1], y, 'o', label='data', alpha = 0.3, color='lightblue')
+ax.plot(x[:,1], rlm_results.fittedvalues, color='orchid', label='RLM')
+ax.plot(x[:,1], ols_results.fittedvalues, color='darkseagreen', label='OLS')
+ax.set_ylim([-50, 50])
+legend = ax.legend()
 
-# calculate and display slope and intercept (huber)
-slope = (line_y_huber[-1] - line_y_huber[0]) / (line_x[-1] - line_x[0])
-intercept = line_y_huber[0]
-fig.text(0.14, 0.83, '$y={:.4f}x+{:.4f}$'.format(slope,intercept), fontsize=12)
-fig.text(0.14, 0.78, '$R^2={:.4f}$'.format(huber.score(x,y)), fontsize=12)
-
-# set up figure (theil-sen)
-fig = plt.figure(figsize=(7,5))
-ax = fig.gca()
-ax.scatter(x, y, c='steelblue', marker='o', alpha=0.3, s=10)
-ax.plot(line_x, line_y_theilsen, color='r')
-ax.set_ylabel('Measured TA - ESPER-Estimated TA ($mmol\;kg^{-1}$)')
-ax.set_ylim((-50,50))
-
-# calculate and display slope and intercept (theil-sen)
-slope = (line_y_theilsen[-1] - line_y_theilsen[0]) / (line_x[-1] - line_x[0])
-intercept = line_y_theilsen[0]
-fig.text(0.14, 0.83, '$y={:.4f}x+{:.4f}$'.format(slope,intercept), fontsize=12)
-fig.text(0.14, 0.78, '$R^2={:.4f}$'.format(theilsen.score(x,y)), fontsize=12)
-
-
+# print equations & p values for each regression type
+fig.text(0.14, 0.83, 'OLS: $y={:.4f}x {:+.4f}$, p-value$={:.3e}$'.format(ols_results.params[1],ols_results.params[0],ols_results.pvalues[1]), fontsize=12)
+fig.text(0.14, 0.78, 'RLM: $y={:.4f}x {:+.4f}$, p-value$={:.3e}$'.format(rlm_results.params[1],rlm_results.params[0],rlm_results.pvalues[1]), fontsize=12)
 # %% do robust regression to take care of outliers (per transect)
 
 # SET ESPER ROUTINE HERE
@@ -540,7 +481,6 @@ r2 = r2_score(y,y_pred)
 result = stats.ttest_ind(a=y,b=y_pred,equal_var=False)
 pvalue = result.pvalue
 
-
 # formatting
 ax = fig.gca()
 if esper_type == 'M':
@@ -566,50 +506,5 @@ ax.set_xlabel('Measured TA - ESPER-Estimated TA ($mmol\;kg^{-1}$)')
 
 # calculate percent of data that is an inlier
 percent_inlier = len(x[inlier_mask])/len(x) * 100
-
-# %% find slope and p-value for RANSAC regression for all 3 methods, 16 equations
-
-ransac_slope = np.zeros([16,3])
-ransac_pvalue = np.zeros([16,3])
-
-for j in range(0,3):
-    if j == 0:
-        esper_type = 'LIRtalk'
-    elif j == 1:
-        esper_type = 'NNtalk'
-    else:
-        esper_type = 'Mtalk'
-        
-    for i in range(1,17):
-        
-        # subset if desired
-        esper_sel = espers
-        # try arctic only
-        #esper_sel = esper_sel[(esper_sel.G2latitude < 55)]
-        esper_sel = esper_sel[esper_sel.G2depth < 25] # do surface values (< 25 m) only 
-        esper_sel['del_alk'] = esper_sel.G2talk - esper_sel[esper_type + str(i)]
-        esper_sel = esper_sel[['dectime','datetime','del_alk','G2expocode']].dropna(axis=0)
-    
-        # apply robust regression
-        x = esper_sel['dectime'].to_numpy().reshape(-1, 1) 
-        y = esper_sel['del_alk'].to_numpy().reshape(-1, 1) 
-    
-        ransac = RANSACRegressor(estimator=LinearRegression(), min_samples=round(esper_sel.shape[0]/2),
-                             loss='absolute_error', random_state=42)#, residual_threshold=10)
-        ransac.fit(x,y)
-        
-        # output slope, intercept, and p-value (assuming time 0 is the first measurement )
-        line_x = np.arange(x.min(), x.max(), 1)
-        line_y_ransac = ransac.predict(line_x[:, np.newaxis])
-        slope = (line_y_ransac[-1][0] - line_y_ransac[0][0]) / (line_x[-1] - line_x[0])
-        intercept = line_y_ransac[0][0]
-        y_pred = ransac.predict(x)
-        result = stats.ttest_ind(a=y,b=y_pred,equal_var=False)
-        pvalue = result.pvalue
-        
-        # assign to table
-        ransac_slope[i-1,j] = slope
-        ransac_pvalue[i-1,j] = pvalue
-
 
 
