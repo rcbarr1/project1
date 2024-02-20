@@ -258,11 +258,14 @@ def ensemble_mean(espers):
                                        'Mtalk_uncert15', 'Mtalk_uncert16']]
 
     espers['Ensemble_Mean_TA_LIR'] = talk_subset_LIR.mean(axis=1)
+    espers['Ensemble_Std_TA_LIR'] = talk_subset_LIR.std(axis=1)
     espers['Ensemble_Mean_TA_Uncert_LIR'] = uncertainty_subset_LIR.mean(axis=1)
     if 'NNtalk1' in espers.columns:
         espers['Ensemble_Mean_TA_NN'] = talk_subset_NN.mean(axis=1)
+        espers['Ensemble_Std_TA_NN'] = talk_subset_NN.std(axis=1)
         espers['Ensemble_Mean_TA_Uncert_NN'] = uncertainty_subset_NN.mean(axis=1)
         espers['Ensemble_Mean_TA_Mixed'] = talk_subset_M.mean(axis=1)
+        espers['Ensemble_Std_TA_Mixed'] = talk_subset_M.std(axis=1)
         espers['Ensemble_Mean_TA_Uncert_Mixed'] = uncertainty_subset_M.mean(axis=1)
     
     espers_out = espers
