@@ -548,12 +548,128 @@ plt.colorbar(h[3],label='Count')
 # print equations & p values for each regression type
 fig.text(0.265, 0.83, 'OLS: $y={:.4f}x {:+.4f}$, p-value$={:.3e}$'.format(ols_results.params[1],ols_results.params[0],ols_results.pvalues[1]), fontsize=12)
 fig.text(0.265, 0.78, 'RLM: $y={:.4f}x {:+.4f}$, p-value$={:.3e}$'.format(rlm_results.params[1],rlm_results.params[0],rlm_results.pvalues[1]), fontsize=12)
-fig.text(0.14, 0.83, 'C', fontsize=12)
+fig.text(0.14, 0.83, 'B', fontsize=12)
+
+#%% plot ∆TA vs. salinity
+# SET ESPER ROUTINE HERE
+esper_type = 'Ensemble_Mean_TA_LIR' # LIR, NN, or Mixed
+
+# subset if desired
+esper_sel = all_trimmed
+esper_sel = all_trimmed[all_trimmed.G2depth < 25] # do surface values (< 25 m) only
+esper_sel = all_trimmed[all_trimmed.G2salinity > 32] # do surface values (< 25 m) only
+ 
+# sort by time
+esper_sel = esper_sel.sort_values(by=['G2salinity'],ascending=True)
 
 
+# calculate the difference in TA betwen GLODAP and ESPERS, store for regression
+del_alk = esper_sel.loc[:,'G2talk'] - esper_sel.loc[:,esper_type]
+x = esper_sel['G2salinity'].to_numpy()
+y = del_alk.to_numpy()
 
+# fit model and print summary
+x_model = sm.add_constant(x) # this is required in statsmodels to get an intercept
+rlm_model = sm.RLM(y, x_model, M=sm.robust.norms.HuberT())
+rlm_results = rlm_model.fit()
 
+ols_model = sm.OLS(y, x_model)
+ols_results = ols_model.fit()
 
+print(rlm_results.params)
+print(rlm_results.bse)
+print(
+    rlm_results.summary(
+        yname="y", xname=["var_%d" % i for i in range(len(rlm_results.params))]
+    )
+)
+
+print(ols_results.params)
+print(ols_results.bse)
+print(
+    ols_results.summary(
+        yname="y", xname=["var_%d" % i for i in range(len(ols_results.params))]
+    )
+)
+
+# make figure
+fig = plt.figure(figsize=(9.3,5),dpi=400)
+ax = fig.gca()
+#ax.plot(x[:,1], y, 'o', label='data', alpha = 0.3, color='lightblue') # for scatterplot
+h = ax.hist2d(x, y, bins=150, norm='log', cmap=cmo.matter) # for 2d histogram
+ax.plot(x_model[:,1], rlm_results.fittedvalues, lw=1, ls='-', color='black', label='RLM')
+ax.plot(x_model[:,1], ols_results.fittedvalues, lw=1, ls='-', color='gainsboro', label='OLS')
+ax.set_ylim([-80, 80])
+ax.set_xlabel('Salinity (PSU)')
+ax.set_ylabel('Measured TA - ESPER Estimated TA ($µmol\;kg^{-1}$)')
+legend = ax.legend(loc='lower left')
+plt.colorbar(h[3],label='Count')
+
+# print equations & p values for each regression type
+fig.text(0.265, 0.83, 'OLS: $y={:.4f}x {:+.4f}$, p-value$={:.3e}$'.format(ols_results.params[1],ols_results.params[0],ols_results.pvalues[1]), fontsize=12)
+fig.text(0.265, 0.78, 'RLM: $y={:.4f}x {:+.4f}$, p-value$={:.3e}$'.format(rlm_results.params[1],rlm_results.params[0],rlm_results.pvalues[1]), fontsize=12)
+#fig.text(0.14, 0.83, 'B', fontsize=12)
+
+#%% plot ∆TA vs. nitrate
+# SET ESPER ROUTINE HERE
+esper_type = 'Ensemble_Mean_TA_LIR' # LIR, NN, or Mixed
+
+# subset if desired
+esper_sel = all_trimmed
+#esper_sel = all_trimmed[all_trimmed.G2depth < 25] # do surface values (< 25 m) only
+
+# drop NaNs in nitrate
+esper_sel = esper_sel.dropna(subset=['G2nitrate'])
+ 
+# sort by time
+esper_sel = esper_sel.sort_values(by=['G2nitrate'], ascending=True)
+
+# calculate the difference in TA betwen GLODAP and ESPERS, store for regression
+del_alk = esper_sel.loc[:,'G2talk'] - esper_sel.loc[:,esper_type]
+x = esper_sel['G2nitrate'].to_numpy()
+y = del_alk.to_numpy()
+
+# fit model and print summary
+x_model = sm.add_constant(x) # this is required in statsmodels to get an intercept
+rlm_model = sm.RLM(y, x_model, M=sm.robust.norms.HuberT())
+rlm_results = rlm_model.fit()
+
+ols_model = sm.OLS(y, x_model)
+ols_results = ols_model.fit()
+
+print(rlm_results.params)
+print(rlm_results.bse)
+print(
+    rlm_results.summary(
+        yname="y", xname=["var_%d" % i for i in range(len(rlm_results.params))]
+    )
+)
+
+print(ols_results.params)
+print(ols_results.bse)
+print(
+    ols_results.summary(
+        yname="y", xname=["var_%d" % i for i in range(len(ols_results.params))]
+    )
+)
+
+# make figure
+fig = plt.figure(figsize=(9.3,5),dpi=400)
+ax = fig.gca()
+#ax.plot(x[:,1], y, 'o', label='data', alpha = 0.3, color='lightblue') # for scatterplot
+h = ax.hist2d(x, y, bins=150, norm='log', cmap=cmo.matter) # for 2d histogram
+ax.plot(x_model[:,1], rlm_results.fittedvalues, lw=1, ls='-', color='black', label='RLM')
+ax.plot(x_model[:,1], ols_results.fittedvalues, lw=1, ls='-', color='gainsboro', label='OLS')
+ax.set_ylim([-80, 80])
+ax.set_xlabel('Nitrate ($µmol\;kg^{-1}$)')
+ax.set_ylabel('Measured TA - ESPER Estimated TA ($µmol\;kg^{-1}$)')
+#legend = ax.legend(loc='lower left')
+plt.colorbar(h[3],label='Count')
+
+# print equations & p values for each regression type
+fig.text(0.265, 0.83, 'OLS: $y={:.4f}x {:+.4f}$, p-value$={:.3e}$'.format(ols_results.params[1],ols_results.params[0],ols_results.pvalues[1]), fontsize=12)
+fig.text(0.265, 0.78, 'RLM: $y={:.4f}x {:+.4f}$, p-value$={:.3e}$'.format(rlm_results.params[1],rlm_results.params[0],rlm_results.pvalues[1]), fontsize=12)
+#fig.text(0.14, 0.83, 'B', fontsize=12)
 
 
 
