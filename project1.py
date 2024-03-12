@@ -17,6 +17,9 @@ import numpy as np
 from datetime import datetime as dt
 import pandas as pd
 from scipy import special
+import statsmodels.api as sm
+import cmocean.cm as cmo
+from scipy import stats
 
 
 def glodap_reformat_time(glodap):
@@ -944,5 +947,122 @@ def create_mc_individual_offset(all_trimmed, num_mc_runs):
     
     return G2talk_mc
     
+def plot2dhist(esper_sel, esper_type, fig, ax, subplot_label, colorbar_flag):
+    # sort by time
+    esper_sel = esper_sel.sort_values(by=['dectime'],ascending=True)
+
+    # calculate the difference in TA betwen GLODAP and ESPERS, store for regression
+    del_alk = esper_sel.loc[:,'G2talk'] - esper_sel.loc[:,esper_type]
+    x = esper_sel['dectime'].to_numpy()
+    y = del_alk.to_numpy()
+
+    # fit model and print summary
+    x_model = sm.add_constant(x) # this is required in statsmodels to get an intercept
+    rlm_model = sm.RLM(y, x_model, M=sm.robust.norms.HuberT())
+    rlm_results = rlm_model.fit()
+
+    ols_model = sm.OLS(y, x_model)
+    ols_results = ols_model.fit()
+
+    print(rlm_results.params)
+    print(rlm_results.bse)
+    print(
+        rlm_results.summary(
+            yname="y", xname=["var_%d" % i for i in range(len(rlm_results.params))]
+        )
+    )
+
+    print(ols_results.params)
+    print(ols_results.bse)
+    print(
+        ols_results.summary(
+            yname="y", xname=["var_%d" % i for i in range(len(ols_results.params))]
+        )
+    )
+
+    ###ax.scatter(x, y, s=0.5) # for only scatter
+
+    h = ax.hist2d(x, y, bins=100, norm='log', cmap=cmo.matter) # for 2d histogram
+    ax.plot(x_model[:,1], rlm_results.fittedvalues, lw=2.5, ls='--', color='gainsboro', label='RLM')
+    #ax.plot(x_model[:,1], ols_results.fittedvalues, lw=1, ls='-', color='gainsboro', label='OLS')
+    ax.set_ylim([-80, 120])
+    if colorbar_flag == 1:
+        fig.colorbar(h[3],label='Count')
+    elif colorbar_flag == 2:
+        fig.colorbar(h[3],label=' ')
+
+    # print equations & p values for each regression type
+    ax.text(1992.5, 100, 'OLS: m$={:+.3f}$, p$={:.1e}$'.format(ols_results.params[1],ols_results.pvalues[1]), fontsize=10)
+    ax.text(1992.5, 80, 'RLM: m$={:+.3f}$, p$={:.1e}$'.format(rlm_results.params[1],rlm_results.pvalues[1]), fontsize=10)
+    ##ax.text(1992.5, 105, 'OLS: m$={:+.3f}$, p$={:.1e}$'.format(ols_results.params[1],ols_results.pvalues[1]), fontsize=10) # for LIR-trained only
+    ##ax.text(1992.5, 90, 'RLM: m$={:+.3f}$, p$={:.1e}$'.format(rlm_results.params[1],rlm_results.pvalues[1]), fontsize=10) # for LIR-trained only
+    ax.text(1992.5, -70, subplot_label, fontsize=12)
     
+    
+def transect_box_plot(trimmed_mc, G2talk_mc, esper_type):
+    # remove transects that have 0 or 1 repeats
+    # I01, P02_J, P03, P09, P10, P13, P17E, ARC01W, MED01
+    del trimmed_mc['I01']
+    del trimmed_mc['P02_J']
+    del trimmed_mc['P03']
+    del trimmed_mc['P09']
+    del trimmed_mc['P10']
+    del trimmed_mc['P13']
+    del trimmed_mc['P17E']
+    del trimmed_mc['ARC01W']
+    del trimmed_mc['MED01']
+    
+    # get rid of empty dict entries
+    del_keys = []
+    for key in trimmed_mc:
+        if trimmed_mc[key].empty:
+            del_keys.append(key)
+    
+    for key in del_keys:
+        del trimmed_mc[key]
+    
+    # preallocate np array to save slopes & p-values data in
+    all_slopes = [np.zeros(G2talk_mc.shape[1]) for i in range(0, len(trimmed_mc.keys()))] # number of transects by number of mc simulations
+    all_sig_slopes = [np.zeros(G2talk_mc.shape[1]) for i in range(0, len(trimmed_mc.keys()))] # number of transects by number of mc simulations (only to store statistically significant slopes)
+    all_pvalues = [np.zeros(G2talk_mc.shape[1]) for i in range(0, len(trimmed_mc.keys()))] # number of transects by number of mc simulations
+    
+    
+    # loop through transects
+    j = 0
+    for key in trimmed_mc:
+        transect = trimmed_mc[key]
+        x = transect.dectime
+        
+        transect_mc = transect.iloc[:,116:] # pull only mc simulated G2talk for this transect
+        
+        # calculate slope and p value for each mc run
+        slopes = np.zeros(transect_mc.shape[1])
+        pvalues = np.zeros(transect_mc.shape[1])
+        sig_slopes = np.zeros(transect_mc.shape[1])
+        
+        # loop through mc simulations for this transect
+        for i in range(0,transect_mc.shape[1]):
+            if esper_type =='LIR':
+                y = transect_mc.iloc[:,i] - transect.Ensemble_Mean_TA_LIR # change ESPER method here
+            elif esper_type =='NN':
+                y = transect_mc.iloc[:,i] - transect.Ensemble_Mean_TA_NN # change ESPER method here
+            elif esper_type =='Mixed':
+                y = transect_mc.iloc[:,i] - transect.Ensemble_Mean_TA_Mixed # change ESPER method here
+        
+            slope, _, _, pvalue, _ = stats.linregress(x, y, alternative='two-sided')
+            slopes[i] = slope
+            pvalues[i] = pvalue
+            if pvalue < 0.05:
+                sig_slopes[i] = slope
+            else:
+                sig_slopes[i] = np.nan
+        
+        all_slopes[j] = slopes
+        all_pvalues[j] = pvalues
+        all_sig_slopes[j] = sig_slopes
+        
+        j += 1
+        
+    return all_slopes
+
         

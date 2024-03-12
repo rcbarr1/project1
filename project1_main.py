@@ -118,52 +118,52 @@ all_trimmed['error_Mixed'] = np.sqrt(all_trimmed.Ensemble_Std_TA_Mixed**2 + G2ta
 
 #%% show layered histograms of distance from ensemble mean for each equation
 # not sure if this is necessary or useful
-fig = plt.figure(figsize=(7,5), dpi=200)
-ax = fig.gca()
+fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(7,4), dpi=200, sharex=True)
+fig.add_subplot(111,frameon=False)
+plt.tick_params(labelcolor='none', which='both', top=False, bottom=False, left=False, right=False)
 
 hist_data = np.zeros((all_trimmed.shape[0], 16))
+
 for i in range(0,16):
     hist_data[:,i] = all_trimmed['LIRtalk' + str(i+1)] - all_trimmed['Ensemble_Mean_TA_LIR']
 
-n_bins = 400
+# plot ESPER-LIR results
+binwidth = 0.25
 labels = ['Eqn. 1', 'Eqn. 2', 'Eqn. 3', 'Eqn. 4', 'Eqn. 5', 'Eqn. 6', 'Eqn. 7',
           'Eqn. 8', 'Eqn. 9', 'Eqn. 10', 'Eqn. 11', 'Eqn. 12', 'Eqn. 13',
           'Eqn. 14', 'Eqn. 15', 'Eqn. 16']
-ax.hist(hist_data, n_bins, histtype ='step', stacked=True,fill=False, label=labels)
-ax.set_xlim([-5,5])
-ax.set_ylim([0,600000])
-ax.set_xlabel('ESPER LIR-Estimated TA - LIR Ensemble Mean TA ($µmol\;kg^{-1}$)')
-ax.set_ylabel('Count')
-#ax.legend()
-fig.text(0.14, 0.825, 'A', fontsize=14)
+ax1.hist(hist_data, bins=np.arange(np.nanmin(hist_data.flatten()), np.nanmax(hist_data.flatten()) + binwidth, binwidth), histtype ='step', stacked=True,fill=False, label=labels)
+ax1.set_xlim([-5,5])
+ax1.set_ylim([0,600000])
+ax1.ticklabel_format(axis='y', style='sci', scilimits=(-1,1))
+fig.text(0.14, 0.825, 'A', fontsize=11)
 
-fig = plt.figure(figsize=(7,5), dpi=200)
-ax = fig.gca()
+# calculate average and std of ∆TA calculated with LIR
+LIR_mean = np.nanmean(hist_data)
+LIR_std = np.nanstd(hist_data)
+
+# plot ESPER NN results
 hist_data = np.zeros((all_trimmed.shape[0], 16))
 for i in range(0,16):
     hist_data[:,i] = all_trimmed['NNtalk' + str(i+1)] - all_trimmed['Ensemble_Mean_TA_NN']
 
-ax.hist(hist_data, n_bins, histtype ='step', stacked=True,fill=False, label=labels)
-ax.set_xlim([-5,5])
-ax.set_ylim([0,600000])
-ax.set_xlabel('ESPER NN-Estimated TA - NN Ensemble Mean TA ($µmol\;kg^{-1}$)')
-ax.set_ylabel('Count')
-#ax.legend()
-fig.text(0.14, 0.825, 'B', fontsize=14)
+ax2.hist(hist_data, bins=np.arange(np.nanmin(hist_data.flatten()), np.nanmax(hist_data.flatten()) + binwidth, binwidth), histtype ='step', stacked=True,fill=False, label=labels)
+ax2.set_xlim([-5,5])
+ax2.set_ylim([0,600000])
+ax2.ticklabel_format(axis='y', style='sci', scilimits=(-1,1))
 
-fig = plt.figure(figsize=(7,5), dpi=200)
-ax = fig.gca()
-hist_data = np.zeros((all_trimmed.shape[0], 16))
-for i in range(0,16):
-    hist_data[:,i] = all_trimmed['Mtalk' + str(i+1)] - all_trimmed['Ensemble_Mean_TA_Mixed']
+# calculate average and std of ∆TA calculated with NN
+NN_mean = np.nanmean(hist_data)
+NN_std = np.nanstd(hist_data)
 
-ax.hist(hist_data, n_bins, histtype ='step', stacked=True,fill=False, label=labels)
-ax.set_xlim([-5,5])
-ax.set_ylim([0,600000])
-ax.set_xlabel('ESPER Mixed-Estimated TA - Mixed Ensemble Mean TA ($µmol\;kg^{-1}$)')
-ax.set_ylabel('Count')
-ax.legend()
-fig.text(0.14, 0.825, 'C', fontsize=14)
+# label axis, set up legend
+plt.ylabel('Number of ∆TA Calculations')
+plt.xlabel('ESPER-Estimated TA - Ensemble Mean TA ($µmol\;kg^{-1}$)')
+fig.text(0.14, 0.41, 'B', fontsize=11)
+
+handles, labels = ax2.get_legend_handles_labels()
+ax2.legend(handles[::-1], labels[::-1], bbox_to_anchor = (1.05, 2.35), loc='upper left')
+
 
 # %% start data visualization
 
@@ -173,16 +173,16 @@ espers = espers.sort_values(by=['dectime'],ascending=True)
 # set up map
 # atlantic-centered view
 #fig = plt.figure(figsize=(6.2,4.1))
-fig = plt.figure(figsize=(5,4), dpi=200)
+fig = plt.figure(figsize=(10,3.5), dpi=200)
 ax = plt.axes(projection=ccrs.PlateCarree())
 # pacific-centered view
 #fig = plt.figure(figsize=(6.3,4.1))
 #ax = plt.axes(projection=ccrs.PlateCarree(central_longitude=180)) # paciifc-centered view
 #ax = plt.axes(projection=ccrs.Orthographic(0,90)) # arctic-centered view (turn off "extent" variable)
 ax.coastlines(resolution='110m',color='k')
-g1 = ax.gridlines(crs=ccrs.PlateCarree(),draw_labels=True,alpha=0)
-g1.top_labels = False
-g1.right_labels = False
+g1 = ax.gridlines(crs=ccrs.PlateCarree(),draw_labels=False,alpha=0)
+g1.bottom_labels = True
+g1.left_labels = True
 ax.add_feature(cfeature.LAND,color='k')
 #ax.set_title('North Atlantic Coverage of TA (GLODAPv2.2023)')
 #extent = [5, 15, -52.5, -52]
@@ -195,12 +195,13 @@ ax.set_extent(extent)
 #lat = espers.G2latitude
 #plot = ax.scatter(lon,lat,transform=ccrs.PlateCarree(),marker='o',edgecolors='none',color='C0',s=1)
 
-# or, plot all trimmed transects
-for key in trimmed:
-    df = trimmed[key]
-    lon = df.G2longitude
-    lat = df.G2latitude
-    plot = ax.scatter(lon,lat,transform=ccrs.PlateCarree(),marker='o',edgecolors='none',s=10,color='steelblue',alpha=0.5)
+# plot all trimmed transects
+lon = all_trimmed.G2longitude
+lat = all_trimmed.G2latitude
+#plot = ax.scatter(lon,lat,transform=ccrs.PlateCarree(),marker='o',edgecolors='none',s=10,color='steelblue',alpha=0.5)
+
+h = ax.hist2d(lon, lat, bins=150, norm='log', cmap=cmo.dense, transform=ccrs.PlateCarree())
+fig.colorbar(h[3],label='Number of Observations', pad = -0.035)
 
 # plot one cruise colored
 #df = trimmed['A17']
@@ -229,7 +230,7 @@ lon = surface.G2longitude
 diff = surface.G2talk - surface.Ensemble_Mean_TA_LIR
 to_plot = pd.DataFrame(data={'G2latitude' : lat, 'G2longitude' : lon, 'del_alk' : diff, 'abs_del_alk' : np.abs(diff)})
 to_plot = to_plot[(to_plot.del_alk > -30) & (to_plot.del_alk < 30)]
-to_plot = to_plot.sort_values('abs_del_alk',axis=0,ascending=False)
+to_plot = to_plot.sort_values('abs_del_alk',axis=0,ascending=True)
 
 # create colormap
 cmap = cmocean.tools.crop(cmo.balance, to_plot.del_alk.min(), to_plot.del_alk.max(), 0)
@@ -238,206 +239,189 @@ cmap = cmocean.tools.crop(cmo.balance, to_plot.del_alk.min(), to_plot.del_alk.ma
 pts = ax.scatter(to_plot.G2longitude,to_plot.G2latitude,transform=ccrs.PlateCarree(),s=30,c=to_plot.del_alk,cmap=cmap, alpha=0.15,edgecolors='none')
 plt.colorbar(pts, ax=ax, label='Measured TA - ESPER-Estimated TA \n($µmol\;kg^{-1}$)')
 
-# %% plot global ensemble mean regression for all trimmed GO-SHIP 
-
-# plot surface values and do regular linear regression
-surface = all_trimmed[all_trimmed.G2depth < 25]
-#surface = all_trimmed
-x = surface.dectime
-y = surface.G2talk - surface.Ensemble_Mean_TA_LIR
-
-slope, intercept, rvalue, pvalue, stderr = stats.linregress(x, y, alternative='two-sided')
-
-# make plot
-fig = plt.figure(figsize=(7,5), dpi=200)
-ax = plt.gca()
-plt.scatter(surface.dectime,y, c='mediumaquamarine', s=10, alpha=0.8)
-fig.text(0.52, 0.83, '$y={:.4f}x+{:.4f}$'.format(slope,intercept), fontsize=14)
-fig.text(0.52, 0.78, '$p-value={:.4e}$'.format(pvalue), fontsize=14)
-#fig.text(0.15, 0.83, 'A', fontsize=14)
-x = np.linspace(surface.dectime.min(), surface.dectime.max(), num=100)
-ax.plot(x, intercept + slope * x, color="firebrick", lw=2, ls='--');
-#ax.set_title('Difference in Measured and ESPER LIR-Predicted TA along GO-SHIP Transects (< 25 m)')
-#ax.set_title('Difference in Measured and ESPER LIR-Predicted TA along GO-SHIP Transects')
-ax.set_ylabel('Measured TA - ESPER-Estimated TA \n($µmol\;kg^{-1}$)',fontsize=12)
-ax.set_ylim(-70,70) # zoomed in
-#ax.set_ylim(-375,225) # to see all data
-ax.set_xlim(surface.dectime.min(),surface.dectime.max())
 
 #%% 2D histogram for global ensemble mean regression for all trimmed GO-SHIP
+# with robust regression (statsmodels rlm)
 
-# plot surface values and do regular linear regression
-surface = all_trimmed[all_trimmed.G2depth < 25]
-#surface = all_trimmed
-x = surface.dectime
-y = surface.G2talk - surface.Ensemble_Mean_TA_LIR
+# make figure
+fig, axs = plt.subplots(nrows=2, ncols=2, figsize=(6.5,4), dpi=200, sharex=True, sharey=True, layout='constrained')
+fig.add_subplot(111,frameon=False)
+ax = fig.gca()
+plt.tick_params(labelcolor='none', which='both', top=False, bottom=False, left=False, right=False)
 
-# plot histogram
-fig = plt.figure(figsize=(7,5), dpi=200)
-ax = plt.gca()
-h = ax.hist2d(x, y, bins=150, norm='log', cmap=cmo.matter)
+# surface LIR
+esper_type = 'Ensemble_Mean_TA_LIR' # LIR, NN, or Mixed
+esper_sel = all_trimmed[all_trimmed.G2depth < 25] # do surface values (< 25 m) only
+p1.plot2dhist(esper_sel, esper_type, fig, axs[0,0], 'A', 0)
 
-# add regression line
-slope, intercept, rvalue, pvalue, stderr = stats.linregress(x, y, alternative='two-sided')
-ax.plot(x, intercept + slope * x, color="maroon", lw=1, ls='--');
-fig.text(0.42, 0.83, '$y={:.4f}x+{:.4f}$'.format(slope,intercept), fontsize=12)
-fig.text(0.42, 0.78, '$p-value={:.4e}$'.format(pvalue), fontsize=12)
+# full ocean LIR
+esper_type = 'Ensemble_Mean_TA_LIR' # LIR, NN, or Mixed
+esper_sel = all_trimmed # full depth
+p1.plot2dhist(esper_sel, esper_type, fig, axs[1,0], 'C', 0)
 
-# add plot elements
-ax.set_ylabel('Measured TA - ESPER-Estimated TA ($µmol\;kg^{-1}$)',fontsize=12)
-ax.set_xlabel('Year',fontsize=12)
-ax.set_ylim(-80,80) # zoomed in
-plt.colorbar(h[3],label='Count')
+# surface NN
+esper_type = 'Ensemble_Mean_TA_NN' # LIR, NN, or Mixed
+esper_sel = all_trimmed[all_trimmed.G2depth < 25] # do surface values (< 25 m) only
+p1.plot2dhist(esper_sel, esper_type, fig, axs[0,1], 'B', 1)
+
+# full ocean NN
+esper_type = 'Ensemble_Mean_TA_NN' # LIR, NN, or Mixed
+esper_sel = all_trimmed # full depth
+p1.plot2dhist(esper_sel, esper_type, fig, axs[1,1], 'D', 1)
+
+ax.set_xlabel('Year')
+ax.xaxis.set_label_coords(0.17,-0.65) # for 2d histogram
+ax.set_ylabel('Measured TA - ESPER-Estimated TA ($µmol\;kg^{-1}$)')
+ax.yaxis.set_label_coords(-0.62,0.28)
+
+#ax.xaxis.set_label_coords(0.28,-0.65) # if doing scatter (supplemental)
+#axs[0,0].text(1991.2, 170, 'A', fontsize=12)
+#axs[0,1].text(1991.2, 170, 'B', fontsize=12)
+#axs[1,0].text(1991.2, 170, 'C', fontsize=12)
+#axs[1,1].text(1991.2, 170, 'D', fontsize=12)
+
+#%% 2D histogram for global ensemble mean regression with only GLODAPv2.2023 points used
+# with robust regression (statsmodels rlm)
+
+# make figure
+fig, axs = plt.subplots(nrows=1, ncols=2, figsize=(7.5,2.7), dpi=200, sharex=True, sharey=True, layout='constrained')
+fig.add_subplot(111,frameon=False)
+ax = fig.gca()
+plt.tick_params(labelcolor='none', which='both', top=False, bottom=False, left=False, right=False)
+
+# surface LIR
+esper_type = 'Ensemble_Mean_TA_LIR' # LIR, NN, or Mixed
+esper_sel = all_trimmed[all_trimmed.G2depth < 25] # do surface values (< 25 m) only
+p1.plot2dhist(esper_sel, esper_type, fig, axs[0], 'A', 2)
+
+# full ocean LIR
+esper_type = 'Ensemble_Mean_TA_LIR' # LIR, NN, or Mixed
+esper_sel = all_trimmed # full depth
+p1.plot2dhist(esper_sel, esper_type, fig, axs[1], 'B', 1)
+
+ax.set_xlabel('Year')
+ax.xaxis.set_label_coords(0.25,-0.65) # for 2d histogram
+ax.set_ylabel('Measured TA - ESPER-Estimated TA\n($µmol\;kg^{-1}$)')
+ax.yaxis.set_label_coords(-0.62,0.28)
+
 
 # %% loop through monte carlo simulation-produced G2talk to do global ensemble mean regression
 
 # plot surface values and do regular linear regression
 all_trimmed_mc = pd.concat([all_trimmed, G2talk_mc], axis=1)
-all_trimmed_mc = all_trimmed_mc[all_trimmed_mc.G2depth < 25]
+all_trimmed_mc_surf = all_trimmed_mc[all_trimmed_mc.G2depth < 25]
 x = all_trimmed_mc.dectime
+x_surf = all_trimmed_mc_surf.dectime
 
 # preallocate arrays for storing slope and p-values
-slopes = np.zeros(G2talk_mc.shape[1])
-pvalues = np.zeros(G2talk_mc.shape[1])
+slopes_surf_LIR = np.zeros(G2talk_mc.shape[1])
+pvalues_surf_LIR = np.zeros(G2talk_mc.shape[1])
+
+slopes_LIR = np.zeros(G2talk_mc.shape[1])
+pvalues_LIR = np.zeros(G2talk_mc.shape[1])
+
+slopes_surf_NN = np.zeros(G2talk_mc.shape[1])
+pvalues_surf_NN = np.zeros(G2talk_mc.shape[1])
+
+slopes_NN = np.zeros(G2talk_mc.shape[1])
+pvalues_NN = np.zeros(G2talk_mc.shape[1])
 
 for i in range(0,G2talk_mc.shape[1]): 
 #for i in range(0,2):
-    y = all_trimmed_mc[str(i)] - all_trimmed_mc.Ensemble_Mean_TA_LIR # this works for per cruise offsets, change ESPER method here
+    y_surf_LIR = all_trimmed_mc_surf[str(i)] - all_trimmed_mc_surf.Ensemble_Mean_TA_LIR # this works for per cruise offsets, change ESPER method here
+    y_LIR = all_trimmed_mc[str(i)] - all_trimmed_mc.Ensemble_Mean_TA_LIR # this works for per cruise offsets, change ESPER method here
+    y_surf_NN = all_trimmed_mc_surf[str(i)] - all_trimmed_mc_surf.Ensemble_Mean_TA_NN # this works for per cruise offsets, change ESPER method here
+    y_NN = all_trimmed_mc[str(i)] - all_trimmed_mc.Ensemble_Mean_TA_NN # this works for per cruise offsets, change ESPER method here
+    
     #y = all_trimmed_mc[str(i)] - all_trimmed_mc.Ensemble_Mean_TA_LIR # this works for individual offsets, change ESPER method here
 
-    slope, intercept, rvalue, pvalue, stderr = stats.linregress(x, y, alternative='two-sided')
+    slope_surf_LIR, intercept_surf_LIR, _, pvalue_surf_LIR, _ = stats.linregress(x_surf, y_surf_LIR, alternative='two-sided')
+    slope_LIR, intercept_LIR, _, pvalue_LIR, _ = stats.linregress(x, y_LIR, alternative='two-sided')
+    slope_surf_NN, intercept_surf_NN, _, pvalue_surf_NN, _ = stats.linregress(x_surf, y_surf_NN, alternative='two-sided')
+    slope_NN, intercept_NN, _, pvalue_NN, _ = stats.linregress(x, y_NN, alternative='two-sided')
     
-    slopes[i] = slope
-    pvalues[i] = pvalue
+    slopes_surf_LIR[i] = slope_surf_LIR
+    pvalues_surf_LIR[i] = pvalue_surf_LIR
+    slopes_LIR[i] = slope_LIR
+    pvalues_LIR[i] = pvalue_LIR
+    slopes_surf_NN[i] = slope_surf_NN
+    pvalues_surf_NN[i] = pvalue_surf_NN
+    slopes_NN[i] = slope_NN
+    pvalues_NN[i] = pvalue_NN
 
-# make histogram of slopes
-fig = plt.figure(figsize=(6,4), dpi=200)
-ax = plt.gca()
-plt.hist(slopes, bins=100)
-mu = slopes.mean()
-sigma = slopes.std()
-#ax.set_title('Monte Carlo Simulation: Slopes of Linear Regressions\n(1000 runs, normally-distributed error of 2 µmol/kg added to each cruise)')
-ax.set_xlabel('Slope of Measured TA - ESPER-Estimated TA over Time ($µmol\;kg^{-1}$)')
-ax.set_ylabel('Count')
+fig, axs = plt.subplots(nrows=2, ncols=2, figsize=(8,5), dpi=200, sharex=True, sharey=True)
+fig.add_subplot(111,frameon=False)
+plt.tick_params(labelcolor='none', which='both', top=False, bottom=False, left=False, right=False)
+
+axs[0,0].hist(slopes_surf_LIR, bins=100)
+axs[0,0].set_xlim([-0.15, 0.15]) # per cruise offset
+#axs[0,0].set_xlim([-0.07, 0.07]) # individual offset
+mu = slopes_surf_LIR.mean()
+sigma = slopes_surf_LIR.std()
 fig.text(0.14, 0.825, 'A', fontsize=14)
-fig.text(0.71, 0.825, '$\mu={:.4f}$'.format(mu), fontsize=14)
-fig.text(0.71, 0.755, '$\sigma={:.4f}$'.format(sigma), fontsize=14)
-ax.set_xlim([-0.15, 0.15]) # per cruise offset
-ax.set_xlim([-0.07, 0.07]) # individual offset
-ax.set_ylim([0, 37])
+fig.text(0.236, 0.84, '$\mu={:.4f}, \sigma={:.4f}$'.format(mu, sigma), fontsize=12)
 
-# scatter slopes and p values to see if any <0 are significant
-#fig = plt.figure(figsize=(9,6))
-#ax = plt.gca()
-#plt.scatter(slopes,pvalues)
-#plt.axhline(y = 0.05, color = 'r', linestyle = '--') 
-#ax.set_title('Monte Carlo Simulation: Slopes of Linear Regressions & Associated p-Values\n(1000 runs, normally-distributed error of 2 µmol/kg added to each cruise)')
-#ax.set_xlabel('Slope of Measured TA - ESPER-Estimated TA over Time ($µmol\;kg^{-1}$)')
-#ax.set_ylabel('p-Value')
-#ax.set_ylim([-0.05, 1])
+axs[1,0].hist(slopes_LIR, bins=100)
+mu = slopes_LIR.mean()
+sigma = slopes_LIR.std()
+fig.text(0.14, 0.415, 'C', fontsize=14)
+fig.text(0.236, 0.43, '$\mu={:.4f}, \sigma={:.4f}$'.format(mu, sigma), fontsize=12)
+
+axs[0,1].hist(slopes_surf_NN, bins=100)
+mu = slopes_surf_NN.mean()
+sigma = slopes_surf_NN.std()
+fig.text(0.56, 0.825, 'B', fontsize=14)
+fig.text(0.661, 0.84, '$\mu={:.4f}, \sigma={:.4f}$'.format(mu, sigma), fontsize=12)
+
+axs[1,1].hist(slopes_NN, bins=100)
+mu = slopes_NN.mean()
+sigma = slopes_NN.std()
+fig.text(0.56, 0.415, 'D', fontsize=14)
+fig.text(0.661, 0.43, '$\mu={:.4f}, \sigma={:.4f}$'.format(mu, sigma), fontsize=12)
+
+plt.xlabel('Slope of Measured TA - ESPER-Estimated TA over Time ($µmol\;kg^{-1}\;yr^{-1}$)')
+plt.ylabel('Count')
 
 # %% make box plot graph of transect slopes from mc simulation
 
+# SURFACE LIR
 # pull surface values
 all_trimmed_mc = pd.concat([all_trimmed, G2talk_mc], axis=1)
 all_trimmed_mc = all_trimmed_mc[all_trimmed_mc.G2depth < 25]
-
 # turn into dict with transects as keys
 trimmed_mc = p1.trim_go_ship(all_trimmed_mc, go_ship_cruise_nums_2023)
+all_slopes_surf = p1.transect_box_plot(trimmed_mc, G2talk_mc, 'LIR')
 
-# remove transects that have 0 or 1 repeats
-# I01, P02_J, P03, P09, P10, P13, P17E, ARC01W, MED01
-del trimmed_mc['I01']
-del trimmed_mc['P02_J']
-del trimmed_mc['P03']
-del trimmed_mc['P09']
-del trimmed_mc['P10']
-del trimmed_mc['P13']
-del trimmed_mc['P17E']
-del trimmed_mc['ARC01W']
-del trimmed_mc['MED01']
+# FULL-OCEAN LIR
+# pull all values
+all_trimmed_mc = pd.concat([all_trimmed, G2talk_mc], axis=1)
+# turn into dict with transects as keys
+trimmed_mc = p1.trim_go_ship(all_trimmed_mc, go_ship_cruise_nums_2023)
+all_slopes_full = p1.transect_box_plot(trimmed_mc, G2talk_mc, 'LIR')
 
-# get rid of empty dict entries
-del_keys = []
-for key in trimmed_mc:
-    if trimmed_mc[key].empty:
-        del_keys.append(key)
-
-for key in del_keys:
-    del trimmed_mc[key]
-
-# preallocate np array to save slopes & p-values data in
-all_slopes = [np.zeros(G2talk_mc.shape[1]) for i in range(0, len(trimmed_mc.keys()))] # number of transects by number of mc simulations
-all_sig_slopes = [np.zeros(G2talk_mc.shape[1]) for i in range(0, len(trimmed_mc.keys()))] # number of transects by number of mc simulations (only to store statistically significant slopes)
-all_pvalues = [np.zeros(G2talk_mc.shape[1]) for i in range(0, len(trimmed_mc.keys()))] # number of transects by number of mc simulations
+# set up plot
+fig, axs = plt.subplots(nrows=2, ncols=1, figsize=(8,5), dpi=200, sharex=True, sharey=True, layout='constrained')
+fig.add_subplot(111,frameon=False)
+ax = fig.gca()
+plt.tick_params(labelcolor='none', which='both', top=False, bottom=False, left=False, right=False)
 
 
-# loop through transects
-j = 0
-for key in trimmed_mc:
-    transect = trimmed_mc[key]
-    x = transect.dectime
-    
-    transect_mc = transect.iloc[:,116:] # pull only mc simulated G2talk for this transect
-    
-    # calculate slope and p value for each mc run
-    slopes = np.zeros(transect_mc.shape[1])
-    pvalues = np.zeros(transect_mc.shape[1])
-    sig_slopes = np.zeros(transect_mc.shape[1])
-    
-    # loop through mc simulations for this transect
-    for i in range(0,transect_mc.shape[1]):
-        y = transect_mc.iloc[:,i] - transect.Ensemble_Mean_TA_LIR # change ESPER method here
-    
-        slope, _, _, pvalue, _ = stats.linregress(x, y, alternative='two-sided')
-        slopes[i] = slope
-        pvalues[i] = pvalue
-        if pvalue < 0.05:
-            sig_slopes[i] = slope
-        else:
-            sig_slopes[i] = np.nan
-    
-    all_slopes[j] = slopes
-    all_pvalues[j] = pvalues
-    all_sig_slopes[j] = sig_slopes
-    
-    j += 1
+# make box plot for surface
+axs[0].boxplot(all_slopes_surf, vert=True, labels=list(trimmed_mc.keys()))
+axs[0].axhline(y=0, color='r', linestyle='--')
+axs[0].set_ylim(-5, 5)
+axs[0].text(1.25, 3.8, 'A', fontsize=12)
 
-# make box plot for slope
-fig = plt.figure(figsize=(15,7), dpi = 200)
-ax = plt.gca()
-plt.boxplot(all_slopes, vert=True, labels=list(trimmed_mc.keys()))
-plt.axhline(y=0, color='r', linestyle='--')
-plt.xticks(rotation=90)
-ax.set_ylabel('Slope of Measured TA - ESPER-Estimated TA over Time ($µmol\;kg^{-1}$)')
-#ax.set_title('Monte Carlo Simulation: Slopes of Linear Regressions by Transect\n(1000 runs, normally-distributed error of 2 µmol/kg added to each cruise)')
-ax.set_ylim(-5, 5)
-fig.text(0.132, 0.84, 'A', fontsize=14)
+# make box plot for full depth
+axs[1].boxplot(all_slopes_full, vert=True, labels=list(trimmed_mc.keys()))
+axs[1].axhline(y=0, color='r', linestyle='--')
+axs[1].set_ylim(-5, 5)
+axs[1].text(1.25, 3.8, 'B', fontsize=12)
+axs[1].tick_params(axis='x', labelrotation=90)
 
-# make box plot for p values
-#fig = plt.figure(figsize=(15,7))
-#ax = plt.gca()
-#plt.boxplot(all_pvalues, vert=True, labels=list(trimmed_mc.keys()))
-#plt.axhline(y=0.05, color='r', linestyle='--')
-#plt.xticks(rotation=90)
-#ax.set_ylabel('P-Value for Measured TA - ESPER-Estimated TA over Time ($µmol\;kg^{-1}$)')
-#ax.set_title('Monte Carlo Simulation: P-Values of Linear Regressions by Transect\n(1000 runs, normally-distributed error of 2 µmol/kg added to each cruise)')
-#ax.set_ylim(0, 1)
+ax.set_ylabel('Slope of Measured TA - ESPER-Estimated TA over Time\n($µmol$ $kg^{-1}$ $yr^{-1}$)')
 
-#%% make box plot for only slopes that have significant p-value
-# filter to get rid of NaNs
-all_sig_slopes_arr = np.array(all_sig_slopes)
-mask = ~np.isnan(all_sig_slopes_arr)
-filtered_data = [d[m] for d, m in zip(all_sig_slopes_arr, mask)]
-# plot box plot
-fig = plt.figure(figsize=(15,7))
-ax = plt.gca()
-plt.boxplot(filtered_data, vert=True, labels=list(trimmed_mc.keys()))
-plt.axhline(y=0, color='r', linestyle='--')
-plt.xticks(rotation=90)
-ax.set_ylabel('Slope of Measured TA - ESPER-Estimated TA over Time ($µmol\;kg^{-1}$)')
-ax.set_title('Monte Carlo Simulation: Significant Slopes of Linear Regressions by Transect\n(1000 runs, normally-distributed error of 2 µmol/kg added to each point)')
-#ax.set_ylim(-2, 2)
+ax.yaxis.set_label_coords(-0.63,0.55)
 
 # %% plot global ensemble mean regression for each GO-SHIP transect
 
@@ -492,63 +476,6 @@ for keys in trimmed:
         pvalues[i] = np.nan
         i += 1
 
-# %% do global mean ensemble robust regression (statsmodels rlm)
-# SET ESPER ROUTINE HERE
-esper_type = 'Ensemble_Mean_TA_LIR' # LIR, NN, or Mixed
-
-# subset if desired
-esper_sel = all_trimmed
-#esper_sel = all_trimmed[all_trimmed.G2depth < 25] # do surface values (< 25 m) only
- 
-# sort by time
-esper_sel = esper_sel.sort_values(by=['dectime'],ascending=True)
-
-# calculate the difference in TA betwen GLODAP and ESPERS, store for regression
-del_alk = esper_sel.loc[:,'G2talk'] - esper_sel.loc[:,esper_type]
-x = esper_sel['dectime'].to_numpy()
-y = del_alk.to_numpy()
-
-# fit model and print summary
-x_model = sm.add_constant(x) # this is required in statsmodels to get an intercept
-rlm_model = sm.RLM(y, x_model, M=sm.robust.norms.HuberT())
-rlm_results = rlm_model.fit()
-
-ols_model = sm.OLS(y, x_model)
-ols_results = ols_model.fit()
-
-print(rlm_results.params)
-print(rlm_results.bse)
-print(
-    rlm_results.summary(
-        yname="y", xname=["var_%d" % i for i in range(len(rlm_results.params))]
-    )
-)
-
-print(ols_results.params)
-print(ols_results.bse)
-print(
-    ols_results.summary(
-        yname="y", xname=["var_%d" % i for i in range(len(ols_results.params))]
-    )
-)
-
-# make figure
-fig = plt.figure(figsize=(9.3,5),dpi=400)
-ax = fig.gca()
-#ax.plot(x[:,1], y, 'o', label='data', alpha = 0.3, color='lightblue') # for scatterplot
-h = ax.hist2d(x, y, bins=150, norm='log', cmap=cmo.matter) # for 2d histogram
-ax.plot(x_model[:,1], rlm_results.fittedvalues, lw=1, ls='-', color='black', label='RLM')
-ax.plot(x_model[:,1], ols_results.fittedvalues, lw=1, ls='-', color='gainsboro', label='OLS')
-ax.set_ylim([-80, 80])
-ax.set_xlabel('Year')
-ax.set_ylabel('Measured TA - ESPER Estimated TA ($µmol\;kg^{-1}$)')
-#legend = ax.legend(loc='lower left')
-plt.colorbar(h[3],label='Count')
-
-# print equations & p values for each regression type
-fig.text(0.265, 0.83, 'OLS: $y={:.4f}x {:+.4f}$, p-value$={:.3e}$'.format(ols_results.params[1],ols_results.params[0],ols_results.pvalues[1]), fontsize=12)
-fig.text(0.265, 0.78, 'RLM: $y={:.4f}x {:+.4f}$, p-value$={:.3e}$'.format(rlm_results.params[1],rlm_results.params[0],rlm_results.pvalues[1]), fontsize=12)
-fig.text(0.14, 0.83, 'B', fontsize=12)
 
 #%% plot ∆TA vs. salinity
 # SET ESPER ROUTINE HERE
