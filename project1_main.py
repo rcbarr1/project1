@@ -92,6 +92,25 @@ trimmed = p1.trim_go_ship(espers, go_ship_cruise_nums_2023)
 all_trimmed = pd.concat(trimmed.values(), ignore_index=True) # flatten from dict of dataframes into one large dataframe
 all_trimmed = all_trimmed.drop_duplicates(ignore_index=True) # drop duplicates
 
+#%% calculate average ESPERs coefficients
+
+# read in coefficients extracted from MATLAB (already averaged across all 16 equations)
+coeffs = pd.read_csv(filepath + 'ESPER_LIR_coeffs.csv', names=['x', 'TA_S', 'TA_T', 'TA_N', 'TA_O', 'TA_Si'])
+
+# attach G2cruise and G2station columns so trimming will work
+coeffs.insert(0, 'G2cruise', espers.G2cruise)
+coeffs.insert(1, 'G2station', espers.G2station)
+coeffs.insert(2, 'Ensemble_Mean_TA_LIR', espers.Ensemble_Mean_TA_LIR)
+
+# trim to pick out points on standard transect
+coeffs_trimmed = p1.trim_go_ship(coeffs, go_ship_cruise_nums_2023)
+coeffs_all_trimmed = pd.concat(coeffs_trimmed.values(), ignore_index=True) # flatten from dict of dataframes into one large dataframe
+coeffs_all_trimmed = coeffs_all_trimmed.drop_duplicates(ignore_index=True) # drop duplicates
+
+# average across all samples
+coeffs_all_trimmed = coeffs_all_trimmed.drop(columns=['G2cruise', 'G2station', 'Ensemble_Mean_TA_LIR', 'x'])
+avg_coeffs = coeffs_all_trimmed.mean(axis=0)
+
 # %% run (or upload) MC simulation to create array of simulated G2talk values (by cruise offset)
 #num_mc_runs = 1000
 #G2talk_mc = p1.create_mc_cruise_offset(all_trimmed, num_mc_runs)
@@ -110,11 +129,6 @@ G2talk_std = G2talk_mc.std(axis=1)
 #G2talk_mc.to_csv(filepath + input_mc_individual_file, index=False)
 
 G2talk_mc = pd.read_csv(filepath + input_mc_individual_file, na_values = -9999)
-
-#%% calculate error for each point? this is a work in progress, not sure it makes sense logically
-all_trimmed['error_LIR'] = np.sqrt(all_trimmed.Ensemble_Std_TA_LIR**2 + G2talk_std**2)
-all_trimmed['error_NN'] = np.sqrt(all_trimmed.Ensemble_Std_TA_NN**2 + G2talk_std**2)
-all_trimmed['error_Mixed'] = np.sqrt(all_trimmed.Ensemble_Std_TA_Mixed**2 + G2talk_std**2)
 
 #%% show layered histograms of distance from ensemble mean for each equation
 # not sure if this is necessary or useful
@@ -175,33 +189,56 @@ espers = espers.sort_values(by=['dectime'],ascending=True)
 #fig = plt.figure(figsize=(6.2,4.1))
 fig = plt.figure(figsize=(10,3.5), dpi=200)
 ax = plt.axes(projection=ccrs.PlateCarree())
-# pacific-centered view
-#fig = plt.figure(figsize=(6.3,4.1))
 #ax = plt.axes(projection=ccrs.PlateCarree(central_longitude=180)) # paciifc-centered view
 #ax = plt.axes(projection=ccrs.Orthographic(0,90)) # arctic-centered view (turn off "extent" variable)
-ax.coastlines(resolution='110m',color='k')
-g1 = ax.gridlines(crs=ccrs.PlateCarree(),draw_labels=False,alpha=0)
-g1.bottom_labels = True
-g1.left_labels = True
-ax.add_feature(cfeature.LAND,color='k')
+
 #ax.set_title('North Atlantic Coverage of TA (GLODAPv2.2023)')
 #extent = [5, 15, -52.5, -52]
 #extent = [-30, 30, -80, 10]
 extent = [-180, 180, -90, 90]
 ax.set_extent(extent)
 
-# get data from glodap
-#lon = espers.G2longitude
-#lat = espers.G2latitude
-#plot = ax.scatter(lon,lat,transform=ccrs.PlateCarree(),marker='o',edgecolors='none',color='C0',s=1)
+# keep only unique years
+# make dataframe of lat, lon, dectime, round dectime to year
+# round lat and lon to nearest 2º
+round_to = 4
+lat = all_trimmed.G2latitude
+lat = (lat / round_to).round().astype(int) * round_to
+lon = all_trimmed.G2longitude
+lon = (lon / round_to).round().astype(int) * round_to
+positions = pd.DataFrame({'lat' : lat, 'lon' : lon, 'dectime' : all_trimmed.dectime.round(0)})
+
+# deal with some longitudes needing to be transformed
+# if lon = -180, make it = 180
+positions.lon[positions.lon == -180] = 180
+
+# if lon > 180, subtract 360
+positions.lon[positions.lon > 180] -= 360
+
+# only keep one cruise per station (I think just drop repeated rows?)
+positions.drop_duplicates(inplace=True)
+
+# count number of years there is a lat/lon observation in a place
+count_positions = positions[['lat', 'lon']].value_counts().reset_index(name='counts')
 
 # plot all trimmed transects
-lon = all_trimmed.G2longitude
-lat = all_trimmed.G2latitude
-#plot = ax.scatter(lon,lat,transform=ccrs.PlateCarree(),marker='o',edgecolors='none',s=10,color='steelblue',alpha=0.5)
+lon = count_positions.lon
+lat = count_positions.lat
+counts = count_positions.counts
 
-h = ax.hist2d(lon, lat, bins=150, norm='log', cmap=cmo.dense, transform=ccrs.PlateCarree())
-fig.colorbar(h[3],label='Number of Observations', pad = -0.035)
+im = ax.scatter(lon,lat,c=counts, cmap=cmo.dense, transform=ccrs.PlateCarree(), marker='o', edgecolors='none', s=15)
+fig.colorbar(im, label='Number of Unique Years a\nMeasurement Was Made', pad=0.02)
+
+#cmap = cmo.dense
+#cmap.set_under('w',1)
+#h = ax.hist2d(lon, lat, bins=50, cmap=cmap, vmin=1, transform=ccrs.PlateCarree(), zorder=10)
+#fig.colorbar(h[3],label='Number of Unique Years a\nMeasurement Was Made', pad=0.02)
+
+ax.coastlines(resolution='110m',color='k')
+g1 = ax.gridlines(crs=ccrs.PlateCarree(),draw_labels=False,alpha=0)
+g1.bottom_labels = True
+g1.left_labels = True
+ax.add_feature(cfeature.LAND,color='k', zorder=12)
 
 # plot one cruise colored
 #df = trimmed['A17']
@@ -274,12 +311,6 @@ ax.xaxis.set_label_coords(0.17,-0.65) # for 2d histogram
 ax.set_ylabel('Measured TA - ESPER-Estimated TA ($µmol\;kg^{-1}$)')
 ax.yaxis.set_label_coords(-0.62,0.28)
 
-#ax.xaxis.set_label_coords(0.28,-0.65) # if doing scatter (supplemental)
-#axs[0,0].text(1991.2, 170, 'A', fontsize=12)
-#axs[0,1].text(1991.2, 170, 'B', fontsize=12)
-#axs[1,0].text(1991.2, 170, 'C', fontsize=12)
-#axs[1,1].text(1991.2, 170, 'D', fontsize=12)
-
 #%% 2D histogram for global ensemble mean regression with only GLODAPv2.2023 points used
 # with robust regression (statsmodels rlm)
 
@@ -303,6 +334,45 @@ ax.set_xlabel('Year')
 ax.xaxis.set_label_coords(0.25,-0.65) # for 2d histogram
 ax.set_ylabel('Measured TA - ESPER-Estimated TA\n($µmol\;kg^{-1}$)')
 ax.yaxis.set_label_coords(-0.62,0.28)
+
+#%% data points colored by weight assigned by robust regression (statsmodels rlm)
+# surface LIR
+esper_type = 'Ensemble_Mean_TA_LIR' # LIR, NN, or Mixed
+esper_sel = all_trimmed[all_trimmed.G2depth < 25] # do surface values (< 25 m) only
+
+# make figure
+fig, axs = plt.subplots(nrows=2, ncols=2, figsize=(7,4.5), dpi=400, sharex=True, sharey=True)
+fig.add_subplot(111,frameon=False)
+ax = fig.gca()
+plt.tick_params(labelcolor='none', which='both', top=False, bottom=False, left=False, right=False)
+
+# surface LIR
+esper_type = 'Ensemble_Mean_TA_LIR' # LIR, NN, or Mixed
+esper_sel = all_trimmed[all_trimmed.G2depth < 25] # do surface values (< 25 m) only
+p1.plot_rlm_weights(esper_sel, esper_type, fig, axs[0,0], 'A', 0)
+
+# full ocean LIR
+esper_type = 'Ensemble_Mean_TA_LIR' # LIR, NN, or Mixed
+esper_sel = all_trimmed # full depth
+p1.plot_rlm_weights(esper_sel, esper_type, fig, axs[1,0], 'C', 0)
+
+# surface NN
+esper_type = 'Ensemble_Mean_TA_NN' # LIR, NN, or Mixed
+esper_sel = all_trimmed[all_trimmed.G2depth < 25] # do surface values (< 25 m) only
+p1.plot_rlm_weights(esper_sel, esper_type, fig, axs[0,1], 'B', 0)
+
+# full ocean NN
+esper_type = 'Ensemble_Mean_TA_NN' # LIR, NN, or Mixed
+esper_sel = all_trimmed # full depth
+pts = p1.plot_rlm_weights(esper_sel, esper_type, fig, axs[1,1], 'D', 0)
+
+# adjust figure
+ax.set_xlabel('Year')
+ax.xaxis.set_label_coords(0.4,-0.1)
+ax.set_ylabel('Measured TA - ESPER-Estimated TA ($µmol\;kg^{-1}$)', labelpad=15)
+
+# add single colorbar
+fig.colorbar(pts, ax=axs.ravel().tolist(), label='Weight Assigned by RLM')
 
 
 # %% loop through monte carlo simulation-produced G2talk to do global ensemble mean regression
@@ -328,13 +398,11 @@ pvalues_NN = np.zeros(G2talk_mc.shape[1])
 
 for i in range(0,G2talk_mc.shape[1]): 
 #for i in range(0,2):
-    y_surf_LIR = all_trimmed_mc_surf[str(i)] - all_trimmed_mc_surf.Ensemble_Mean_TA_LIR # this works for per cruise offsets, change ESPER method here
-    y_LIR = all_trimmed_mc[str(i)] - all_trimmed_mc.Ensemble_Mean_TA_LIR # this works for per cruise offsets, change ESPER method here
-    y_surf_NN = all_trimmed_mc_surf[str(i)] - all_trimmed_mc_surf.Ensemble_Mean_TA_NN # this works for per cruise offsets, change ESPER method here
-    y_NN = all_trimmed_mc[str(i)] - all_trimmed_mc.Ensemble_Mean_TA_NN # this works for per cruise offsets, change ESPER method here
+    y_surf_LIR = all_trimmed_mc_surf[str(i)] - all_trimmed_mc_surf.Ensemble_Mean_TA_LIR
+    y_LIR = all_trimmed_mc[str(i)] - all_trimmed_mc.Ensemble_Mean_TA_LIR
+    y_surf_NN = all_trimmed_mc_surf[str(i)] - all_trimmed_mc_surf.Ensemble_Mean_TA_NN
+    y_NN = all_trimmed_mc[str(i)] - all_trimmed_mc.Ensemble_Mean_TA_NN
     
-    #y = all_trimmed_mc[str(i)] - all_trimmed_mc.Ensemble_Mean_TA_LIR # this works for individual offsets, change ESPER method here
-
     slope_surf_LIR, intercept_surf_LIR, _, pvalue_surf_LIR, _ = stats.linregress(x_surf, y_surf_LIR, alternative='two-sided')
     slope_LIR, intercept_LIR, _, pvalue_LIR, _ = stats.linregress(x, y_LIR, alternative='two-sided')
     slope_surf_NN, intercept_surf_NN, _, pvalue_surf_NN, _ = stats.linregress(x_surf, y_surf_NN, alternative='two-sided')
@@ -405,7 +473,6 @@ fig.add_subplot(111,frameon=False)
 ax = fig.gca()
 plt.tick_params(labelcolor='none', which='both', top=False, bottom=False, left=False, right=False)
 
-
 # make box plot for surface
 axs[0].boxplot(all_slopes_surf, vert=True, labels=list(trimmed_mc.keys()))
 axs[0].axhline(y=0, color='r', linestyle='--')
@@ -422,6 +489,50 @@ axs[1].tick_params(axis='x', labelrotation=90)
 ax.set_ylabel('Slope of Measured TA - ESPER-Estimated TA over Time\n($µmol$ $kg^{-1}$ $yr^{-1}$)')
 
 ax.yaxis.set_label_coords(-0.63,0.55)
+
+#%% calculate error: error in TREND, not point
+# u_esper = standard deviation in slope across all 16 equations
+# u_sample= standard deviation in slopes predicted by mc analysis
+# U = summation of u_esper and u_sample in quadrature
+
+# doing this with robust regression
+
+# calculate u_esper
+esper_type = 'LIRtalk' # LIR, NN, or Mixed (change separately for u_sample below)
+esper_sel = all_trimmed
+esper_sel = all_trimmed[all_trimmed.G2depth < 25] # do surface values (< 25 m) only
+slopes_rlm = np.zeros(16)
+slopes_ols = np.zeros(16)
+
+for i in range(0,16):
+
+    # sort by time
+    esper_sel = esper_sel.sort_values(by=['dectime'],ascending=True)
+
+    # calculate the difference in TA betwen GLODAP and ESPERS, store for regression
+    esper_sel = esper_sel.dropna(subset=['G2talk', esper_type+str(i+1)])
+    del_alk = esper_sel.loc[:,'G2talk'] - esper_sel.loc[:,esper_type+str(i+1)]
+    x = esper_sel['dectime'].to_numpy()
+    y = del_alk.to_numpy()
+
+    # fit model and print summary
+    x_model = sm.add_constant(x) # this is required in statsmodels to get an intercept
+    rlm_model = sm.RLM(y, x_model, M=sm.robust.norms.HuberT())
+    rlm_results = rlm_model.fit()
+
+    ols_model = sm.OLS(y, x_model)
+    ols_results = ols_model.fit()
+
+    slopes_rlm[i] = rlm_results.params[1]
+    slopes_ols[i] = ols_results.params[1]
+
+u_esper = slopes_rlm.std() # change if RLM or OLS used for u_esper here
+
+# calculate u_sample
+u_sample = slopes_surf_LIR.std() # for SURFACE, LIR
+#u_sample = slopes_LIR.std() # for FULL DEPTH, LIR
+
+U = np.sqrt(u_esper**2 + u_sample**2)
 
 # %% plot global ensemble mean regression for each GO-SHIP transect
 
@@ -476,130 +587,86 @@ for keys in trimmed:
         pvalues[i] = np.nan
         i += 1
 
+#%% plot ∆TA vs. predictor variables (robust regression shown)
+# salinity and nitrate in full and deep ocean
 
-#%% plot ∆TA vs. salinity
-# SET ESPER ROUTINE HERE
+# make figure
+fig, axs = plt.subplots(nrows=2, ncols=2, figsize=(8,4), dpi=200, sharey=True, layout='constrained')
+fig.add_subplot(111,frameon=False)
+ax = fig.gca()
+plt.tick_params(labelcolor='none', which='both', top=False, bottom=False, left=False, right=False)
+
+# surface LIR vs. salinity
 esper_type = 'Ensemble_Mean_TA_LIR' # LIR, NN, or Mixed
-
-# subset if desired
-esper_sel = all_trimmed
 esper_sel = all_trimmed[all_trimmed.G2depth < 25] # do surface values (< 25 m) only
-esper_sel = all_trimmed[all_trimmed.G2salinity > 32] # do surface values (< 25 m) only
- 
-# sort by time
-esper_sel = esper_sel.sort_values(by=['G2salinity'],ascending=True)
+var_name = 'G2salinity'
+p1.compare_TA_var(var_name, esper_sel, esper_type, fig, axs[0,0], 'A', 2)
 
-
-# calculate the difference in TA betwen GLODAP and ESPERS, store for regression
-del_alk = esper_sel.loc[:,'G2talk'] - esper_sel.loc[:,esper_type]
-x = esper_sel['G2salinity'].to_numpy()
-y = del_alk.to_numpy()
-
-# fit model and print summary
-x_model = sm.add_constant(x) # this is required in statsmodels to get an intercept
-rlm_model = sm.RLM(y, x_model, M=sm.robust.norms.HuberT())
-rlm_results = rlm_model.fit()
-
-ols_model = sm.OLS(y, x_model)
-ols_results = ols_model.fit()
-
-print(rlm_results.params)
-print(rlm_results.bse)
-print(
-    rlm_results.summary(
-        yname="y", xname=["var_%d" % i for i in range(len(rlm_results.params))]
-    )
-)
-
-print(ols_results.params)
-print(ols_results.bse)
-print(
-    ols_results.summary(
-        yname="y", xname=["var_%d" % i for i in range(len(ols_results.params))]
-    )
-)
-
-# make figure
-fig = plt.figure(figsize=(9.3,5),dpi=400)
-ax = fig.gca()
-#ax.plot(x[:,1], y, 'o', label='data', alpha = 0.3, color='lightblue') # for scatterplot
-h = ax.hist2d(x, y, bins=150, norm='log', cmap=cmo.matter) # for 2d histogram
-ax.plot(x_model[:,1], rlm_results.fittedvalues, lw=1, ls='-', color='black', label='RLM')
-ax.plot(x_model[:,1], ols_results.fittedvalues, lw=1, ls='-', color='gainsboro', label='OLS')
-ax.set_ylim([-80, 80])
-ax.set_xlabel('Salinity (PSU)')
-ax.set_ylabel('Measured TA - ESPER Estimated TA ($µmol\;kg^{-1}$)')
-legend = ax.legend(loc='lower left')
-plt.colorbar(h[3],label='Count')
-
-# print equations & p values for each regression type
-fig.text(0.265, 0.83, 'OLS: $y={:.4f}x {:+.4f}$, p-value$={:.3e}$'.format(ols_results.params[1],ols_results.params[0],ols_results.pvalues[1]), fontsize=12)
-fig.text(0.265, 0.78, 'RLM: $y={:.4f}x {:+.4f}$, p-value$={:.3e}$'.format(rlm_results.params[1],rlm_results.params[0],rlm_results.pvalues[1]), fontsize=12)
-#fig.text(0.14, 0.83, 'B', fontsize=12)
-
-#%% plot ∆TA vs. nitrate
-# SET ESPER ROUTINE HERE
+# full ocean LIR vs. salinity
 esper_type = 'Ensemble_Mean_TA_LIR' # LIR, NN, or Mixed
+esper_sel = all_trimmed # full depth
+var_name = 'G2salinity'
+p1.compare_TA_var(var_name, esper_sel, esper_type, fig, axs[1,0], 'C', 2)
+axs[1,0].set_xlabel('Salinity (PSU)')
 
-# subset if desired
-esper_sel = all_trimmed
-#esper_sel = all_trimmed[all_trimmed.G2depth < 25] # do surface values (< 25 m) only
+# surface NN vs. nitrate
+esper_type = 'Ensemble_Mean_TA_NN' # LIR, NN, or Mixed
+esper_sel = all_trimmed[all_trimmed.G2depth < 25] # do surface values (< 25 m) only
+var_name = 'G2nitrate'
+p1.compare_TA_var(var_name, esper_sel, esper_type, fig, axs[0,1], 'B', 1)
 
-# drop NaNs in nitrate
-esper_sel = esper_sel.dropna(subset=['G2nitrate'])
- 
-# sort by time
-esper_sel = esper_sel.sort_values(by=['G2nitrate'], ascending=True)
+# full ocean NN vs. nitrate
+esper_type = 'Ensemble_Mean_TA_NN' # LIR, NN, or Mixed
+esper_sel = all_trimmed # full depth
+var_name = 'G2nitrate'
+p1.compare_TA_var(var_name, esper_sel, esper_type, fig, axs[1,1], 'D', 1)
+axs[1,1].set_xlabel('Nitrate ($µmol\;kg^{-1}$)')
 
-# calculate the difference in TA betwen GLODAP and ESPERS, store for regression
-del_alk = esper_sel.loc[:,'G2talk'] - esper_sel.loc[:,esper_type]
-x = esper_sel['G2nitrate'].to_numpy()
-y = del_alk.to_numpy()
+ax.set_ylabel('Measured TA - ESPER-Estimated TA ($µmol\;kg^{-1}$)')
+ax.yaxis.set_label_coords(-0.62,0.55)
 
-# fit model and print summary
-x_model = sm.add_constant(x) # this is required in statsmodels to get an intercept
-rlm_model = sm.RLM(y, x_model, M=sm.robust.norms.HuberT())
-rlm_results = rlm_model.fit()
-
-ols_model = sm.OLS(y, x_model)
-ols_results = ols_model.fit()
-
-print(rlm_results.params)
-print(rlm_results.bse)
-print(
-    rlm_results.summary(
-        yname="y", xname=["var_%d" % i for i in range(len(rlm_results.params))]
-    )
-)
-
-print(ols_results.params)
-print(ols_results.bse)
-print(
-    ols_results.summary(
-        yname="y", xname=["var_%d" % i for i in range(len(ols_results.params))]
-    )
-)
+#%% plot ∆TA vs. predictor variables (robust regression shown)
+# surface ocean only --> salinity top row, left before 2005 and right after 2005
+# surface ocean only --> nitrate bottom row, left before 2005 and right after 2005
 
 # make figure
-fig = plt.figure(figsize=(9.3,5),dpi=400)
+fig, axs = plt.subplots(nrows=2, ncols=2, figsize=(8,4), dpi=200, sharey=True, layout='constrained')
+fig.add_subplot(111,frameon=False)
 ax = fig.gca()
-#ax.plot(x[:,1], y, 'o', label='data', alpha = 0.3, color='lightblue') # for scatterplot
-h = ax.hist2d(x, y, bins=150, norm='log', cmap=cmo.matter) # for 2d histogram
-ax.plot(x_model[:,1], rlm_results.fittedvalues, lw=1, ls='-', color='black', label='RLM')
-ax.plot(x_model[:,1], ols_results.fittedvalues, lw=1, ls='-', color='gainsboro', label='OLS')
-ax.set_ylim([-80, 80])
-ax.set_xlabel('Nitrate ($µmol\;kg^{-1}$)')
-ax.set_ylabel('Measured TA - ESPER Estimated TA ($µmol\;kg^{-1}$)')
-#legend = ax.legend(loc='lower left')
-plt.colorbar(h[3],label='Count')
+plt.tick_params(labelcolor='none', which='both', top=False, bottom=False, left=False, right=False)
 
-# print equations & p values for each regression type
-fig.text(0.265, 0.83, 'OLS: $y={:.4f}x {:+.4f}$, p-value$={:.3e}$'.format(ols_results.params[1],ols_results.params[0],ols_results.pvalues[1]), fontsize=12)
-fig.text(0.265, 0.78, 'RLM: $y={:.4f}x {:+.4f}$, p-value$={:.3e}$'.format(rlm_results.params[1],rlm_results.params[0],rlm_results.pvalues[1]), fontsize=12)
-#fig.text(0.14, 0.83, 'B', fontsize=12)
+# surface LIR vs. salinity (pre-2005)
+esper_type = 'Ensemble_Mean_TA_LIR' # LIR, NN, or Mixed
+esper_sel = all_trimmed[all_trimmed.G2depth < 25] # do surface values (< 25 m) only
+esper_sel = esper_sel[esper_sel.dectime < 2005] # pre-2005 only
+var_name = 'G2salinity'
+p1.compare_TA_var(var_name, esper_sel, esper_type, fig, axs[0,0], 'A', 2)
 
+# surface LIR vs. salinity (post-2005)
+esper_type = 'Ensemble_Mean_TA_LIR' # LIR, NN, or Mixed
+esper_sel = all_trimmed[all_trimmed.G2depth < 25] # do surface values (< 25 m) only
+esper_sel = esper_sel[esper_sel.dectime >= 2005] # post-2005 only
+var_name = 'G2salinity'
+p1.compare_TA_var(var_name, esper_sel, esper_type, fig, axs[1,0], 'C', 2)
+axs[1,0].set_xlabel('Salinity (PSU)')
 
+# surface NN vs. nitrate (pre-2005)
+esper_type = 'Ensemble_Mean_TA_NN' # LIR, NN, or Mixed
+esper_sel = all_trimmed[all_trimmed.G2depth < 25] # do surface values (< 25 m) only
+esper_sel = esper_sel[esper_sel.dectime < 2005] # pre-2005 only
+var_name = 'G2nitrate'
+p1.compare_TA_var(var_name, esper_sel, esper_type, fig, axs[0,1], 'B', 1)
 
+# surface NN vs. nitrate (post-2005)
+esper_type = 'Ensemble_Mean_TA_NN' # LIR, NN, or Mixed
+esper_sel = all_trimmed[all_trimmed.G2depth < 25] # do surface values (< 25 m) only
+esper_sel = esper_sel[esper_sel.dectime >= 2005] # post-2005 only
+var_name = 'G2nitrate'
+p1.compare_TA_var(var_name, esper_sel, esper_type, fig, axs[1,1], 'D', 1)
+axs[1,1].set_xlabel('Nitrate ($µmol\;kg^{-1}$)')
+
+ax.set_ylabel('Measured TA - ESPER-Estimated TA ($µmol\;kg^{-1}$)')
+ax.yaxis.set_label_coords(-0.62,0.55)
 
 
 

@@ -12,7 +12,6 @@ Description: Module holding functions developed for Project 1
     
 """
 
-# %% set-up
 import numpy as np
 from datetime import datetime as dt
 import pandas as pd
@@ -136,18 +135,19 @@ def go_ship_only(glodap):
                          'I09S' : [72, 77, 249],
                          'I10' : [80, 82, 256, 1054],
                          'P01' : [299, 461, 468, 502, 504, 1053, 5014],
-                         'P02' : [272, 1035],
-                         'P02_J' : [406, 407, 408, 459],
-                         'P03' : [],
-                         'P03_J' : [497, 1070, 1086, 1096, 2098, 5017],
+                         'P02U' : [272, 1035],
+                         'P02J' : [406, 407, 408, 459],
+                         'P03U' : [],
+                         'P03J' : [497, 1070, 1086, 1096, 2098, 5017],
                          'P04' : [319],
-                         'P06' : [243, 486, 273, 3029, 3030],
-                         'P09' : [],
-                         'P09_J' : [412, 515, 546, 547, 549, 550, 552, 554, 555, 556, 558, 559, 561, 562, 564, 565, 566, 568, 570, 571, 573, 576, 581, 583, 592, 595, 596, 599, 600, 603, 604, 607, 608, 609, 1056, 1057, 1058, 1067, 1071, 1079,  1080, 1082, 1083, 1087, 1090, 1093, 1100, 1101, 2041, 2047, 2057, 2062, 2067, 2075, 2080, 2087, 2099, 4066, 4068, 4069, 4071, 4078, 4089],
-                         'P10' : [302],
-                         'P10_J' : [495, 553, 557, 560, 563, 594, 1087, 1090, 1093, 1098, 1099, 2050, 2057, 2062, 2075, 2087, 4066],
-                         'P13' : [296],
-                         'P13_J' : [439, 440, 517, 545, 548, 551, 553, 557, 560, 563, 567, 569, 572, 574, 575, 577, 579, 580, 582, 584, 585, 586, 587, 588, 589, 590, 591, 593, 594, 597, 598, 601, 602, 605, 606, 1058, 1060, 1063, 1064, 1066, 1069, 1071, 1076, 1078, 1079, 1081, 1092, 2038, 2041, 2047, 2054, 2064, 2084, 2091, 2094, 2096, 2097, 2102, 2103, 4063, 4069, 4074, 4076, 4081, 4083, 4087],
+                         'P06U' : [243, 273, 3029, 3030],
+                         'P06J' : [486],
+                         'P09U' : [],
+                         'P09J' : [412, 515, 546, 547, 549, 550, 552, 554, 555, 556, 558, 559, 561, 562, 564, 565, 566, 568, 570, 571, 573, 576, 581, 583, 592, 595, 596, 599, 600, 603, 604, 607, 608, 609, 1056, 1057, 1058, 1067, 1071, 1079,  1080, 1082, 1083, 1087, 1090, 1093, 1100, 1101, 2041, 2047, 2057, 2062, 2067, 2075, 2080, 2087, 2099, 4066, 4068, 4069, 4071, 4078, 4089],
+                         'P10U' : [302],
+                         'P10J' : [495, 553, 557, 560, 563, 594, 1087, 1090, 1093, 1098, 1099, 2050, 2057, 2062, 2075, 2087, 4066],
+                         'P13U' : [296],
+                         'P13J' : [439, 440, 517, 545, 548, 551, 553, 557, 560, 563, 567, 569, 572, 574, 575, 577, 579, 580, 582, 584, 585, 586, 587, 588, 589, 590, 591, 593, 594, 597, 598, 601, 602, 605, 606, 1058, 1060, 1063, 1064, 1066, 1069, 1071, 1076, 1078, 1079, 1081, 1092, 2038, 2041, 2047, 2054, 2064, 2084, 2091, 2094, 2096, 2097, 2102, 2103, 4063, 4069, 4074, 4076, 4081, 4083, 4087],
                          'P14' : [280, 301, 504, 505, 1050],
                          'P15' : [83, 84, 280, 335, 1020],
                          # 'P16' : [245, 276, 277, 285, 286, 304, 306, 307, 320, 350, 1036, 1043, 1044],
@@ -531,162 +531,164 @@ def trim_go_ship(espers, go_ship_cruise_nums_2023):
     P01 = P01[~((P01.G2cruise == 504) & (P01.G2station == 1004))] # 504.1004
     P01 = P01[~((P01.G2cruise == 1053) & (P01.G2station == 151))] # 1053.151
 
-    P02 = espers[espers["G2cruise"].isin(go_ship_cruise_nums_2023['P02'])] # no trimming needed
+    P02U = espers[espers["G2cruise"].isin(go_ship_cruise_nums_2023['P02U'])] # no trimming needed
 
-    P02_J = espers[espers["G2cruise"].isin(go_ship_cruise_nums_2023['P02_J'])] # no trimming needed
+    P02J = espers[espers["G2cruise"].isin(go_ship_cruise_nums_2023['P02J'])] # no trimming needed
 
-    P03 = espers[espers["G2cruise"].isin(go_ship_cruise_nums_2023['P03'])] # no trimming needed
+    P03U = espers[espers["G2cruise"].isin(go_ship_cruise_nums_2023['P03U'])] # no trimming needed
 
-    P03_J = espers[espers["G2cruise"].isin(go_ship_cruise_nums_2023['P03_J'])] # no trimming needed
+    P03J = espers[espers["G2cruise"].isin(go_ship_cruise_nums_2023['P03J'])] # no trimming needed
     for i in range(209,219):
-        P03_J = P03_J[~((P03_J.G2cruise == 497) & (P03_J.G2station == i))] # 497.[209:218]
+        P03J = P03J[~((P03J.G2cruise == 497) & (P03J.G2station == i))] # 497.[209:218]
     for i in range(3851,3867):
-        P03_J = P03_J[~((P03_J.G2cruise == 1086) & (P03_J.G2station == i))] # 1086.[3851:3866]
+        P03J = P03J[~((P03J.G2cruise == 1086) & (P03J.G2station == i))] # 1086.[3851:3866]
     for i in range(4867,4878):
-        P03_J = P03_J[~((P03_J.G2cruise == 1096) & (P03_J.G2station == i))] # 1096.[4867:4877]
+        P03J = P03J[~((P03J.G2cruise == 1096) & (P03J.G2station == i))] # 1096.[4867:4877]
 
-    P06 = espers[espers["G2cruise"].isin(go_ship_cruise_nums_2023['P06'])] # no trimming needed
+    P06U = espers[espers["G2cruise"].isin(go_ship_cruise_nums_2023['P06U'])] # no trimming needed
+    
+    P06J = espers[espers["G2cruise"].isin(go_ship_cruise_nums_2023['P06J'])] # no trimming needed
 
-    P09 = espers[espers["G2cruise"].isin(go_ship_cruise_nums_2023['P09'])] # no trimming needed
+    P09U = espers[espers["G2cruise"].isin(go_ship_cruise_nums_2023['P09U'])] # no trimming needed
         
-    P09_J = espers[espers["G2cruise"].isin(go_ship_cruise_nums_2023['P09_J'])] # FINISH THIS
+    P09J = espers[espers["G2cruise"].isin(go_ship_cruise_nums_2023['P09J'])] # FINISH THIS
     for i in range(71,80):
-        P09_J = P09_J[~((P09_J.G2cruise == 609) & (P09_J.G2station == i))] # 609.[71:79]
+        P09J = P09J[~((P09J.G2cruise == 609) & (P09J.G2station == i))] # 609.[71:79]
     for i in range(3056,3070):
-        P09_J = P09_J[~((P09_J.G2cruise == 1067) & (P09_J.G2station == i))] # 1067.[3056:3069]
+        P09J = P09J[~((P09J.G2cruise == 1067) & (P09J.G2station == i))] # 1067.[3056:3069]
     for i in range(3482,3521):
-        P09_J = P09_J[~((P09_J.G2cruise == 1071) & (P09_J.G2station == i))] # 1071.[3482:3520]
+        P09J = P09J[~((P09J.G2cruise == 1071) & (P09J.G2station == i))] # 1071.[3482:3520]
     for i in range(3958,4000):
-        P09_J = P09_J[~((P09_J.G2cruise == 1079) & (P09_J.G2station == i))] # 1079.[3958:3999]
+        P09J = P09J[~((P09J.G2cruise == 1079) & (P09J.G2station == i))] # 1079.[3958:3999]
     for i in range(3920,3964):
-        P09_J = P09_J[~((P09_J.G2cruise == 1087) & (P09_J.G2station == i))] # 1087.[3920:3963]
+        P09J = P09J[~((P09J.G2cruise == 1087) & (P09J.G2station == i))] # 1087.[3920:3963]
     for i in range(4273,4305):
-        P09_J = P09_J[~((P09_J.G2cruise == 1090) & (P09_J.G2station == i))] # 1090.[4273:4304]
+        P09J = P09J[~((P09J.G2cruise == 1090) & (P09J.G2station == i))] # 1090.[4273:4304]
     for i in range(4624,4650):
-        P09_J = P09_J[~((P09_J.G2cruise == 1093) & (P09_J.G2station == i))] # 1093.[4624:4649]
+        P09J = P09J[~((P09J.G2cruise == 1093) & (P09J.G2station == i))] # 1093.[4624:4649]
     for i in range(5486,5549):
-        P09_J = P09_J[~((P09_J.G2cruise == 1100) & (P09_J.G2station == i))] # 1100.[5486:5548]
+        P09J = P09J[~((P09J.G2cruise == 1100) & (P09J.G2station == i))] # 1100.[5486:5548]
     for i in range(4237,4279):
-        P09_J = P09_J[~((P09_J.G2cruise == 2041) & (P09_J.G2station == i))] # 2041.[4237:4278]
+        P09J = P09J[~((P09J.G2cruise == 2041) & (P09J.G2station == i))] # 2041.[4237:4278]
     for i in range(4535,4577):
-        P09_J = P09_J[~((P09_J.G2cruise == 2047) & (P09_J.G2station == i))] # 2047.[4535:4576]
+        P09J = P09J[~((P09J.G2cruise == 2047) & (P09J.G2station == i))] # 2047.[4535:4576]
     for i in range(4995,5026):
-        P09_J = P09_J[~((P09_J.G2cruise == 2057) & (P09_J.G2station == i))] # 2057.[4995:5025]
+        P09J = P09J[~((P09J.G2cruise == 2057) & (P09J.G2station == i))] # 2057.[4995:5025]
     for i in range(5183,5192):
-        P09_J = P09_J[~((P09_J.G2cruise == 2062) & (P09_J.G2station == i))] # 2062.[5183:5191]
+        P09J = P09J[~((P09J.G2cruise == 2062) & (P09J.G2station == i))] # 2062.[5183:5191]
     for i in range(4974,5006):
-        P09_J = P09_J[~((P09_J.G2cruise == 2075) & (P09_J.G2station == i))] # 2075.[4974:5005]
+        P09J = P09J[~((P09J.G2cruise == 2075) & (P09J.G2station == i))] # 2075.[4974:5005]
     for i in range(5330,5347):
-        P09_J = P09_J[~((P09_J.G2cruise == 2080) & (P09_J.G2station == i))] # 2080.[5330:5346]
+        P09J = P09J[~((P09J.G2cruise == 2080) & (P09J.G2station == i))] # 2080.[5330:5346]
     for i in range(5641,5655):
-        P09_J = P09_J[~((P09_J.G2cruise == 2087) & (P09_J.G2station == i))] # 2087.[5641:5654]
+        P09J = P09J[~((P09J.G2cruise == 2087) & (P09J.G2station == i))] # 2087.[5641:5654]
     for i in range(6174,6191):
-        P09_J = P09_J[~((P09_J.G2cruise == 2099) & (P09_J.G2station == i))] # 2099.[6174:6190]
+        P09J = P09J[~((P09J.G2cruise == 2099) & (P09J.G2station == i))] # 2099.[6174:6190]
     for i in range(5695,5781):
-        P09_J = P09_J[~((P09_J.G2cruise == 4066) & (P09_J.G2station == i))] # 4066.[5695:5780]
+        P09J = P09J[~((P09J.G2cruise == 4066) & (P09J.G2station == i))] # 4066.[5695:5780]
     for i in range(5769,5781):
-        P09_J = P09_J[~((P09_J.G2cruise == 4069) & (P09_J.G2station == i))] # 4069.[5769:5780]
+        P09J = P09J[~((P09J.G2cruise == 4069) & (P09J.G2station == i))] # 4069.[5769:5780]
     for i in range(6413,6418):
-        P09_J = P09_J[~((P09_J.G2cruise == 4078) & (P09_J.G2station == i))] # 4078.[6413:6417]
+        P09J = P09J[~((P09J.G2cruise == 4078) & (P09J.G2station == i))] # 4078.[6413:6417]
 
-    P10 = espers[espers["G2cruise"].isin(go_ship_cruise_nums_2023['P10'])]
+    P10U = espers[espers["G2cruise"].isin(go_ship_cruise_nums_2023['P10U'])]
     for i in range(80,91):
-        P10 = P10[~((P10.G2cruise == 302) & (P10.G2station == i))] # 302.[80:90]
+        P10U = P10U[~((P10U.G2cruise == 302) & (P10U.G2station == i))] # 302.[80:90]
 
-    P10_J = espers[espers["G2cruise"].isin(go_ship_cruise_nums_2023['P10_J'])] # DO THIS
-    P10_J = P10_J[~((P10_J.G2cruise == 495) & (P10_J.G2station == 1003))] # 495.1003
+    P10J = espers[espers["G2cruise"].isin(go_ship_cruise_nums_2023['P10J'])] # DO THIS
+    P10J = P10J[~((P10J.G2cruise == 495) & (P10J.G2station == 1003))] # 495.1003
     for i in range(3870,3964):
-        P10_J = P10_J[~((P10_J.G2cruise == 1087) & (P10_J.G2station == i))] # 1087.[3870:3963]
+        P10J = P10J[~((P10J.G2cruise == 1087) & (P10J.G2station == i))] # 1087.[3870:3963]
     for i in range(4254,4305):
-        P10_J = P10_J[~((P10_J.G2cruise == 1090) & (P10_J.G2station == i))] # 1090.[4254:4304]
+        P10J = P10J[~((P10J.G2cruise == 1090) & (P10J.G2station == i))] # 1090.[4254:4304]
     for i in range(4586,4650):
-        P10_J = P10_J[~((P10_J.G2cruise == 1093) & (P10_J.G2station == i))] # 1093.[4586:4649]
-    P10_J = P10_J[~((P10_J.G2cruise == 1098) & (P10_J.G2station == 5163))] # 1098.5163
+        P10J = P10J[~((P10J.G2cruise == 1093) & (P10J.G2station == i))] # 1093.[4586:4649]
+    P10J = P10J[~((P10J.G2cruise == 1098) & (P10J.G2station == 5163))] # 1098.5163
     for i in range(5220,5238):
-        P10_J = P10_J[~((P10_J.G2cruise == 1099) & (P10_J.G2station == i))] # 1099.[5220:5237]
+        P10J = P10J[~((P10J.G2cruise == 1099) & (P10J.G2station == i))] # 1099.[5220:5237]
     for i in range(4663,4727):
-        P10_J = P10_J[~((P10_J.G2cruise == 2050) & (P10_J.G2station == i))] # 2050.[4663:4726]
+        P10J = P10J[~((P10J.G2cruise == 2050) & (P10J.G2station == i))] # 2050.[4663:4726]
     for i in range(4955,5026):
-        P10_J = P10_J[~((P10_J.G2cruise == 2057) & (P10_J.G2station == i))] # 2057.[4955:5025]
+        P10J = P10J[~((P10J.G2cruise == 2057) & (P10J.G2station == i))] # 2057.[4955:5025]
     for i in range(5195,5233):
-        P10_J = P10_J[~((P10_J.G2cruise == 2062) & (P10_J.G2station == i))] # 2062.[5195:5232]
+        P10J = P10J[~((P10J.G2cruise == 2062) & (P10J.G2station == i))] # 2062.[5195:5232]
     for i in range(4924,5006):
-        P10_J = P10_J[~((P10_J.G2cruise == 2075) & (P10_J.G2station == i))] # 2075.[4924:5005]
+        P10J = P10J[~((P10J.G2cruise == 2075) & (P10J.G2station == i))] # 2075.[4924:5005]
     for i in range(5591,5638):
-        P10_J = P10_J[~((P10_J.G2cruise == 2087) & (P10_J.G2station == i))] # 2087.[5591:5637]
+        P10J = P10J[~((P10J.G2cruise == 2087) & (P10J.G2station == i))] # 2087.[5591:5637]
     for i in range(5654,5692):
-        P10_J = P10_J[~((P10_J.G2cruise == 4066) & (P10_J.G2station == i))] # 4066.[5654:5691]
+        P10J = P10J[~((P10J.G2cruise == 4066) & (P10J.G2station == i))] # 4066.[5654:5691]
 
-    P13 = espers[espers["G2cruise"].isin(go_ship_cruise_nums_2023['P13'])]
+    P13U = espers[espers["G2cruise"].isin(go_ship_cruise_nums_2023['P13U'])]
 
-    P13_J = espers[espers["G2cruise"].isin(go_ship_cruise_nums_2023['P13_J'])] # FINISH THIS
+    P13J = espers[espers["G2cruise"].isin(go_ship_cruise_nums_2023['P13J'])] # FINISH THIS
     for i in range(1,3):
-        P13_J = P13_J[~((P13_J.G2cruise == 439) & (P13_J.G2station == i))] # 439.[1:2]
-    P13_J = P13_J[~((P13_J.G2cruise == 439) & (P13_J.G2station == 16))] # 439.16
-    P13_J = P13_J[~((P13_J.G2cruise == 439) & (P13_J.G2station == 24))] # 439.24
-    P13_J = P13_J[~((P13_J.G2cruise == 439) & (P13_J.G2station == 71))] # 439.71
-    P13_J = P13_J[~((P13_J.G2cruise == 440) & (P13_J.G2station == 0))] # 440.0
+        P13J = P13J[~((P13J.G2cruise == 439) & (P13J.G2station == i))] # 439.[1:2]
+    P13J = P13J[~((P13J.G2cruise == 439) & (P13J.G2station == 16))] # 439.16
+    P13J = P13J[~((P13J.G2cruise == 439) & (P13J.G2station == 24))] # 439.24
+    P13J = P13J[~((P13J.G2cruise == 439) & (P13J.G2station == 71))] # 439.71
+    P13J = P13J[~((P13J.G2cruise == 440) & (P13J.G2station == 0))] # 440.0
     for i in range(1,43):
-        P13_J = P13_J[~((P13_J.G2cruise == 517) & (P13_J.G2station == i))] # 517.[1:42]
-    P13_J = P13_J[~((P13_J.G2cruise == 598) & (P13_J.G2station == 2428))] # 598.2428
-    P13_J = P13_J[~((P13_J.G2cruise == 598) & (P13_J.G2station == 2432))] # 598.2432
+        P13J = P13J[~((P13J.G2cruise == 517) & (P13J.G2station == i))] # 517.[1:42]
+    P13J = P13J[~((P13J.G2cruise == 598) & (P13J.G2station == 2428))] # 598.2428
+    P13J = P13J[~((P13J.G2cruise == 598) & (P13J.G2station == 2432))] # 598.2432
     for i in range(2585,2593):
-        P13_J = P13_J[~((P13_J.G2cruise == 1060) & (P13_J.G2station == i))] # 1060.[2585:2592]
+        P13J = P13J[~((P13J.G2cruise == 1060) & (P13J.G2station == i))] # 1060.[2585:2592]
     for i in range(2980,3002):
-        P13_J = P13_J[~((P13_J.G2cruise == 1066) & (P13_J.G2station == i))] # 1066.[2980:3001]
+        P13J = P13J[~((P13J.G2cruise == 1066) & (P13J.G2station == i))] # 1066.[2980:3001]
     for i in range(2733,2738):
-        P13_J = P13_J[~((P13_J.G2cruise == 1064) & (P13_J.G2station == i))] # 1064.[2733:2737]
+        P13J = P13J[~((P13J.G2cruise == 1064) & (P13J.G2station == i))] # 1064.[2733:2737]
     for i in range(3294,3316):
-        P13_J = P13_J[~((P13_J.G2cruise == 1069) & (P13_J.G2station == i))] # 1069.[3294:3315]
+        P13J = P13J[~((P13J.G2cruise == 1069) & (P13J.G2station == i))] # 1069.[3294:3315]
     for i in range(3341,3363):
-        P13_J = P13_J[~((P13_J.G2cruise == 1069) & (P13_J.G2station == i))] # 1069.[3341:3362]
-    P13_J = P13_J[~((P13_J.G2cruise == 1071) & (P13_J.G2station == 3529))] # 1071.3529
+        P13J = P13J[~((P13J.G2cruise == 1069) & (P13J.G2station == i))] # 1069.[3341:3362]
+    P13J = P13J[~((P13J.G2cruise == 1071) & (P13J.G2station == 3529))] # 1071.3529
     for i in range(3538,3576):
-        P13_J = P13_J[~((P13_J.G2cruise == 1071) & (P13_J.G2station == i))] # 1071.[3538:3575]
+        P13J = P13J[~((P13J.G2cruise == 1071) & (P13J.G2station == i))] # 1071.[3538:3575]
     for i in range(3757,3769):
-        P13_J = P13_J[~((P13_J.G2cruise == 1076) & (P13_J.G2station == i))] # 1076.[3757:3768]
+        P13J = P13J[~((P13J.G2cruise == 1076) & (P13J.G2station == i))] # 1076.[3757:3768]
     for i in range(3790,3811):
-        P13_J = P13_J[~((P13_J.G2cruise == 1076) & (P13_J.G2station == i))] # 1076.[3790:3810]
+        P13J = P13J[~((P13J.G2cruise == 1076) & (P13J.G2station == i))] # 1076.[3790:3810]
     for i in range(3885,3991):
-        P13_J = P13_J[~((P13_J.G2cruise == 1078) & (P13_J.G2station == i))] # 1078.[3885:3990]
+        P13J = P13J[~((P13J.G2cruise == 1078) & (P13J.G2station == i))] # 1078.[3885:3990]
     for i in range(3903,3950):
-        P13_J = P13_J[~((P13_J.G2cruise == 1079) & (P13_J.G2station == i))] # 1079.[3903:3949]
+        P13J = P13J[~((P13J.G2cruise == 1079) & (P13J.G2station == i))] # 1079.[3903:3949]
     for i in range(4424,4455):
-        P13_J = P13_J[~((P13_J.G2cruise == 1092) & (P13_J.G2station == i))] # 1092.[4424:4454]
+        P13J = P13J[~((P13J.G2cruise == 1092) & (P13J.G2station == i))] # 1092.[4424:4454]
     for i in range(4115,4137):
-        P13_J = P13_J[~((P13_J.G2cruise == 2038) & (P13_J.G2station == i))] # 2038.[4115:4136]
+        P13J = P13J[~((P13J.G2cruise == 2038) & (P13J.G2station == i))] # 2038.[4115:4136]
     for i in range(4186,4224):
-        P13_J = P13_J[~((P13_J.G2cruise == 2041) & (P13_J.G2station == i))] # 2041.[4186:4223]
+        P13J = P13J[~((P13J.G2cruise == 2041) & (P13J.G2station == i))] # 2041.[4186:4223]
     for i in range(4480,4518):
-        P13_J = P13_J[~((P13_J.G2cruise == 2047) & (P13_J.G2station == i))] # 2047.[4480:4517]
-    P13_J = P13_J[~((P13_J.G2cruise == 2047) & (P13_J.G2station == 4526))] # 2047.4526
+        P13J = P13J[~((P13J.G2cruise == 2047) & (P13J.G2station == i))] # 2047.[4480:4517]
+    P13J = P13J[~((P13J.G2cruise == 2047) & (P13J.G2station == 4526))] # 2047.4526
     for i in range(5299,5303):
-        P13_J = P13_J[~((P13_J.G2cruise == 2064) & (P13_J.G2station == i))] # 2064.[5299:5302]
+        P13J = P13J[~((P13J.G2cruise == 2064) & (P13J.G2station == i))] # 2064.[5299:5302]
     for i in range(5466,5472):
-        P13_J = P13_J[~((P13_J.G2cruise == 2084) & (P13_J.G2station == i))] # 2084.[5466:5471]
+        P13J = P13J[~((P13J.G2cruise == 2084) & (P13J.G2station == i))] # 2084.[5466:5471]
     for i in range(5453,5455):
-        P13_J = P13_J[~((P13_J.G2cruise == 2084) & (P13_J.G2station == i))] # 2084.[5453:5454]
+        P13J = P13J[~((P13J.G2cruise == 2084) & (P13J.G2station == i))] # 2084.[5453:5454]
     for i in range(5785,5801):
-        P13_J = P13_J[~((P13_J.G2cruise == 2091) & (P13_J.G2station == i))] # 2091.[5785:5800]
+        P13J = P13J[~((P13J.G2cruise == 2091) & (P13J.G2station == i))] # 2091.[5785:5800]
     for i in range(5994,6019):
-        P13_J = P13_J[~((P13_J.G2cruise == 2094) & (P13_J.G2station == i))] # 2094.[5994:6018]
+        P13J = P13J[~((P13J.G2cruise == 2094) & (P13J.G2station == i))] # 2094.[5994:6018]
     for i in range(6030,6046):
-        P13_J = P13_J[~((P13_J.G2cruise == 2096) & (P13_J.G2station == i))] # 2096.[6030:6045]
-    P13_J = P13_J[~((P13_J.G2cruise == 2097) & (P13_J.G2station == 6081))] # 2097.6081
+        P13J = P13J[~((P13J.G2cruise == 2096) & (P13J.G2station == i))] # 2096.[6030:6045]
+    P13J = P13J[~((P13J.G2cruise == 2097) & (P13J.G2station == 6081))] # 2097.6081
     for i in range(6246,6262):
-        P13_J = P13_J[~((P13_J.G2cruise == 2102) & (P13_J.G2station == i))] # 2102.[6246:6261]
+        P13J = P13J[~((P13J.G2cruise == 2102) & (P13J.G2station == i))] # 2102.[6246:6261]
     for i in range(5596,5600):
-        P13_J = P13_J[~((P13_J.G2cruise == 4063) & (P13_J.G2station == i))] # 4063.[5596:5599]
+        P13J = P13J[~((P13J.G2cruise == 4063) & (P13J.G2station == i))] # 4063.[5596:5599]
     for i in range(5785,5791):
-        P13_J = P13_J[~((P13_J.G2cruise == 4069) & (P13_J.G2station == i))] # 4069.[5785:5790]
+        P13J = P13J[~((P13J.G2cruise == 4069) & (P13J.G2station == i))] # 4069.[5785:5790]
     for i in range(5934,5942):
-        P13_J = P13_J[~((P13_J.G2cruise == 4074) & (P13_J.G2station == i))] # 4074.[5934:5941]
+        P13J = P13J[~((P13J.G2cruise == 4074) & (P13J.G2station == i))] # 4074.[5934:5941]
     for i in range(5997,6019):
-        P13_J = P13_J[~((P13_J.G2cruise == 4076) & (P13_J.G2station == i))] # 4076.[5997:6018]
+        P13J = P13J[~((P13J.G2cruise == 4076) & (P13J.G2station == i))] # 4076.[5997:6018]
     for i in range(6462,6481):
-        P13_J = P13_J[~((P13_J.G2cruise == 4081) & (P13_J.G2station == i))] # 4081.[6462:6480]
+        P13J = P13J[~((P13J.G2cruise == 4081) & (P13J.G2station == i))] # 4081.[6462:6480]
     for i in range(6702,6764):
-        P13_J = P13_J[~((P13_J.G2cruise == 4087) & (P13_J.G2station == i))] # 4087.[6702:6763]
+        P13J = P13J[~((P13J.G2cruise == 4087) & (P13J.G2station == i))] # 4087.[6702:6763]
 
     P14 = espers[espers["G2cruise"].isin(go_ship_cruise_nums_2023['P14'])]
     for i in range(1,5):
@@ -819,13 +821,13 @@ def trim_go_ship(espers, go_ship_cruise_nums_2023):
                'ARC01W' : ARC01W, 'MED01' : MED01, 'I01' : I01, 'I03' : I03,
                'I05' : I05, 'I06' : I06, 'I07' : I07, 'I08N' : I08N,
                'I08S' : I08S, 'I09N' : I09N, 'I09S' : I09S, 'I10' : I10,
-               'P01' : P01, 'P02' : P02, 'P02_J' : P02_J, 'P03' : P03,
-               'P03_J' : P03_J, 'P06' : P06, 'P09' : P09, 'P09_J' : P09_J,
-               'P10' : P10, 'P10_J' : P10_J, 'P13' : P13, 'P13_J' : P13_J,
-               'P14' : P14, 'P15' : P15, 'P16N' : P16N, 'P16S' : P16S,
-               'P17E' : P17E, 'P17N' : P17N, 'P18' : P18, 'P21' : P21,
-               'S04I' : S04I, 'SR04' : SR04, 'S04P' : S04P, 'SR01' : SR01,
-               'SR03' : SR03}
+               'P01' : P01, 'P02U' : P02U, 'P02J' : P02J, 'P03U' : P03U,
+               'P03J' : P03J, 'P06U' : P06U, 'P06J' : P06J,
+               'P09U' : P09U, 'P09J' : P09J, 'P10U' : P10U,
+               'P10J' : P10J, 'P13U' : P13U, 'P13J' : P13J, 'P14' : P14,
+               'P15' : P15, 'P16N' : P16N, 'P16S' : P16S, 'P17E' : P17E,
+               'P17N' : P17N, 'P18' : P18, 'P21' : P21, 'S04I' : S04I,
+               'SR04' : SR04, 'S04P' : S04P, 'SR01' : SR01, 'SR03' : SR03}
     
     return trimmed
 
@@ -964,24 +966,6 @@ def plot2dhist(esper_sel, esper_type, fig, ax, subplot_label, colorbar_flag):
     ols_model = sm.OLS(y, x_model)
     ols_results = ols_model.fit()
 
-    print(rlm_results.params)
-    print(rlm_results.bse)
-    print(
-        rlm_results.summary(
-            yname="y", xname=["var_%d" % i for i in range(len(rlm_results.params))]
-        )
-    )
-
-    print(ols_results.params)
-    print(ols_results.bse)
-    print(
-        ols_results.summary(
-            yname="y", xname=["var_%d" % i for i in range(len(ols_results.params))]
-        )
-    )
-
-    ###ax.scatter(x, y, s=0.5) # for only scatter
-
     h = ax.hist2d(x, y, bins=100, norm='log', cmap=cmo.matter) # for 2d histogram
     ax.plot(x_model[:,1], rlm_results.fittedvalues, lw=2.5, ls='--', color='gainsboro', label='RLM')
     #ax.plot(x_model[:,1], ols_results.fittedvalues, lw=1, ls='-', color='gainsboro', label='OLS')
@@ -994,23 +978,54 @@ def plot2dhist(esper_sel, esper_type, fig, ax, subplot_label, colorbar_flag):
     # print equations & p values for each regression type
     ax.text(1992.5, 100, 'OLS: m$={:+.3f}$, p$={:.1e}$'.format(ols_results.params[1],ols_results.pvalues[1]), fontsize=10)
     ax.text(1992.5, 80, 'RLM: m$={:+.3f}$, p$={:.1e}$'.format(rlm_results.params[1],rlm_results.pvalues[1]), fontsize=10)
+    print('ols slope, p value: ' + str(ols_results.params[1]) + ', ' + str(ols_results.pvalues[1]))
+    print('rlm slope, p value: ' + str(rlm_results.params[1]) + ', ' + str(rlm_results.pvalues[1]))
     ##ax.text(1992.5, 105, 'OLS: m$={:+.3f}$, p$={:.1e}$'.format(ols_results.params[1],ols_results.pvalues[1]), fontsize=10) # for LIR-trained only
     ##ax.text(1992.5, 90, 'RLM: m$={:+.3f}$, p$={:.1e}$'.format(rlm_results.params[1],rlm_results.pvalues[1]), fontsize=10) # for LIR-trained only
     ax.text(1992.5, -70, subplot_label, fontsize=12)
     
     
+def plot_rlm_weights(esper_sel, esper_type, fig, ax, subplot_label, colorbar_flag):
+    esper_sel = esper_sel.sort_values(by=['dectime'],ascending=True)
+
+    # calculate the difference in TA betwen GLODAP and ESPERS, store for regression
+    del_alk = esper_sel.loc[:,'G2talk'] - esper_sel.loc[:,esper_type]
+    x = esper_sel['dectime'].to_numpy()
+    y = del_alk.to_numpy()
+
+    # fit model and print summary
+    x_model = sm.add_constant(x) # this is required in statsmodels to get an intercept
+    rlm_model = sm.RLM(y, x_model, M=sm.robust.norms.HuberT())
+    _ = rlm_model.fit()
+    
+    # plot figure
+    cmap = cmo.dense
+    pts = ax.scatter(x,y,s=15,c=rlm_model.weights,cmap=cmap,alpha=0.8,edgecolors='none')
+    if colorbar_flag == 1:
+        fig.colorbar(pts, label='Weight Assigned by RLM')
+    elif colorbar_flag == 2:
+        fig.colorbar(pts, label='   ')
+        
+    ax.set_xlim([x.min(), x.max()])
+    ax.text(1992.5, 160, subplot_label, fontsize=12)
+    
+    return pts
+
+    
+    
 def transect_box_plot(trimmed_mc, G2talk_mc, esper_type):
     # remove transects that have 0 or 1 repeats
-    # I01, P02_J, P03, P09, P10, P13, P17E, ARC01W, MED01
-    del trimmed_mc['I01']
-    del trimmed_mc['P02_J']
-    del trimmed_mc['P03']
-    del trimmed_mc['P09']
-    del trimmed_mc['P10']
-    del trimmed_mc['P13']
-    del trimmed_mc['P17E']
+    # ARC01W, I01, MED01, P02J, P03U, P06J, P09U, P10U, P13U
     del trimmed_mc['ARC01W']
+    del trimmed_mc['I01']
     del trimmed_mc['MED01']
+    del trimmed_mc['P02J']
+    del trimmed_mc['P03U']
+    del trimmed_mc['P06J']
+    del trimmed_mc['P09U']
+    del trimmed_mc['P10U']
+    del trimmed_mc['P13U']
+    del trimmed_mc['P17E']  
     
     # get rid of empty dict entries
     del_keys = []
@@ -1064,5 +1079,62 @@ def transect_box_plot(trimmed_mc, G2talk_mc, esper_type):
         j += 1
         
     return all_slopes
+
+def compare_TA_var(var_name, esper_sel, esper_type, fig, ax, subplot_label, colorbar_flag):
+    # sort by variable
+    esper_sel = esper_sel.sort_values(by=[var_name],ascending=True)
+    
+    # get rid of rows with nans in variable column
+    esper_sel = esper_sel.dropna(subset=[var_name])
+
+    # calculate the difference in TA betwen GLODAP and ESPERS, store for regression
+    del_alk = esper_sel.loc[:,'G2talk'] - esper_sel.loc[:,esper_type]
+    
+    # set x and y for regression
+    x = esper_sel.loc[:, var_name].to_numpy()
+    y = del_alk.to_numpy()
+
+    # fit model and print summary
+    x_model = sm.add_constant(x) # this is required in statsmodels to get an intercept
+    rlm_model = sm.RLM(y, x_model, M=sm.robust.norms.HuberT())
+    rlm_results = rlm_model.fit()
+
+    ols_model = sm.OLS(y, x_model)
+    ols_results = ols_model.fit()
+
+    h = ax.hist2d(x, y, bins=150, norm='log', cmap=cmo.matter) # for 2d histogram
+    ax.plot(x_model[:,1], rlm_results.fittedvalues, lw=2.5, ls='--', color='gainsboro', label='RLM')
+    #ax.plot(x_model[:,1], ols_results.fittedvalues, lw=1, ls='-', color='gainsboro', label='OLS')
+    ax.set_ylim([-80, 100])
+    
+    # turn colorbar on and off
+    if colorbar_flag == 1:
+        fig.colorbar(h[3],label='Count')
+    elif colorbar_flag == 2:
+        fig.colorbar(h[3],label=' ')
+      
+    # change axis limits    
+    if var_name == 'G2salinity':
+        ax.set_xlim([30, 37])
+        ax.text(30.2, 80, 'OLS: m$={:+.3f}$, p$={:.1e}$'.format(ols_results.params[1],ols_results.pvalues[1]), fontsize=10)
+        ax.text(30.2, 60, 'RLM: m$={:+.3f}$, p$={:.1e}$'.format(rlm_results.params[1],rlm_results.pvalues[1]), fontsize=10)
+        ax.text(30.2, -70, subplot_label, fontsize=12)
+        
+    elif var_name == 'G2nitrate':
+        ax.set_xlim([0, 47])
+        ax.text(1.3, 80, 'OLS: m$={:+.3f}$, p$={:.1e}$'.format(ols_results.params[1],ols_results.pvalues[1]), fontsize=10)
+        ax.text(1.3, 60, 'RLM: m$={:+.3f}$, p$={:.1e}$'.format(rlm_results.params[1],rlm_results.pvalues[1]), fontsize=10)
+        ax.text(1.3, -70, subplot_label, fontsize=12)
+        
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
 
         
