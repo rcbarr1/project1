@@ -171,18 +171,13 @@ NN_mean = np.nanmean(hist_data)
 NN_std = np.nanstd(hist_data)
 
 # label axis, set up legend
-plt.ylabel('Number of ∆TA Calculations')
-plt.xlabel('ESPER-Estimated TA - Ensemble Mean TA ($µmol\;kg^{-1}$)')
+plt.ylabel('Number of $∆A_{T}$ Calculations')
+plt.xlabel('ESPER-Estimated $A_{T}$ - Ensemble Mean $A_{T}$ ($µmol\;kg^{-1}$)')
 fig.text(0.14, 0.41, 'B', fontsize=11)
 
 handles, labels = ax2.get_legend_handles_labels()
 ax2.legend(handles[::-1], labels[::-1], bbox_to_anchor = (1.05, 2.35), loc='upper left')
 
-
-# %% start data visualization
-
-# organize data by decimal time
-espers = espers.sort_values(by=['dectime'],ascending=True)
 # %% USEFUL FOR VISUALIZING DATA LOCATIONS
 # set up map
 # atlantic-centered view
@@ -227,7 +222,7 @@ lat = count_positions.lat
 counts = count_positions.counts
 
 im = ax.scatter(lon,lat,c=counts, cmap=cmo.dense, transform=ccrs.PlateCarree(), marker='o', edgecolors='none', s=15)
-fig.colorbar(im, label='Number of Unique Years a\nMeasurement Was Made', pad=0.02)
+fig.colorbar(im, label='Number of Unique Years an\n$A_{T}$ Measurement Was Made', pad=0.02)
 
 #cmap = cmo.dense
 #cmap.set_under('w',1)
@@ -274,7 +269,7 @@ cmap = cmocean.tools.crop(cmo.balance, to_plot.del_alk.min(), to_plot.del_alk.ma
 
 # plot data
 pts = ax.scatter(to_plot.G2longitude,to_plot.G2latitude,transform=ccrs.PlateCarree(),s=30,c=to_plot.del_alk,cmap=cmap, alpha=0.15,edgecolors='none')
-plt.colorbar(pts, ax=ax, label='Measured TA - ESPER-Estimated TA \n($µmol\;kg^{-1}$)')
+plt.colorbar(pts, ax=ax, label='Measured $A_{T}$ - ESPER-Estimated $A_{T}$ \n($µmol\;kg^{-1}$)')
 
 
 #%% 2D histogram for global ensemble mean regression for all trimmed GO-SHIP
@@ -290,6 +285,7 @@ plt.tick_params(labelcolor='none', which='both', top=False, bottom=False, left=F
 esper_type = 'Ensemble_Mean_TA_LIR' # LIR, NN, or Mixed
 esper_sel = all_trimmed[all_trimmed.G2depth < 25] # do surface values (< 25 m) only
 p1.plot2dhist(esper_sel, esper_type, fig, axs[0,0], 'A', 0)
+
 
 # full ocean LIR
 esper_type = 'Ensemble_Mean_TA_LIR' # LIR, NN, or Mixed
@@ -308,7 +304,7 @@ p1.plot2dhist(esper_sel, esper_type, fig, axs[1,1], 'D', 1)
 
 ax.set_xlabel('Year')
 ax.xaxis.set_label_coords(0.17,-0.65) # for 2d histogram
-ax.set_ylabel('Measured TA - ESPER-Estimated TA ($µmol\;kg^{-1}$)')
+ax.set_ylabel('Measured $A_{T}$ - ESPER-Estimated $A_{T}$ ($µmol\;kg^{-1}$)')
 ax.yaxis.set_label_coords(-0.62,0.28)
 
 #%% 2D histogram for global ensemble mean regression with only GLODAPv2.2023 points used
@@ -332,7 +328,7 @@ p1.plot2dhist(esper_sel, esper_type, fig, axs[1], 'B', 1)
 
 ax.set_xlabel('Year')
 ax.xaxis.set_label_coords(0.25,-0.65) # for 2d histogram
-ax.set_ylabel('Measured TA - ESPER-Estimated TA\n($µmol\;kg^{-1}$)')
+ax.set_ylabel('Measured $A_{T}$ - ESPER-Estimated $A_{T}$\n($µmol\;kg^{-1}$)')
 ax.yaxis.set_label_coords(-0.62,0.28)
 
 #%% data points colored by weight assigned by robust regression (statsmodels rlm)
@@ -369,7 +365,7 @@ pts = p1.plot_rlm_weights(esper_sel, esper_type, fig, axs[1,1], 'D', 0)
 # adjust figure
 ax.set_xlabel('Year')
 ax.xaxis.set_label_coords(0.4,-0.1)
-ax.set_ylabel('Measured TA - ESPER-Estimated TA ($µmol\;kg^{-1}$)', labelpad=15)
+ax.set_ylabel('Measured $A_{T}$ - ESPER-Estimated $A_{T}$ ($µmol\;kg^{-1}$)', labelpad=15)
 
 # add single colorbar
 fig.colorbar(pts, ax=axs.ravel().tolist(), label='Weight Assigned by RLM')
@@ -397,7 +393,6 @@ slopes_NN = np.zeros(G2talk_mc.shape[1])
 pvalues_NN = np.zeros(G2talk_mc.shape[1])
 
 for i in range(0,G2talk_mc.shape[1]): 
-#for i in range(0,2):
     y_surf_LIR = all_trimmed_mc_surf[str(i)] - all_trimmed_mc_surf.Ensemble_Mean_TA_LIR
     y_LIR = all_trimmed_mc[str(i)] - all_trimmed_mc.Ensemble_Mean_TA_LIR
     y_surf_NN = all_trimmed_mc_surf[str(i)] - all_trimmed_mc_surf.Ensemble_Mean_TA_NN
@@ -421,9 +416,9 @@ fig, axs = plt.subplots(nrows=2, ncols=2, figsize=(8,5), dpi=200, sharex=True, s
 fig.add_subplot(111,frameon=False)
 plt.tick_params(labelcolor='none', which='both', top=False, bottom=False, left=False, right=False)
 
-axs[0,0].hist(slopes_surf_LIR, bins=100)
+#axs[0,0].hist(slopes_surf_LIR, bins=100)
 axs[0,0].set_xlim([-0.15, 0.15]) # per cruise offset
-#axs[0,0].set_xlim([-0.07, 0.07]) # individual offset
+axs[0,0].set_xlim([-0.07, 0.07]) # individual offset
 mu = slopes_surf_LIR.mean()
 sigma = slopes_surf_LIR.std()
 fig.text(0.14, 0.825, 'A', fontsize=14)
@@ -447,7 +442,7 @@ sigma = slopes_NN.std()
 fig.text(0.56, 0.415, 'D', fontsize=14)
 fig.text(0.661, 0.43, '$\mu={:.4f}, \sigma={:.4f}$'.format(mu, sigma), fontsize=12)
 
-plt.xlabel('Slope of Measured TA - ESPER-Estimated TA over Time ($µmol\;kg^{-1}\;yr^{-1}$)')
+plt.xlabel('Slope of Measured $A_{T}$ - ESPER-Estimated $A_{T}$ over Time ($µmol\;kg^{-1}\;yr^{-1}$)')
 plt.ylabel('Count')
 
 # %% make box plot graph of transect slopes from mc simulation
@@ -486,7 +481,7 @@ axs[1].set_ylim(-5, 5)
 axs[1].text(1.25, 3.8, 'B', fontsize=12)
 axs[1].tick_params(axis='x', labelrotation=90)
 
-ax.set_ylabel('Slope of Measured TA - ESPER-Estimated TA over Time\n($µmol$ $kg^{-1}$ $yr^{-1}$)')
+ax.set_ylabel('Slope of Measured $A_{T}$ - ESPER-Estimated $A_{T}$ over Time\n($µmol$ $kg^{-1}$ $yr^{-1}$)')
 
 ax.yaxis.set_label_coords(-0.63,0.55)
 
@@ -559,8 +554,8 @@ for keys in trimmed:
         fig.text(0.6, 0.83, '$y={:.4f}x+{:.4f}$'.format(slope,intercept), fontsize=14)
         fig.text(0.6, 0.78, '$p-value={:.4e}$'.format(pvalue), fontsize=14)
         ax.plot(surface.datetime, intercept + slope * surface.dectime, color="r", lw=1);
-        ax.set_title(str(keys) + ': Difference in Measured and ESPER-Predicted TA (< 25 m)')
-        ax.set_ylabel('Measured TA - ESPER-Estimated TA ($µmol\;kg^{-1}$)')
+        ax.set_title(str(keys) + ': Difference in Measured and ESPER-Predicted $A_{T}$ (< 25 m)')
+        ax.set_ylabel('Measured $A_{T}$ - ESPER-Estimated $A_{T}$ ($µmol\;kg^{-1}$)')
         ax.set_ylim(-70,70)
         ax.set_xlim(all_trimmed.datetime.min(),all_trimmed.datetime.max())
     
@@ -577,8 +572,8 @@ for keys in trimmed:
         fig.text(0.6, 0.83, '$y={:.4f}x+{:.4f}$'.format(slope,intercept), fontsize=14)
         fig.text(0.6, 0.78, '$p-value={:.4e}$'.format(pvalue), fontsize=14)
         ax.plot(transect.datetime, intercept + slope * transect.dectime, color="r", lw=1);
-        ax.set_title(str(keys) + ': Difference in Measured and ESPER-Predicted TA (Full Depth)')
-        ax.set_ylabel('Measured TA - ESPER-Estimated TA ($µmol\;kg^{-1}$)')
+        ax.set_title(str(keys) + ': Difference in Measured and ESPER-Predicted $A_{T}$ (Full Depth)')
+        ax.set_ylabel('Measured $A_{T}$ - ESPER-Estimated $A_{T}$ ($µmol\;kg^{-1}$)')
         ax.set_ylim(-70,70)
         ax.set_xlim(all_trimmed.datetime.min(),all_trimmed.datetime.max())
         i += 1
@@ -622,7 +617,7 @@ var_name = 'G2nitrate'
 p1.compare_TA_var(var_name, esper_sel, esper_type, fig, axs[1,1], 'D', 1)
 axs[1,1].set_xlabel('Nitrate ($µmol\;kg^{-1}$)')
 
-ax.set_ylabel('Measured TA - ESPER-Estimated TA ($µmol\;kg^{-1}$)')
+ax.set_ylabel('Measured $A_{T}$ - ESPER-Estimated $A_{T}$ ($µmol\;kg^{-1}$)')
 ax.yaxis.set_label_coords(-0.62,0.55)
 
 #%% plot ∆TA vs. predictor variables (robust regression shown)
@@ -665,7 +660,7 @@ var_name = 'G2nitrate'
 p1.compare_TA_var(var_name, esper_sel, esper_type, fig, axs[1,1], 'D', 1)
 axs[1,1].set_xlabel('Nitrate ($µmol\;kg^{-1}$)')
 
-ax.set_ylabel('Measured TA - ESPER-Estimated TA ($µmol\;kg^{-1}$)')
+ax.set_ylabel('Measured $A_{T}$ - ESPER-Estimated $A_{T}$ ($µmol\;kg^{-1}$)')
 ax.yaxis.set_label_coords(-0.62,0.55)
 
 
