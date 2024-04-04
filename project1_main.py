@@ -20,6 +20,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy import stats
+from scipy.io import loadmat
 #from scipy import interpolate
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
@@ -32,6 +33,8 @@ filepath = '/Users/Reese/Documents/Research Projects/project1/data/' # where GLO
 input_GLODAP_file = 'GLODAPv2.2023_Merged_Master_File.csv' # GLODAP data filename (2023)
 input_mc_cruise_file = 'G2talk_mc_simulated.csv' # MC (per cruise) simulated data
 input_mc_individual_file = 'G2talk_mc_individual_simulated.csv' # MC (per cruise) simulated data
+coeffs_file = 'ESPER_LIR_coeffs.csv' # ESPER LIR coefficients saved from MATLAB
+preformed_file = 'PreformedPropertiesDefault_v1.mat' # preformed properties data (from Carter et al., 2019)
 
 # %% import GLODAP data file
 glodap = pd.read_csv(filepath + input_GLODAP_file, na_values = -9999)
@@ -95,7 +98,7 @@ all_trimmed = all_trimmed.drop_duplicates(ignore_index=True) # drop duplicates
 #%% calculate average ESPERs coefficients
 
 # read in coefficients extracted from MATLAB (already averaged across all 16 equations)
-coeffs = pd.read_csv(filepath + 'ESPER_LIR_coeffs.csv', names=['x', 'TA_S', 'TA_T', 'TA_N', 'TA_O', 'TA_Si'])
+coeffs = pd.read_csv(filepath + coeffs_file, names=['x', 'TA_S', 'TA_T', 'TA_N', 'TA_O', 'TA_Si'])
 
 # attach G2cruise and G2station columns so trimming will work
 coeffs.insert(0, 'G2cruise', espers.G2cruise)
@@ -110,6 +113,56 @@ coeffs_all_trimmed = coeffs_all_trimmed.drop_duplicates(ignore_index=True) # dro
 # average across all samples
 coeffs_all_trimmed = coeffs_all_trimmed.drop(columns=['G2cruise', 'G2station', 'Ensemble_Mean_TA_LIR', 'x'])
 avg_coeffs = coeffs_all_trimmed.mean(axis=0)
+
+#%% calculate ratio of regenerated nitrate to regenerated potential alkalinity
+# read in coefficients extracted from MATLAB (already averaged across all 16 equations)
+preformed = loadmat(filepath + preformed_file)
+
+# calculate average surface preformed nitrate and alkalinity
+preformed_N = preformed['pN']
+preformed_TA = preformed['pTA']
+depths = preformed['Depth']
+lats = preformed['Latitude']
+lons = preformed['Longitude']
+
+# deal with some longitudes needing to be transformed
+surface = all_trimmed[all_trimmed.G2depth < 25]
+# if lon = -180, make it = 180
+surface.G2longitude[surface.G2longitude == -180] = 180
+# if lon > 180, subtract 360
+surface.G2longitude[surface.G2longitude > 180] -= 360
+# if lon > 180, subtract 360 (transform preformed to match)
+preformed['Longitude'][preformed['Longitude'] > 180] -= 360
+
+# take depth closest to the surface (need to figure out why no data > 100 m)
+preformed_N = preformed_N[:, :, 6]
+preformed_TA = preformed_TA[:, :, 6]
+
+# loop through all surface cruise data points, find closest lat/lon, subtract
+# to get ∆N and ∆TA where ∆N = N - N0 and ∆TA = TA - TA0 (regenerated = measured - preformed)
+regen_N = np.zeros(len(surface))
+regen_TA = np.zeros(len(surface))
+for i in range(0, len(surface)):
+    surf_lat = surface.G2latitude.iloc[i]
+    surf_lon = surface.G2longitude.iloc[i]
+    
+    lat_diff = np.absolute(lats-surf_lat)
+    lon_diff = np.absolute(lons-surf_lon)
+    
+    lat_idx = lat_diff.argmin()
+    lon_idx = lon_diff.argmin()
+
+    regen_N[i] = surface.G2nitrate.iloc[i] - preformed_N[lon_idx, lat_idx]
+    regen_TA[i] = surface.G2talk.iloc[i] - preformed_TA[lon_idx, lat_idx]
+    
+
+# calculate regenerated potential alkalinity (∆pTA = TA - TA0 + 1.36*(N - N0))
+regen_pTA = regen_TA - 1.36 * regen_N
+
+# average regenerated nitrate and regenerated potential alkalinity, calculate ratio
+avg_regen_N = np.nanmean(regen_N)
+avg_regen_pTA = np.nanmean(regen_pTA)
+regen_ratio = avg_regen_N / avg_regen_pTA
 
 # %% run (or upload) MC simulation to create array of simulated G2talk values (by cruise offset)
 #num_mc_runs = 1000
@@ -271,6 +324,16 @@ cmap = cmocean.tools.crop(cmo.balance, to_plot.del_alk.min(), to_plot.del_alk.ma
 pts = ax.scatter(to_plot.G2longitude,to_plot.G2latitude,transform=ccrs.PlateCarree(),s=30,c=to_plot.del_alk,cmap=cmap, alpha=0.15,edgecolors='none')
 plt.colorbar(pts, ax=ax, label='Measured $A_{T}$ - ESPER-Estimated $A_{T}$ \n($µmol\;kg^{-1}$)')
 
+#%%
+fig, axs = plt.subplots(nrows=1, ncols=1, figsize=(6.5,4), dpi=200, sharex=True, sharey=True, layout='constrained')
+fig.add_subplot(111,frameon=False)
+ax = fig.gca()
+plt.tick_params(labelcolor='none', which='both', top=False, bottom=False, left=False, right=False)
+esper_type = 'Ensemble_Mean_TA_LIR' # LIR, NN, or Mixed
+esper_sel = all_trimmed[all_trimmed.G2depth < 25] # do surface values (< 25 m) only
+p1.plot2dhist(esper_sel, esper_type, fig, axs, ' ', 0)
+fig.text(0.6, 0.83, '$y={:.4f}x+{:.4f}$'.format(slope,intercept), fontsize=14)
+fig.text(0.6, 0.78, '$p-value={:.4e}$'.format(pvalue), fontsize=14)
 
 #%% 2D histogram for global ensemble mean regression for all trimmed GO-SHIP
 # with robust regression (statsmodels rlm)
