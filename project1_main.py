@@ -13,8 +13,6 @@ To-Do:
     - translate call_ESPERs.m to python once ESPERs in Python are released
 """
 
-# set-up
-
 import project1 as p1
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -113,56 +111,6 @@ coeffs_all_trimmed = coeffs_all_trimmed.drop_duplicates(ignore_index=True) # dro
 # average across all samples
 coeffs_all_trimmed = coeffs_all_trimmed.drop(columns=['G2cruise', 'G2station', 'Ensemble_Mean_TA_LIR', 'x'])
 avg_coeffs = coeffs_all_trimmed.mean(axis=0)
-
-#%% calculate ratio of regenerated nitrate to regenerated potential alkalinity
-# read in coefficients extracted from MATLAB (already averaged across all 16 equations)
-preformed = loadmat(filepath + preformed_file)
-
-# calculate average surface preformed nitrate and alkalinity
-preformed_N = preformed['pN']
-preformed_TA = preformed['pTA']
-depths = preformed['Depth']
-lats = preformed['Latitude']
-lons = preformed['Longitude']
-
-# deal with some longitudes needing to be transformed
-surface = all_trimmed[all_trimmed.G2depth < 25]
-# if lon = -180, make it = 180
-surface.G2longitude[surface.G2longitude == -180] = 180
-# if lon > 180, subtract 360
-surface.G2longitude[surface.G2longitude > 180] -= 360
-# if lon > 180, subtract 360 (transform preformed to match)
-preformed['Longitude'][preformed['Longitude'] > 180] -= 360
-
-# take depth closest to the surface (need to figure out why no data > 100 m)
-preformed_N = preformed_N[:, :, 6]
-preformed_TA = preformed_TA[:, :, 6]
-
-# loop through all surface cruise data points, find closest lat/lon, subtract
-# to get ∆N and ∆TA where ∆N = N - N0 and ∆TA = TA - TA0 (regenerated = measured - preformed)
-regen_N = np.zeros(len(surface))
-regen_TA = np.zeros(len(surface))
-for i in range(0, len(surface)):
-    surf_lat = surface.G2latitude.iloc[i]
-    surf_lon = surface.G2longitude.iloc[i]
-    
-    lat_diff = np.absolute(lats-surf_lat)
-    lon_diff = np.absolute(lons-surf_lon)
-    
-    lat_idx = lat_diff.argmin()
-    lon_idx = lon_diff.argmin()
-
-    regen_N[i] = surface.G2nitrate.iloc[i] - preformed_N[lon_idx, lat_idx]
-    regen_TA[i] = surface.G2talk.iloc[i] - preformed_TA[lon_idx, lat_idx]
-    
-
-# calculate regenerated potential alkalinity (∆pTA = TA - TA0 + 1.36*(N - N0))
-regen_pTA = regen_TA - 1.36 * regen_N
-
-# average regenerated nitrate and regenerated potential alkalinity, calculate ratio
-avg_regen_N = np.nanmean(regen_N)
-avg_regen_pTA = np.nanmean(regen_pTA)
-regen_ratio = avg_regen_N / avg_regen_pTA
 
 # %% run (or upload) MC simulation to create array of simulated G2talk values (by cruise offset)
 #num_mc_runs = 1000
@@ -324,16 +272,6 @@ cmap = cmocean.tools.crop(cmo.balance, to_plot.del_alk.min(), to_plot.del_alk.ma
 pts = ax.scatter(to_plot.G2longitude,to_plot.G2latitude,transform=ccrs.PlateCarree(),s=30,c=to_plot.del_alk,cmap=cmap, alpha=0.15,edgecolors='none')
 plt.colorbar(pts, ax=ax, label='Measured $A_{T}$ - ESPER-Estimated $A_{T}$ \n($µmol\;kg^{-1}$)')
 
-#%%
-fig, axs = plt.subplots(nrows=1, ncols=1, figsize=(6.5,4), dpi=200, sharex=True, sharey=True, layout='constrained')
-fig.add_subplot(111,frameon=False)
-ax = fig.gca()
-plt.tick_params(labelcolor='none', which='both', top=False, bottom=False, left=False, right=False)
-esper_type = 'Ensemble_Mean_TA_LIR' # LIR, NN, or Mixed
-esper_sel = all_trimmed[all_trimmed.G2depth < 25] # do surface values (< 25 m) only
-p1.plot2dhist(esper_sel, esper_type, fig, axs, ' ', 0)
-fig.text(0.6, 0.83, '$y={:.4f}x+{:.4f}$'.format(slope,intercept), fontsize=14)
-fig.text(0.6, 0.78, '$p-value={:.4e}$'.format(pvalue), fontsize=14)
 
 #%% 2D histogram for global ensemble mean regression for all trimmed GO-SHIP
 # with robust regression (statsmodels rlm)
@@ -479,9 +417,9 @@ fig, axs = plt.subplots(nrows=2, ncols=2, figsize=(8,5), dpi=200, sharex=True, s
 fig.add_subplot(111,frameon=False)
 plt.tick_params(labelcolor='none', which='both', top=False, bottom=False, left=False, right=False)
 
-#axs[0,0].hist(slopes_surf_LIR, bins=100)
+axs[0,0].hist(slopes_surf_LIR, bins=100)
 axs[0,0].set_xlim([-0.15, 0.15]) # per cruise offset
-axs[0,0].set_xlim([-0.07, 0.07]) # individual offset
+#axs[0,0].set_xlim([-0.07, 0.07]) # individual offset
 mu = slopes_surf_LIR.mean()
 sigma = slopes_surf_LIR.std()
 fig.text(0.14, 0.825, 'A', fontsize=14)
@@ -644,87 +582,9 @@ for keys in trimmed:
         slopes[i] = np.nan
         pvalues[i] = np.nan
         i += 1
-
-#%% plot ∆TA vs. predictor variables (robust regression shown)
-# salinity and nitrate in full and deep ocean
-
-# make figure
-fig, axs = plt.subplots(nrows=2, ncols=2, figsize=(8,4), dpi=200, sharey=True, layout='constrained')
-fig.add_subplot(111,frameon=False)
-ax = fig.gca()
-plt.tick_params(labelcolor='none', which='both', top=False, bottom=False, left=False, right=False)
-
-# surface LIR vs. salinity
-esper_type = 'Ensemble_Mean_TA_LIR' # LIR, NN, or Mixed
-esper_sel = all_trimmed[all_trimmed.G2depth < 25] # do surface values (< 25 m) only
-var_name = 'G2salinity'
-p1.compare_TA_var(var_name, esper_sel, esper_type, fig, axs[0,0], 'A', 2)
-
-# full ocean LIR vs. salinity
-esper_type = 'Ensemble_Mean_TA_LIR' # LIR, NN, or Mixed
-esper_sel = all_trimmed # full depth
-var_name = 'G2salinity'
-p1.compare_TA_var(var_name, esper_sel, esper_type, fig, axs[1,0], 'C', 2)
-axs[1,0].set_xlabel('Salinity (PSU)')
-
-# surface NN vs. nitrate
-esper_type = 'Ensemble_Mean_TA_NN' # LIR, NN, or Mixed
-esper_sel = all_trimmed[all_trimmed.G2depth < 25] # do surface values (< 25 m) only
-var_name = 'G2nitrate'
-p1.compare_TA_var(var_name, esper_sel, esper_type, fig, axs[0,1], 'B', 1)
-
-# full ocean NN vs. nitrate
-esper_type = 'Ensemble_Mean_TA_NN' # LIR, NN, or Mixed
-esper_sel = all_trimmed # full depth
-var_name = 'G2nitrate'
-p1.compare_TA_var(var_name, esper_sel, esper_type, fig, axs[1,1], 'D', 1)
-axs[1,1].set_xlabel('Nitrate ($µmol\;kg^{-1}$)')
-
-ax.set_ylabel('Measured $A_{T}$ - ESPER-Estimated $A_{T}$ ($µmol\;kg^{-1}$)')
-ax.yaxis.set_label_coords(-0.62,0.55)
-
-#%% plot ∆TA vs. predictor variables (robust regression shown)
-# surface ocean only --> salinity top row, left before 2005 and right after 2005
-# surface ocean only --> nitrate bottom row, left before 2005 and right after 2005
-
-# make figure
-fig, axs = plt.subplots(nrows=2, ncols=2, figsize=(8,4), dpi=200, sharey=True, layout='constrained')
-fig.add_subplot(111,frameon=False)
-ax = fig.gca()
-plt.tick_params(labelcolor='none', which='both', top=False, bottom=False, left=False, right=False)
-
-# surface LIR vs. salinity (pre-2005)
-esper_type = 'Ensemble_Mean_TA_LIR' # LIR, NN, or Mixed
-esper_sel = all_trimmed[all_trimmed.G2depth < 25] # do surface values (< 25 m) only
-esper_sel = esper_sel[esper_sel.dectime < 2005] # pre-2005 only
-var_name = 'G2salinity'
-p1.compare_TA_var(var_name, esper_sel, esper_type, fig, axs[0,0], 'A', 2)
-
-# surface LIR vs. salinity (post-2005)
-esper_type = 'Ensemble_Mean_TA_LIR' # LIR, NN, or Mixed
-esper_sel = all_trimmed[all_trimmed.G2depth < 25] # do surface values (< 25 m) only
-esper_sel = esper_sel[esper_sel.dectime >= 2005] # post-2005 only
-var_name = 'G2salinity'
-p1.compare_TA_var(var_name, esper_sel, esper_type, fig, axs[1,0], 'C', 2)
-axs[1,0].set_xlabel('Salinity (PSU)')
-
-# surface NN vs. nitrate (pre-2005)
-esper_type = 'Ensemble_Mean_TA_NN' # LIR, NN, or Mixed
-esper_sel = all_trimmed[all_trimmed.G2depth < 25] # do surface values (< 25 m) only
-esper_sel = esper_sel[esper_sel.dectime < 2005] # pre-2005 only
-var_name = 'G2nitrate'
-p1.compare_TA_var(var_name, esper_sel, esper_type, fig, axs[0,1], 'B', 1)
-
-# surface NN vs. nitrate (post-2005)
-esper_type = 'Ensemble_Mean_TA_NN' # LIR, NN, or Mixed
-esper_sel = all_trimmed[all_trimmed.G2depth < 25] # do surface values (< 25 m) only
-esper_sel = esper_sel[esper_sel.dectime >= 2005] # post-2005 only
-var_name = 'G2nitrate'
-p1.compare_TA_var(var_name, esper_sel, esper_type, fig, axs[1,1], 'D', 1)
-axs[1,1].set_xlabel('Nitrate ($µmol\;kg^{-1}$)')
-
-ax.set_ylabel('Measured $A_{T}$ - ESPER-Estimated $A_{T}$ ($µmol\;kg^{-1}$)')
-ax.yaxis.set_label_coords(-0.62,0.55)
+        
+        
+        
 
 
 

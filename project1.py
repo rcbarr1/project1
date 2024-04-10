@@ -134,18 +134,13 @@ def go_ship_only(glodap):
                      'I09S' : [72, 77, 249],
                      'I10' : [80, 82, 256, 1054],
                      'P01' : [299, 461, 468, 502, 504, 1053, 5014],
-                     'P02' : [272, 1035],
-                     'P02J' : [406, 407, 408, 459],
-                     'P03U' : [],
+                     'P02' : [272, 406, 407, 408, 459, 1035],
                      'P03' : [497, 1070, 1086, 1096, 2098, 5017],
                      'P04' : [319],
                      'P06' : [243, 486, 273, 3029, 3030],
-                     'P09U' : [],
                      'P09' : [412, 515, 546, 547, 549, 550, 552, 554, 555, 556, 558, 559, 561, 562, 564, 565, 566, 568, 570, 571, 573, 576, 581, 583, 592, 595, 596, 599, 600, 603, 604, 607, 608, 609, 1056, 1057, 1058, 1067, 1071, 1079,  1080, 1082, 1083, 1087, 1090, 1093, 1100, 1101, 2041, 2047, 2057, 2062, 2067, 2075, 2080, 2087, 2099, 4066, 4068, 4069, 4071, 4078, 4089],
-                     'P10U' : [302],
-                     'P10' : [495, 553, 557, 560, 563, 594, 1087, 1090, 1093, 1098, 1099, 2050, 2057, 2062, 2075, 2087, 4066],
-                     'P13U' : [296],
-                     'P13' : [439, 440, 517, 545, 548, 551, 553, 557, 560, 563, 567, 569, 572, 574, 575, 577, 579, 580, 582, 584, 585, 586, 587, 588, 589, 590, 591, 593, 594, 597, 598, 601, 602, 605, 606, 1058, 1060, 1063, 1064, 1066, 1069, 1071, 1076, 1078, 1079, 1081, 1092, 2038, 2041, 2047, 2054, 2064, 2084, 2091, 2094, 2096, 2097, 2102, 2103, 4063, 4069, 4074, 4076, 4081, 4083, 4087],
+                     'P10' : [302, 495, 553, 557, 560, 563, 594, 1087, 1090, 1093, 1098, 1099, 2050, 2057, 2062, 2075, 2087, 4066],
+                     'P13' : [296, 439, 440, 517, 545, 548, 551, 553, 557, 560, 563, 567, 569, 572, 574, 575, 577, 579, 580, 582, 584, 585, 586, 587, 588, 589, 590, 591, 593, 594, 597, 598, 601, 602, 605, 606, 1058, 1060, 1063, 1064, 1066, 1069, 1071, 1076, 1078, 1079, 1081, 1092, 2038, 2041, 2047, 2054, 2064, 2084, 2091, 2094, 2096, 2097, 2102, 2103, 4063, 4069, 4074, 4076, 4081, 4083, 4087],
                      'P14' : [280, 301, 504, 505, 1050],
                      'P15' : [83, 84, 280, 335, 1020],
                      # 'P16' : [245, 276, 277, 285, 286, 304, 306, 307, 320, 350, 1036, 1043, 1044],
@@ -531,10 +526,6 @@ def trim_go_ship(espers, go_ship_cruise_nums_2023):
 
     P02 = espers[espers["G2cruise"].isin(go_ship_cruise_nums_2023['P02'])] # no trimming needed
 
-    P02J = espers[espers["G2cruise"].isin(go_ship_cruise_nums_2023['P02J'])] # no trimming needed
-
-    P03U = espers[espers["G2cruise"].isin(go_ship_cruise_nums_2023['P03U'])] # no trimming needed
-
     P03 = espers[espers["G2cruise"].isin(go_ship_cruise_nums_2023['P03'])] # no trimming needed
     for i in range(209,219):
         P03 = P03[~((P03.G2cruise == 497) & (P03.G2station == i))] # 497.[209:218]
@@ -544,8 +535,6 @@ def trim_go_ship(espers, go_ship_cruise_nums_2023):
         P03 = P03[~((P03.G2cruise == 1096) & (P03.G2station == i))] # 1096.[4867:4877]
 
     P06 = espers[espers["G2cruise"].isin(go_ship_cruise_nums_2023['P06'])] # no trimming needed
-
-    P09U = espers[espers["G2cruise"].isin(go_ship_cruise_nums_2023['P09U'])] # no trimming needed
         
     P09 = espers[espers["G2cruise"].isin(go_ship_cruise_nums_2023['P09'])] # FINISH THIS
     for i in range(71,80):
@@ -587,11 +576,9 @@ def trim_go_ship(espers, go_ship_cruise_nums_2023):
     for i in range(6413,6418):
         P09 = P09[~((P09.G2cruise == 4078) & (P09.G2station == i))] # 4078.[6413:6417]
 
-    P10U = espers[espers["G2cruise"].isin(go_ship_cruise_nums_2023['P10U'])]
-    for i in range(80,91):
-        P10U = P10U[~((P10U.G2cruise == 302) & (P10U.G2station == i))] # 302.[80:90]
-
     P10 = espers[espers["G2cruise"].isin(go_ship_cruise_nums_2023['P10'])] # DO THIS
+    for i in range(80,91):
+        P10 = P10[~((P10.G2cruise == 302) & (P10.G2station == i))] # 302.[80:90]
     P10 = P10[~((P10.G2cruise == 495) & (P10.G2station == 1003))] # 495.1003
     for i in range(3870,3964):
         P10 = P10[~((P10.G2cruise == 1087) & (P10.G2station == i))] # 1087.[3870:3963]
@@ -614,8 +601,6 @@ def trim_go_ship(espers, go_ship_cruise_nums_2023):
         P10 = P10[~((P10.G2cruise == 2087) & (P10.G2station == i))] # 2087.[5591:5637]
     for i in range(5654,5692):
         P10 = P10[~((P10.G2cruise == 4066) & (P10.G2station == i))] # 4066.[5654:5691]
-
-    P13U = espers[espers["G2cruise"].isin(go_ship_cruise_nums_2023['P13U'])]
 
     P13 = espers[espers["G2cruise"].isin(go_ship_cruise_nums_2023['P13'])] # FINISH THIS
     for i in range(1,3):
@@ -817,13 +802,11 @@ def trim_go_ship(espers, go_ship_cruise_nums_2023):
                'ARC01W' : ARC01W, 'MED01' : MED01, 'I01' : I01, 'I03' : I03,
                'I05' : I05, 'I06' : I06, 'I07' : I07, 'I08N' : I08N,
                'I08S' : I08S, 'I09N' : I09N, 'I09S' : I09S, 'I10' : I10,
-               'P01' : P01, 'P02' : P02, 'P02J' : P02J, 'P03U' : P03U,
-               'P03' : P03, 'P06' : P06, 'P09U' : P09U, 'P09' : P09,
-               'P10U' : P10U, 'P10' : P10, 'P13U' : P13U, 'P13' : P13,
-               'P14' : P14, 'P15' : P15, 'P16N' : P16N, 'P16S' : P16S,
-               'P17E' : P17E, 'P17N' : P17N, 'P18' : P18, 'P21' : P21,
-               'S04I' : S04I, 'SR04' : SR04, 'S04P' : S04P, 'SR01' : SR01,
-               'SR03' : SR03}
+               'P01' : P01, 'P02' : P02, 'P03' : P03, 'P06' : P06, 'P09' : P09,
+               'P10' : P10, 'P13' : P13, 'P14' : P14, 'P15' : P15,
+               'P16N' : P16N, 'P16S' : P16S, 'P17E' : P17E, 'P17N' : P17N,
+               'P18' : P18, 'P21' : P21, 'S04I' : S04I, 'SR04' : SR04,
+               'S04P' : S04P, 'SR01' : SR01, 'SR03' : SR03}
     
     return trimmed
 
@@ -1006,8 +989,6 @@ def plot_rlm_weights(esper_sel, esper_type, fig, ax, subplot_label, colorbar_fla
     ax.text(1992.5, 160, subplot_label, fontsize=12)
     
     return pts
-
-    
     
 def transect_box_plot(trimmed_mc, G2talk_mc, esper_type):
     # remove transects that have 0 or 1 repeats
@@ -1015,11 +996,6 @@ def transect_box_plot(trimmed_mc, G2talk_mc, esper_type):
     del trimmed_mc['ARC01W']
     del trimmed_mc['I01']
     del trimmed_mc['MED01']
-    del trimmed_mc['P02J']
-    del trimmed_mc['P03U']
-    del trimmed_mc['P09U']
-    del trimmed_mc['P10U']
-    del trimmed_mc['P13U']
     del trimmed_mc['P17E']  
     
     # get rid of empty dict entries
@@ -1035,7 +1011,6 @@ def transect_box_plot(trimmed_mc, G2talk_mc, esper_type):
     all_slopes = [np.zeros(G2talk_mc.shape[1]) for i in range(0, len(trimmed_mc.keys()))] # number of transects by number of mc simulations
     all_sig_slopes = [np.zeros(G2talk_mc.shape[1]) for i in range(0, len(trimmed_mc.keys()))] # number of transects by number of mc simulations (only to store statistically significant slopes)
     all_pvalues = [np.zeros(G2talk_mc.shape[1]) for i in range(0, len(trimmed_mc.keys()))] # number of transects by number of mc simulations
-    
     
     # loop through transects
     j = 0
