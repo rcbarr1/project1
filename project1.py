@@ -19,6 +19,7 @@ from scipy import special
 import statsmodels.api as sm
 import cmocean.cm as cmo
 from scipy import stats
+from scipy.interpolate import LinearNDInterpolator
 
 
 def glodap_reformat_time(glodap):
@@ -955,13 +956,14 @@ def plot2dhist(esper_sel, esper_type, fig, ax, subplot_label, colorbar_flag):
         fig.colorbar(h[3],label=' ')
 
     # print equations & p values for each regression type
-    ax.text(1992.5, 100, 'OLS: m$={:+.3f}$, p$={:.1e}$'.format(ols_results.params[1],ols_results.pvalues[1]), fontsize=10)
-    ax.text(1992.5, 80, 'RLM: m$={:+.3f}$, p$={:.1e}$'.format(rlm_results.params[1],rlm_results.pvalues[1]), fontsize=10)
+    ##ax.text(1992.5, 100, 'OLS: m$={:+.3f}$, p$={:.1e}$'.format(ols_results.params[1],ols_results.pvalues[1]), fontsize=10)
+    ##ax.text(1992.5, 80, 'RLM: m$={:+.3f}$, p$={:.1e}$'.format(rlm_results.params[1],rlm_results.pvalues[1]), fontsize=10)
     print('ols slope, p value: ' + str(ols_results.params[1]) + ', ' + str(ols_results.pvalues[1]))
     print('rlm slope, p value: ' + str(rlm_results.params[1]) + ', ' + str(rlm_results.pvalues[1]))
-    ##ax.text(1992.5, 105, 'OLS: m$={:+.3f}$, p$={:.1e}$'.format(ols_results.params[1],ols_results.pvalues[1]), fontsize=10) # for LIR-trained only
-    ##ax.text(1992.5, 90, 'RLM: m$={:+.3f}$, p$={:.1e}$'.format(rlm_results.params[1],rlm_results.pvalues[1]), fontsize=10) # for LIR-trained only
+    ax.text(1992.5, 105, 'OLS: m$={:+.3f}$, p$={:.1e}$'.format(ols_results.params[1],ols_results.pvalues[1]), fontsize=10) # for LIR-trained only
+    ax.text(1992.5, 90, 'RLM: m$={:+.3f}$, p$={:.1e}$'.format(rlm_results.params[1],rlm_results.pvalues[1]), fontsize=10) # for LIR-trained only
     ax.text(1992.5, -70, subplot_label, fontsize=12)
+    ax.set_xlim([1991.66753234399, 2021.75842656012])
     
     
 def plot_rlm_weights(esper_sel, esper_type, fig, ax, subplot_label, colorbar_flag):
@@ -1097,14 +1099,66 @@ def compare_TA_var(var_name, esper_sel, esper_type, fig, ax, subplot_label, colo
         ax.text(1.3, -70, subplot_label, fontsize=12)
         
     
+def find_MLD(lons, lats, MLD_da, latm, lonm, type_flag):
+    """
+    Reads in the Holte et al. monthly mixed layer climatology and interpolates
+    it. Currently set up to interpolate the maximum monthly mixed layer depth,
+    but it could be rewritten to allow minimum or average MLD.
     
-    
-    
-    
-    
-    
-    
-    
-    
-
+    Keyword arguments:
+        lons = longitudes of interest
+        lats = latitudes of interest
+        MLD_da = mixed layer depth from density algorithm from Holte et al.
+                (should be mld_da_max or mld_da_mean)
+        latm = from Holte et al.
+        lonm = from Holte et al.
+        type_flag = 0 for maximum monthly max MLD, 1 for mean monthly mean MLD
         
+    Returns:
+        max_MLDs = maximum mixed layer depths at lons & lats
+    """
+    
+    # extracting the maximum values along the first dimension
+    # this is taking the maximum MLD across the monthly climatologies
+    # --> whichever month had the largest MLD
+    if type_flag == 0:
+        MLDs = np.nanmax(MLD_da, axis=0)
+    elif type_flag == 1:
+        MLDs = np.nanmean(MLD_da, axis=0)
+    else:
+        print('ERROR: type_flag should be specified as 0 or 1')
+    
+    # padding lonm and latm arrays
+    lonm = np.vstack([lonm[-1, :] - 360, lonm, lonm[0, :] + 360])
+    latm = np.vstack([latm[-1, :], latm, latm[0, :]])
+    MLDs = np.vstack([MLDs[-1, :], MLDs, MLDs[0, :]])
+    
+    latm = np.hstack([latm[:, 0:1] - 1, latm, latm[:, -1:] + 1])
+    lonm = np.hstack([lonm[:, 0:1], lonm, lonm[:, -1:]])
+    MLDs = np.hstack([MLDs[:, 0:1], MLDs, MLDs[:, -1:]])
+    
+    # flattening and cleaning the arrays
+    latm = latm.flatten()
+    lonm = lonm.flatten()
+    MLDs = MLDs.flatten()
+    
+    valid_idx = ~np.isnan(MLDs)
+    latm = latm[valid_idx]
+    lonm = lonm[valid_idx]
+    MLDs = MLDs[valid_idx]
+    
+    lonm[lonm < 0] += 360
+    lons[lons < 0] += 360
+    
+    # interpolation
+    points = np.column_stack((lonm, latm))
+    interpolator = LinearNDInterpolator(points, MLDs)
+    
+    interp_MLDs = interpolator(lons, lats)
+    
+    return interp_MLDs
+
+
+
+
+
