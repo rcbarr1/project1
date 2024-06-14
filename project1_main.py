@@ -76,7 +76,7 @@ glodap_out = go_ship[['G2expocode','G2cruise','G2station','G2region','G2cast',
 # glodap.to_csv(filepath + 'GLODAPv2.2022_for_ESPERs.csv', index=False) # for 2022
 glodap_out.to_csv(filepath + 'GLODAPv2.2023_for_Brendan.csv', index=False) # for 2023
  
-# %%step 3: upload ESPERs outputs to here
+# %% upload ESPERs outputs to here
 espers = pd.read_csv(filepath + 'GLODAP_with_ESPER_TA.csv') # to do the normal ESPER
 #espers = pd.read_csv(filepath + 'GLODAP_with_ESPER_TA_GO-SHIP_LIR.csv') # to do the GO-SHIP trained ESPER
 espers['datetime'] = pd.to_datetime(espers['datetime']) # recast datetime as datetime data type
@@ -130,7 +130,7 @@ G2talk_std = G2talk_mc.std(axis=1)
 G2talk_mc = pd.read_csv(filepath + input_mc_individual_file, na_values = -9999)
 
 #%% show layered histograms of distance from ensemble mean for each equation
-# not sure if this is necessary or useful
+
 fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(7,4), dpi=200, sharex=True)
 fig.add_subplot(111,frameon=False)
 plt.tick_params(labelcolor='none', which='both', top=False, bottom=False, left=False, right=False)
@@ -270,7 +270,6 @@ cmap = cmocean.tools.crop(cmo.balance, to_plot.del_alk.min(), to_plot.del_alk.ma
 pts = ax.scatter(to_plot.G2longitude,to_plot.G2latitude,transform=ccrs.PlateCarree(),s=30,c=to_plot.del_alk,cmap=cmap, alpha=0.15,edgecolors='none')
 plt.colorbar(pts, ax=ax, label='Measured $A_{T}$ - ESPER-Estimated $A_{T}$ \n($µmol\;kg^{-1}$)')
 
-
 #%% 2D histogram for global ensemble mean regression for all trimmed GO-SHIP
 # with robust regression (statsmodels rlm)
 
@@ -320,15 +319,16 @@ esper_sel = all_trimmed[all_trimmed.G2depth < all_trimmed.surface_depth] # do su
 p1.plot2dhist(esper_sel, esper_type, fig, axs[0], 'A', 1)
 
 # full ocean LIR
-#esper_type = 'Ensemble_Mean_TA_LIR' # LIR, NN, or Mixed
-#esper_sel = all_trimmed # full depth
-esper_type = 'Ensemble_Mean_TA_NN' # LIR, NN, or Mixed
-esper_sel = all_trimmed[all_trimmed.G2depth < all_trimmed.surface_depth] # do surface values (< 25 m) only
+esper_type = 'Ensemble_Mean_TA_LIR' # LIR, NN, or Mixed
+esper_sel = all_trimmed # full depth
+#esper_type = 'Ensemble_Mean_TA_NN' # LIR, NN, or Mixed
+#esper_sel = all_trimmed[all_trimmed.G2depth < all_trimmed.surface_depth] # do surface values (< 25 m) only
 p1.plot2dhist(esper_sel, esper_type, fig, axs[1], 'B', 1)
 
 ax.set_xlabel('Year')
 ax.xaxis.set_label_coords(0.25,-0.65) # for 2d histogram
 ax.set_ylabel('Measured $A_{T}$ - ESPER-Estimated $A_{T}$\n($µmol\;kg^{-1}$)')
+###ax.set_ylabel('Measured $A_{T}$ ($µmol\;kg^{-1}$)')
 ax.yaxis.set_label_coords(-0.62,0.28)
 
 #%% data points colored by weight assigned by robust regression (statsmodels rlm)
@@ -443,7 +443,7 @@ fig.text(0.56, 0.415, 'D', fontsize=14)
 fig.text(0.661, 0.43, '$\mu={:.4f}, \sigma={:.4f}$'.format(mu, sigma), fontsize=12)
 
 plt.xlabel('Slope of Measured $A_{T}$ - ESPER-Estimated $A_{T}$ over Time ($µmol\;kg^{-1}\;yr^{-1}$)')
-plt.ylabel('Count')
+plt.ylabel('Number of Occurrences')
 
 # %% make box plot graph of transect slopes from mc simulation
 
@@ -482,6 +482,7 @@ axs[1].text(1.25, 3.8, 'B', fontsize=12)
 axs[1].tick_params(axis='x', labelrotation=90)
 
 ax.set_ylabel('Slope of Measured $A_{T}$ - ESPER-Estimated $A_{T}$ over Time\n($µmol$ $kg^{-1}$ $yr^{-1}$)')
+#ax.set_ylabel('Slope of Measured $A_{T}$ over Time\n($µmol$ $kg^{-1}$ $yr^{-1}$)')
 
 ax.yaxis.set_label_coords(-0.63,0.55)
 
@@ -665,61 +666,117 @@ ax.add_feature(cfeature.LAND,color='k', zorder=12)
 esper_sel = all_trimmed[all_trimmed.G2depth < all_trimmed.surface_depth] # do surface values (< 25 m) only
 
 # preallocate array to store slopes & p-values
-ols_slopes = np.zeros(15)
-ols_pvalues = np.zeros(15)
-rlm_slopes = np.zeros(15)
-rlm_pvalues = np.zeros(15)
+ols_slopes_LIR = np.zeros(15)
+ols_pvalues_LIR = np.zeros(15)
+rlm_slopes_LIR = np.zeros(15)
+rlm_pvalues_LIR = np.zeros(15)
+
+ols_slopes_NN = np.zeros(15)
+ols_pvalues_NN = np.zeros(15)
+rlm_slopes_NN = np.zeros(15)
+rlm_pvalues_NN = np.zeros(15)
 
 # calculate ∆ between each equation and equation 16
 for i in range(1, 16):
-    esper_type = 'LIRtalk' + str(i) # LIR, NN, or Mixed
-    del_alk_LIR = esper_sel[esper_type] - esper_sel['LIRtalk16']
+    esper_LIR = 'LIRtalk' + str(i)
+    esper_NN = 'NNtalk' + str(i)
+    del_alk_LIR = esper_sel[esper_LIR] - esper_sel['LIRtalk16']
+    del_alk_NN = esper_sel[esper_NN] - esper_sel['NNtalk16']
 
     x = esper_sel['dectime'].to_numpy()
-    y = del_alk_LIR.to_numpy()
+    y_LIR = del_alk_LIR.to_numpy()
+    y_NN = del_alk_NN.to_numpy()
     
     # get rid of NaN values
-    not_nan_idx = np.where(~np.isnan(y))
-    x = x[not_nan_idx]
-    y = y[not_nan_idx]
+    not_nan_idx_LIR = np.where(~np.isnan(y_LIR))
+    x_LIR = x[not_nan_idx_LIR]
+    y_LIR = y_LIR[not_nan_idx_LIR]
+    
+    not_nan_idx_NN = np.where(~np.isnan(y_NN))
+    x_NN = x[not_nan_idx_NN]
+    y_NN = y_NN[not_nan_idx_NN]
     
     # calculate trend with ols/rlm for each ∆equation instead of ensemble mean
     # fit model and print summary
-    x_model = sm.add_constant(x) # this is required in statsmodels to get an intercept
-    rlm_model = sm.RLM(y, x_model, M=sm.robust.norms.HuberT())
-    rlm_results = rlm_model.fit()
+    x_model_LIR = sm.add_constant(x_LIR) # this is required in statsmodels to get an intercept
+    rlm_model_LIR = sm.RLM(y_LIR, x_model_LIR, M=sm.robust.norms.HuberT())
+    rlm_results_LIR = rlm_model_LIR.fit()
+    
+    x_model_NN = sm.add_constant(x_NN) # this is required in statsmodels to get an intercept
+    rlm_model_NN = sm.RLM(y_NN, x_model_NN, M=sm.robust.norms.HuberT())
+    rlm_results_NN = rlm_model_NN.fit()
 
-    ols_model = sm.OLS(y, x_model)
-    ols_results = ols_model.fit()
+    ols_model_LIR = sm.OLS(y_LIR, x_model_LIR)
+    ols_results_LIR = ols_model_LIR.fit()
+    
+    ols_model_NN = sm.OLS(y_NN, x_model_NN)
+    ols_results_NN = ols_model_NN.fit()
     
     # store slope and p-value for each equation
-    ols_slopes[i-1] = ols_results.params[1]
-    ols_pvalues[i-1] = ols_results.pvalues[1]
-    rlm_slopes[i-1] = rlm_results.params[1]
-    rlm_pvalues[i-1] = rlm_results.pvalues[1]
+    ols_slopes_LIR[i-1] = ols_results_LIR.params[1]
+    ols_pvalues_LIR[i-1] = ols_results_LIR.pvalues[1]
+    rlm_slopes_LIR[i-1] = rlm_results_LIR.params[1]
+    rlm_pvalues_LIR[i-1] = rlm_results_LIR.pvalues[1]
+    
+    ols_slopes_NN[i-1] = ols_results_NN.params[1]
+    ols_pvalues_NN[i-1] = ols_results_NN.pvalues[1]
+    rlm_slopes_NN[i-1] = rlm_results_NN.params[1]
+    rlm_pvalues_NN[i-1] = rlm_results_NN.pvalues[1]
     
 # plot slopes and pvalues (scatter plot?)
 fig, axs = plt.subplots(2, 1, figsize=(7,4), dpi=200, sharex=True)
 
-axs[0].scatter(range(1,16), ols_slopes, c='deepskyblue', label='Ordinary Least Squares')
-axs[0].scatter(range(1,16), rlm_slopes, c='orchid', label='Robust Linear Model')
-axs[1].scatter(range(1,16), ols_pvalues, c='deepskyblue', marker='x')
-axs[1].scatter(range(1,16), rlm_pvalues, c='orchid', marker='x')
+# break into significant slopes and nonsignificant slopes
+ols_sig_LIR = np.copy(ols_slopes_LIR)
+ols_sig_LIR[ols_pvalues_LIR >= 0.05] = np.nan
+
+ols_notsig_LIR = np.copy(ols_slopes_LIR)
+ols_notsig_LIR[ols_pvalues_LIR < 0.05] = np.nan
+
+rlm_sig_LIR = np.copy(rlm_slopes_LIR)
+rlm_sig_LIR[rlm_pvalues_LIR >= 0.05] = np.nan
+
+rlm_notsig_LIR = np.copy(rlm_slopes_LIR)
+rlm_notsig_LIR[rlm_pvalues_LIR < 0.05] = np.nan
+
+ols_sig_NN = np.copy(ols_slopes_NN)
+ols_sig_NN[ols_pvalues_NN >= 0.05] = np.nan
+
+ols_notsig_NN = np.copy(ols_slopes_NN)
+ols_notsig_NN[ols_pvalues_NN < 0.05] = np.nan
+
+rlm_sig_NN = np.copy(rlm_slopes_NN)
+rlm_sig_NN[rlm_pvalues_NN >= 0.05] = np.nan
+
+rlm_notsig_NN = np.copy(rlm_slopes_NN)
+rlm_notsig_NN[rlm_pvalues_NN < 0.05] = np.nan
+
+axs[0].scatter(range(1,16), ols_sig_LIR, c='deepskyblue', marker='o', label='OLS (Significant)')
+axs[0].scatter(range(1,16), ols_notsig_LIR, facecolors='none', marker='o', edgecolors='deepskyblue', label='OLS (Not Significant)')
+axs[0].scatter(range(1,16), rlm_sig_LIR, c='orchid', marker='o', label='RLM (Significant)')
+axs[0].scatter(range(1,16), rlm_notsig_LIR, facecolors='none', marker='o', edgecolors='orchid', label='RLM (Not Significant)')
+
+axs[1].scatter(range(1,16), ols_sig_NN, c='deepskyblue', marker='o', label='OLS (Significant)')
+axs[1].scatter(range(1,16), ols_notsig_NN, facecolors='none', marker='o', edgecolors='deepskyblue', label='OLS (Not Significant)')
+axs[1].scatter(range(1,16), rlm_sig_NN, c='orchid', marker='o', label='RLM (Significant)')
+axs[1].scatter(range(1,16), rlm_notsig_NN, facecolors='none', marker='o', edgecolors='orchid', label='RLM (Not Significant)')
+
 axs[0].axhline(y=0.0, ls='--', c='k')
-axs[1].axhline(y=0.05, ls='--', c='k')
+axs[1].axhline(y=0.0, ls='--', c='k')
 
-axs[0].set_title('Trends in Difference between TA Predicted by Each Equation vs.\nEquation 16 over Time')
-axs[0].set_ylabel('Slope ($µmol\;kg^{-1}\;yr^{-1}$)')
-axs[1].set_ylabel('p-Value')
-axs[1].set_xlabel('LIR Equation Number')
+axs[1].set_xlabel('Equation Number')
+axs[1].set_ylabel('Slope of Difference between $A_{T}$ Predicted\nby Each Eqn. and Eqn. 16 over Time\n($µmol\;kg^{-1}\;yr^{-1}$)')
+axs[1].yaxis.set_label_coords(-0.1,1.1)
 
-axs[0].set_ylim([-0.005, 0.005])
-axs[1].set_ylim([0, 1])
+axs[0].text(0.6, -0.02, 'A', fontsize=12)
+axs[1].text(0.6, -0.02, 'B', fontsize=12)
 
-axs[0].legend(bbox_to_anchor = (0.88, -1.6), ncol=2)
+axs[0].set_ylim([-0.022, 0.022])
+axs[1].set_ylim([-0.022, 0.022])
+
+axs[1].legend(bbox_to_anchor = (0.88, -0.35), ncol=2)
 
 plt.xticks(range(1,16))
-
 # %% regional analysis
 # North Atlantic: A02, A05, A16N, A20, A22, A25, AR07E, AR07W, A17 (above 0º latitude)
 # South Atlantic: A10, A12, A135, A16S, A17 (below 0º and above -60º latitude)
@@ -772,6 +829,89 @@ arctic = {key: value for key, value in trimmed.items() if key in {'ARC01E', 'ARC
 arctic = pd.concat(arctic.values(), ignore_index=True) # flatten from dict of dataframes into one large dataframe
 arctic = arctic.drop_duplicates(ignore_index=True) # drop duplicates
 
+# %% break north pacific into three groups
+# north pacific cruises: P01, P02, P03, P09, P10, P13, P14, P16N, P18 (above 0º latitude)
+
+# group 1: american cruises
+# 276, 277, 279, 280, 286, 296, 299, 301, 302, 304, 306, 307, 345, 1035, 1043,
+# 1044, 1045
+# any adjustments here? 302 = -12, 307 = +6
+
+# group 2: japanese single or spec
+# 272, 461, 468, 495, 497, 502, 504, 505, 567, 598, 602, 609, 1050, 1053, 1060,
+# 1063, 1064, 1066, 1067, 1069, 1070, 1071, 1076, 1078, 1079, 1081, 1082, 1083,
+# 1086, 1087, 1090, 1092, 1093, 1096, 1098, 1099, 1100, 1101, 2038, 2041, 2047,
+# 2050, 2054, 2057, 2062, 2064, 2067, 2075, 2080, 2084, 2087, 2091, 2094, 2096,
+# 2097, 2098, 2099, 2102, 2103, 4065, 4066, 4068, 4069, 4071, 4074, 4076, 4078,
+# 4081, 4083, 4087, 4089, 5014, 5017
+# any adjustments here? 461 = +6, 468 = +13, 567 = +20, 602 = +6, 1067 = +8, 
+# 1069 = +6, 1071 = +4, 1078 = +3, 1079 = +4, 1090 = +6, 2091 = +4, 5017 = +3 
+
+# group 3: japanese unknown, up to year 2008
+# 406, 407, 408, 412, 439, 440, 459, 515, 517, 545, 546, 547, 548, 549, 550,
+# 551, 552, 553, 554, 555, 556, 557, 558, 559, 560, 561, 562, 563, 564, 565,
+# 566, 568, 569, 570, 571, 572, 573, 574, 575, 576, 577, 579, 580, 581, 582,
+# 583, 584, 585, 586, 587, 588, 589, 590, 591, 592, 593, 594, 595, 596, 597,
+# 598, 599, 600, 601, 603, 604, 605, 606, 607, 608, 1056, 1057, 1058, 1080
+# any adjustments here? 459 = +14
+
+# keep only cruise numbers from group one
+north_pacific_USA = north_pacific[
+    north_pacific['G2cruise'].isin([276, 277, 279, 280, 286, 296, 299, 301,
+                                    302, 304, 306, 307, 345, 1035, 1043, 1044,
+                                    1045])]
+
+# keep only cruise numbers from group two
+north_pacific_JPNnew = north_pacific[
+    north_pacific['G2cruise'].isin([272, 461, 468, 495, 497, 502, 504, 505,
+                                    567, 598, 602, 609, 1050, 1053, 1060, 1063,
+                                    1064, 1066, 1067, 1069, 1070, 1071, 1076,
+                                    1078, 1079, 1081, 1082, 1083, 1086, 1087,
+                                    1090, 1092, 1093, 1096, 1098, 1099, 1100,
+                                    1101, 2038, 2041, 2047, 2050, 2054, 2057,
+                                    2062, 2064, 2067, 2075, 2080, 2084, 2087,
+                                    2091, 2094, 2096, 2097, 2098, 2099, 2102,
+                                    2103, 4065, 4066, 4068, 4069, 4071, 4074,
+                                    4076, 4078, 4081, 4083, 4087, 4089, 5014,
+                                    5017])]
+
+# keep only cruise numbers from group three
+north_pacific_JPNold = north_pacific[
+    north_pacific['G2cruise'].isin([406, 407, 408, 412, 439, 440, 459, 515,
+                                    517, 545, 546, 547, 548, 549, 550, 551,
+                                    552, 553, 554, 555, 556, 557, 558, 559,
+                                    560, 561, 562, 563, 564, 565, 566, 568,
+                                    569, 570, 571, 572, 573, 574, 575, 576,
+                                    577, 579, 580, 581, 582, 583, 584, 585,
+                                    586, 587, 588, 589, 590, 591, 592, 593,
+                                    594, 595, 596, 597, 598, 599, 600, 601,
+                                    603, 604, 605, 606, 607, 608, 1056, 1057,
+                                    1058, 1080])]
+
+# %% method change in indian ocean?
+# 255, 252, 488, 251, 253, 355, 682, 254, 3034, 3041, 339, 4062, 249, 352, 1046, 250, 353, 3035, 72, 82, 256, 1054
+# 255 (1995-96): closed-cell automated potentiometric titration systems
+# 252 (1995): closed-cell automated potentiometric titration systems
+# 488 (2003-4): nippon gran titration
+# 251 (1995): closed-cell automated potentiometric titration systems
+# 253 (1995): closed-cell automated potentiometric titration systems, bradshaw & brewer 1988
+# 355 (2007): potentiometric, 2007 dickson guide
+# 682 (2002): potentiometric
+# 254 (1995): closed-cell automated potentiometric titration systems, bradshaw & brewer 1988
+# 3034 (2018): HCl titration in close cell (potentiometric)
+# 339 (1995): single-point titration (millero, 1993)
+# 4062 (2019): spectrophotometry, yao & byrne, 1998
+# 249 (1994): closed-cell automated potentiometric titration systems, millero 1993 & 1998
+# 352 (2007): closed-cell
+# 1046 (2016): two-stage open cell acidimetric, potentiometric
+# 250 (1995): closed-cell automated potentiometric titration systems, bradshaw & brewer 1988
+# 353 (2007): open-cell potentiometric
+# 3035 (2016): two-stage open cell acidimetric, potentiometric
+# 72 (2004-5): ??
+# 82 (2000): potentiometric titration system similar to that described by brewer 1986
+# 256 (1995): closed-cell automated potentiometric titration systems, millero 1993 & 1998
+# 1054 (2015-16): spectrophotometry, nippon
+
 # %% plot regions on a map colored separately
 # set up map
 fig = plt.figure(figsize=(10,3.5), dpi=200)
@@ -815,19 +955,54 @@ plt.tick_params(labelcolor='none', which='both', top=False, bottom=False, left=F
 
 # surface LIR
 esper_type = 'Ensemble_Mean_TA_LIR' # LIR, NN, or Mixed
+#esper_type = 'Ensemble_Mean_TA_NN' # LIR, NN, or Mixed
 basin_sel = basin[basin.G2depth < basin.surface_depth] # do surface values (< 25 m) only
 p1.plot2dhist(basin_sel, esper_type, fig, axs[0], 'Surface (< 25 m)', 1)
 
 # full ocean LIR
 esper_type = 'Ensemble_Mean_TA_LIR' # LIR, NN, or Mixed
+#esper_type = 'Ensemble_Mean_TA_NN' # LIR, NN, or Mixed
 basin_sel = basin # full depth
 p1.plot2dhist(basin_sel, esper_type, fig, axs[1], 'Full Depth', 1)
 
 ax.set_xlabel('Year')
 ax.xaxis.set_label_coords(0.25,-0.65) # for 2d histogram
 ax.set_ylabel('Measured $A_{T}$ - ESPER-Estimated $A_{T}$\n($µmol\;kg^{-1}$)')
+###ax.set_ylabel('Measured $A_{T}$($µmol\;kg^{-1}$)')
 ax.yaxis.set_label_coords(-0.62,0.28)
 
+#%% plot number of measurements in each region over time
+fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(7,4), dpi=200, sharex=True, sharey=True, layout='constrained')
+
+basins = [north_atlantic, south_atlantic, north_pacific, south_pacific, indian, southern, arctic]
+basin_names = ['North Atlantic', 'South Atlantic', 'North Pacific', 'South Pacific', 'Indian', 'Southern', 'Arctic']
+
+for basin, name in zip(basins, basin_names):
+    grouped = basin.groupby('datetime').count()
+    grouped_year = grouped.groupby(pd.Grouper(freq='Y')).sum()
+    ax.plot(grouped_year.G2talk,label=name)
+
+ax.legend(bbox_to_anchor = (0.92, -0.1), ncol=4)
+ax.set_ylabel('Number of $A_{T}$ Measurements')
+
+#%% do each season over time too
+fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(7,4), dpi=200, sharex=True, sharey=True, layout='constrained')
+
+DJF = all_trimmed[all_trimmed.datetime.dt.month.isin([12, 1, 2])]
+MAM = all_trimmed[all_trimmed.datetime.dt.month.isin([3, 4, 5])]
+JJA = all_trimmed[all_trimmed.datetime.dt.month.isin([6, 7, 8])]
+SON = all_trimmed[all_trimmed.datetime.dt.month.isin([9, 10, 11])]
+
+seasons = [DJF, MAM, JJA, SON]
+season_names = ['DJF', 'MAM', 'JJA', 'SON']
+
+for season, name in zip(seasons, season_names):
+    grouped = season.groupby('datetime').count()
+    grouped_year = grouped.groupby(pd.Grouper(freq='Y')).sum()
+    ax.plot(grouped_year.G2talk,label=name)
+
+ax.legend(bbox_to_anchor = (0.8, -0.1), ncol=4)
+ax.set_ylabel('Number of $A_{T}$ Measurements')
 
 # %% run (or upload) MC simulation FOR EACH REGION to create array of simulated G2talk values (by cruise offset)
 #num_mc_runs = 1000
@@ -865,10 +1040,332 @@ G2talk_std_AO = G2talk_mc_AO.std(axis=1)
 G2talk_mc_regions = [G2talk_mc_NA, G2talk_mc_SA, G2talk_mc_NP, G2talk_mc_SP, G2talk_mc_IO, G2talk_mc_SO, G2talk_mc_AO]
 G2talk_std_regions = [G2talk_std_NA, G2talk_std_SA, G2talk_std_NP, G2talk_std_SP, G2talk_std_IO, G2talk_std_SO, G2talk_std_AO]
 
-#%% calculate error FOR EACH REGION: error in TREND, not point
+# %% loop through monte carlo simulation-produced G2talk to do global ensemble mean regression
+all_trimmed_basin = north_atlantic
+G2talk_mc_basin = G2talk_mc_NA
+
+# plot surface values and do regular linear regression
+all_trimmed_basin.reset_index(drop=True, inplace=True)
+G2talk_mc_basin.reset_index(drop=True, inplace=True)
+all_trimmed_mc_basin = pd.concat([all_trimmed_basin, G2talk_mc_basin], axis=1)
+all_trimmed_mc_basin_surf = all_trimmed_mc_basin[all_trimmed_mc_basin.G2depth < all_trimmed_mc_basin.surface_depth]
+x = all_trimmed_mc_basin.dectime
+x_surf = all_trimmed_mc_basin_surf.dectime
+
+# preallocate arrays for storing slope and p-values
+slopes_surf_LIR = np.zeros(G2talk_mc_basin.shape[1])
+pvalues_surf_LIR = np.zeros(G2talk_mc_basin.shape[1])
+
+slopes_LIR = np.zeros(G2talk_mc_basin.shape[1])
+pvalues_LIR = np.zeros(G2talk_mc_basin.shape[1])
+
+slopes_surf_NN = np.zeros(G2talk_mc_basin.shape[1])
+pvalues_surf_NN = np.zeros(G2talk_mc_basin.shape[1])
+
+slopes_NN = np.zeros(G2talk_mc_basin.shape[1])
+pvalues_NN = np.zeros(G2talk_mc_basin.shape[1])
+
+for i in range(0,G2talk_mc_basin.shape[1]): 
+    y_surf_LIR = all_trimmed_mc_basin_surf[str(i)] - all_trimmed_mc_basin_surf.Ensemble_Mean_TA_LIR
+    y_LIR = all_trimmed_mc_basin[str(i)] - all_trimmed_mc_basin.Ensemble_Mean_TA_LIR
+    y_surf_NN = all_trimmed_mc_basin_surf[str(i)] - all_trimmed_mc_basin_surf.Ensemble_Mean_TA_NN
+    y_NN = all_trimmed_mc_basin[str(i)] - all_trimmed_mc_basin.Ensemble_Mean_TA_NN
+    
+    slope_surf_LIR, intercept_surf_LIR, _, pvalue_surf_LIR, _ = stats.linregress(x_surf, y_surf_LIR, alternative='two-sided')
+    slope_LIR, intercept_LIR, _, pvalue_LIR, _ = stats.linregress(x, y_LIR, alternative='two-sided')
+    slope_surf_NN, intercept_surf_NN, _, pvalue_surf_NN, _ = stats.linregress(x_surf, y_surf_NN, alternative='two-sided')
+    slope_NN, intercept_NN, _, pvalue_NN, _ = stats.linregress(x, y_NN, alternative='two-sided')
+    
+    slopes_surf_LIR[i] = slope_surf_LIR
+    pvalues_surf_LIR[i] = pvalue_surf_LIR
+    slopes_LIR[i] = slope_LIR
+    pvalues_LIR[i] = pvalue_LIR
+    slopes_surf_NN[i] = slope_surf_NN
+    pvalues_surf_NN[i] = pvalue_surf_NN
+    slopes_NN[i] = slope_NN
+    pvalues_NN[i] = pvalue_NN
+
+fig, axs = plt.subplots(nrows=2, ncols=2, figsize=(8,5), dpi=200, sharex=True, sharey=True)
+fig.add_subplot(111,frameon=False)
+plt.tick_params(labelcolor='none', which='both', top=False, bottom=False, left=False, right=False)
+
+axs[0,0].hist(slopes_surf_LIR, bins=100)
+axs[0,0].set_xlim([-0.15, 0.15]) # per cruise offset
+#axs[0,0].set_xlim([-0.07, 0.07]) # individual offset
+mu = slopes_surf_LIR.mean()
+sigma = slopes_surf_LIR.std()
+fig.text(0.14, 0.825, 'A', fontsize=14)
+fig.text(0.236, 0.84, '$\mu={:.4f}, \sigma={:.4f}$'.format(mu, sigma), fontsize=12)
+
+axs[1,0].hist(slopes_LIR, bins=100)
+mu = slopes_LIR.mean()
+sigma = slopes_LIR.std()
+fig.text(0.14, 0.415, 'C', fontsize=14)
+fig.text(0.236, 0.43, '$\mu={:.4f}, \sigma={:.4f}$'.format(mu, sigma), fontsize=12)
+
+axs[0,1].hist(slopes_surf_NN, bins=100)
+mu = slopes_surf_NN.mean()
+sigma = slopes_surf_NN.std()
+fig.text(0.56, 0.825, 'B', fontsize=14)
+fig.text(0.661, 0.84, '$\mu={:.4f}, \sigma={:.4f}$'.format(mu, sigma), fontsize=12)
+
+axs[1,1].hist(slopes_NN, bins=100)
+mu = slopes_NN.mean()
+sigma = slopes_NN.std()
+fig.text(0.56, 0.415, 'D', fontsize=14)
+fig.text(0.661, 0.43, '$\mu={:.4f}, \sigma={:.4f}$'.format(mu, sigma), fontsize=12)
+
+plt.xlabel('Slope of Measured $A_{T}$ - ESPER-Estimated $A_{T}$ over Time ($µmol\;kg^{-1}\;yr^{-1}$)')
+plt.ylabel('Number of Occurrences')
+
+#%% calculate error: error in TREND, not point
 # u_esper = standard deviation in slope across all 16 equations
 # u_sample= standard deviation in slopes predicted by mc analysis
 # U = summation of u_esper and u_sample in quadrature
+# CALCULATES UNCERTANTIES FOR EACH BASIN
+
+basins = [north_atlantic, south_atlantic, north_pacific, south_pacific, indian, southern, arctic]
+mc_basins = [G2talk_mc_NA, G2talk_mc_SA, G2talk_mc_NP, G2talk_mc_SP, G2talk_mc_IO, G2talk_mc_SO, G2talk_mc_AO]
+
+basin_U_surf_LIR = np.zeros(len(basins))
+basin_U_surf_NN = np.zeros(len(basins))
+basin_U_LIR = np.zeros(len(basins))
+basin_U_NN = np.zeros(len(basins))
+
+for basin, mc_basin, j in zip(basins, mc_basins, range(0,len(basins))):
+    
+    # calculate u_esper
+    esper = basin
+    esper_surf = basin[basin.G2depth < basin.surface_depth] # do surface values (< 25 m) only
+    
+    slopes_rlm_LIR = np.zeros(16)
+    slopes_rlm_NN = np.zeros(16)
+    slopes_rlm_surf_LIR = np.zeros(16)
+    slopes_rlm_surf_NN = np.zeros(16)
+    
+    slopes_ols_LIR = np.zeros(16)
+    slopes_ols_NN = np.zeros(16)
+    slopes_ols_surf_LIR = np.zeros(16)
+    slopes_ols_surf_NN = np.zeros(16)
+    
+    for i in range(0,16):
+    
+        # sort by time
+        esper = esper.sort_values(by=['dectime'],ascending=True)
+        esper_surf = esper_surf.sort_values(by=['dectime'],ascending=True)
+    
+        # calculate the difference in TA betwen GLODAP and ESPERS, store for regression
+        esper_LIR = esper.dropna(subset=['G2talk', 'LIRtalk' + str(i+1)])
+        esper_NN= esper.dropna(subset=['G2talk', 'NNtalk' + str(i+1)])
+        esper_surf_LIR = esper_surf.dropna(subset=['G2talk', 'LIRtalk' + str(i+1)])
+        esper_surf_NN= esper_surf.dropna(subset=['G2talk', 'NNtalk' + str(i+1)])
+        
+        del_alk_LIR = esper_LIR.loc[:,'G2talk'] - esper_LIR.loc[:,'LIRtalk' + str(i+1)]
+        del_alk_NN = esper_NN.loc[:,'G2talk'] - esper_NN.loc[:,'NNtalk' + str(i+1)]
+        del_alk_surf_LIR = esper_surf_LIR.loc[:,'G2talk'] - esper_surf_LIR.loc[:,'LIRtalk' + str(i+1)]
+        del_alk_surf_NN = esper_surf_NN.loc[:,'G2talk'] - esper_surf_NN.loc[:,'NNtalk' + str(i+1)]
+        
+        x_LIR = esper_LIR['dectime'].to_numpy()
+        x_surf_LIR = esper_surf_LIR['dectime'].to_numpy()
+        x_NN = esper_NN['dectime'].to_numpy()
+        x_surf_NN = esper_surf_NN['dectime'].to_numpy()
+        
+        y_LIR = del_alk_LIR.to_numpy()
+        y_NN = del_alk_NN.to_numpy()
+        y_surf_LIR = del_alk_surf_LIR.to_numpy()
+        y_surf_NN = del_alk_surf_NN.to_numpy()
+    
+        # fit model and print summary
+        x_model_LIR = sm.add_constant(x_LIR) # this is required in statsmodels to get an intercept
+        x_model_surf_LIR = sm.add_constant(x_surf_LIR) # this is required in statsmodels to get an intercept
+        x_model_NN = sm.add_constant(x_NN) # this is required in statsmodels to get an intercept
+        x_model_surf_NN = sm.add_constant(x_surf_NN) # this is required in statsmodels to get an intercept
+        
+        rlm_model_LIR = sm.RLM(y_LIR, x_model_LIR, M=sm.robust.norms.HuberT())
+        rlm_results_LIR = rlm_model_LIR.fit()
+        
+        rlm_model_NN = sm.RLM(y_NN, x_model_NN, M=sm.robust.norms.HuberT())
+        rlm_results_NN = rlm_model_NN.fit()
+        
+        rlm_model_surf_LIR = sm.RLM(y_surf_LIR, x_model_surf_LIR, M=sm.robust.norms.HuberT())
+        rlm_results_surf_LIR = rlm_model_surf_LIR.fit()
+        
+        rlm_model_surf_NN = sm.RLM(y_surf_NN, x_model_surf_NN, M=sm.robust.norms.HuberT())
+        rlm_results_surf_NN = rlm_model_surf_NN.fit()
+    
+        slopes_rlm_LIR[i] = rlm_results_LIR.params[1]
+        slopes_rlm_NN[i] = rlm_results_NN.params[1]
+        slopes_rlm_surf_LIR[i] = rlm_results_surf_LIR.params[1]
+        slopes_rlm_surf_NN[i] = rlm_results_surf_NN.params[1]
+        
+        #ols_model_LIR = sm.OLS(y_LIR, x_model_LIR)
+        #ols_results_LIR = ols_model_LIR.fit()
+        
+        #ols_model_NN = sm.OLS(y_NN, x_model_NN)
+        #ols_results_NN = ols_model_NN.fit()
+        
+        #ols_model_surf_LIR = sm.OLS(y_surf_LIR, x_model_surf_LIR)
+        #ols_results_surf_LIR = ols_model_surf_LIR.fit()
+        
+        #ols_model_surf_NN = sm.OLS(y_surf_NN, x_model_surf_NN)
+        #ols_results_surf_NN = ols_model_surf_NN.fit()
+        
+        #slopes_ols_LIR[i] = ols_results_LIR.params[1]
+        #slopes_ols_NN[i] = ols_results_NN.params[1]
+        #slopes_ols_surf_LIR[i] = ols_results_surf_LIR.params[1]
+        #slopes_ols_surf_NN[i] = ols_results_surf_NN.params[1]
+    
+    u_esper_LIR = slopes_rlm_LIR.std()
+    u_esper_NN = slopes_rlm_NN.std()
+    u_esper_surf_LIR = slopes_rlm_surf_LIR.std()
+    u_esper_surf_NN = slopes_rlm_surf_NN.std()
+    
+    #u_esper_LIR = slopes_ols_LIR.std()
+    #u_esper_NN = slopes_ols_NN.std()
+    #u_esper_surf_LIR = slopes_ols_surf_LIR.std()
+    #u_esper_surf_NN = slopes_ols_surf_NN.std()
+    
+    # calculate u_sample
+    # loop through monte carlo simulation-produced G2talk to do global ensemble mean regression
+    all_trimmed_basin = basin
+    G2talk_mc_basin = mc_basin
+
+    # plot surface values and do regular linear regression
+    all_trimmed_basin.reset_index(drop=True, inplace=True)
+    G2talk_mc_basin.reset_index(drop=True, inplace=True)
+    all_trimmed_mc_basin = pd.concat([all_trimmed_basin, G2talk_mc_basin], axis=1)
+    all_trimmed_mc_basin_surf = all_trimmed_mc_basin[all_trimmed_mc_basin.G2depth < all_trimmed_mc_basin.surface_depth]
+    x = all_trimmed_mc_basin.dectime
+    x_surf = all_trimmed_mc_basin_surf.dectime
+
+    # preallocate arrays for storing slope and p-values
+    slopes_surf_LIR = np.zeros(G2talk_mc_basin.shape[1])
+    pvalues_surf_LIR = np.zeros(G2talk_mc_basin.shape[1])
+
+    slopes_LIR = np.zeros(G2talk_mc_basin.shape[1])
+    pvalues_LIR = np.zeros(G2talk_mc_basin.shape[1])
+
+    slopes_surf_NN = np.zeros(G2talk_mc_basin.shape[1])
+    pvalues_surf_NN = np.zeros(G2talk_mc_basin.shape[1])
+
+    slopes_NN = np.zeros(G2talk_mc_basin.shape[1])
+    pvalues_NN = np.zeros(G2talk_mc_basin.shape[1])
+
+    for i in range(0,G2talk_mc_basin.shape[1]): 
+        y_surf_LIR = all_trimmed_mc_basin_surf[str(i)] - all_trimmed_mc_basin_surf.Ensemble_Mean_TA_LIR
+        y_LIR = all_trimmed_mc_basin[str(i)] - all_trimmed_mc_basin.Ensemble_Mean_TA_LIR
+        y_surf_NN = all_trimmed_mc_basin_surf[str(i)] - all_trimmed_mc_basin_surf.Ensemble_Mean_TA_NN
+        y_NN = all_trimmed_mc_basin[str(i)] - all_trimmed_mc_basin.Ensemble_Mean_TA_NN
+        
+        slope_surf_LIR, intercept_surf_LIR, _, pvalue_surf_LIR, _ = stats.linregress(x_surf, y_surf_LIR, alternative='two-sided')
+        slope_LIR, intercept_LIR, _, pvalue_LIR, _ = stats.linregress(x, y_LIR, alternative='two-sided')
+        slope_surf_NN, intercept_surf_NN, _, pvalue_surf_NN, _ = stats.linregress(x_surf, y_surf_NN, alternative='two-sided')
+        slope_NN, intercept_NN, _, pvalue_NN, _ = stats.linregress(x, y_NN, alternative='two-sided')
+        
+        slopes_surf_LIR[i] = slope_surf_LIR
+        pvalues_surf_LIR[i] = pvalue_surf_LIR
+        slopes_LIR[i] = slope_LIR
+        pvalues_LIR[i] = pvalue_LIR
+        slopes_surf_NN[i] = slope_surf_NN
+        pvalues_surf_NN[i] = pvalue_surf_NN
+        slopes_NN[i] = slope_NN
+        pvalues_NN[i] = pvalue_NN
+    
+    u_sample_surf_LIR = slopes_surf_LIR.std() # for SURFACE, LIR
+    u_sample_LIR = slopes_LIR.std() # for FULL DEPTH, LIR
+    u_sample_surf_NN = slopes_surf_NN.std() # for SURFACE, NN
+    u_sample_NN = slopes_NN.std() # for FULL DEPTH, NN
+    
+    basin_U_surf_LIR[j] = np.sqrt(u_esper_surf_LIR**2 + u_sample_surf_LIR**2)
+    basin_U_surf_NN[j] = np.sqrt(u_esper_surf_NN**2 + u_sample_surf_NN**2)
+    basin_U_LIR[j] = np.sqrt(u_esper_LIR**2 + u_sample_LIR**2)
+    basin_U_NN[j] = np.sqrt(u_esper_NN**2 + u_sample_NN**2)
+    
+# %% calculate arrays of slopes as well
+
+
+# %% make box plot graph of transect slopes from mc simulation
+
+# create dictionary with regional data + mc as values, regions as keys
+north_atlantic.reset_index(drop=True, inplace=True)
+G2talk_mc_NA.reset_index(drop=True, inplace=True)
+NA_mc = pd.concat([north_atlantic, G2talk_mc_NA], axis=1)
+NA_mc_surf = NA_mc[NA_mc.G2depth < NA_mc.surface_depth]
+
+south_atlantic.reset_index(drop=True, inplace=True)
+G2talk_mc_SA.reset_index(drop=True, inplace=True)
+SA_mc = pd.concat([south_atlantic, G2talk_mc_SA], axis=1)
+SA_mc_surf = SA_mc[SA_mc.G2depth < SA_mc.surface_depth]
+
+north_pacific.reset_index(drop=True, inplace=True)
+G2talk_mc_NP.reset_index(drop=True, inplace=True)
+NP_mc = pd.concat([north_pacific, G2talk_mc_NP], axis=1)
+NP_mc_surf = NP_mc[NP_mc.G2depth < NP_mc.surface_depth]
+
+south_pacific.reset_index(drop=True, inplace=True)
+G2talk_mc_SP.reset_index(drop=True, inplace=True)
+SP_mc = pd.concat([south_pacific, G2talk_mc_SP], axis=1)
+SP_mc_surf = SP_mc[SP_mc.G2depth < SP_mc.surface_depth]
+
+indian.reset_index(drop=True, inplace=True)
+G2talk_mc_IO.reset_index(drop=True, inplace=True)
+IO_mc = pd.concat([indian, G2talk_mc_IO], axis=1)
+IO_mc_surf = IO_mc[IO_mc.G2depth < IO_mc.surface_depth]
+
+southern.reset_index(drop=True, inplace=True)
+G2talk_mc_SO.reset_index(drop=True, inplace=True)
+SO_mc = pd.concat([southern, G2talk_mc_SO], axis=1)
+SO_mc_surf = SO_mc[SO_mc.G2depth < SO_mc.surface_depth]
+
+arctic.reset_index(drop=True, inplace=True)
+G2talk_mc_AO.reset_index(drop=True, inplace=True)
+AO_mc = pd.concat([arctic, G2talk_mc_AO], axis=1)
+AO_mc_surf = AO_mc[AO_mc.G2depth < AO_mc.surface_depth]
+
+trimmed_mc_basin = {'NAO' : NA_mc, 'SAO' : SA_mc, 'NPO' : NP_mc, 'SPO' : SP_mc,
+                    'IO' : IO_mc, 'SO' : SO_mc, 'AO' : AO_mc}
+
+trimmed_mc_basin_surf = {'NAO' : NA_mc_surf, 'SAO' : SA_mc_surf,
+                         'NPO' : NP_mc_surf, 'SPO' : SP_mc_surf,
+                         'IO' : IO_mc_surf, 'SO' : SO_mc_surf,
+                         'AO' : AO_mc_surf}
+
+# SURFACE LIR
+all_slopes_surf = p1.transect_box_plot(trimmed_mc_basin_surf, G2talk_mc, 'NN')
+
+# FULL-OCEAN LIR
+all_slopes_full = p1.transect_box_plot(trimmed_mc_basin, G2talk_mc, 'NN')
+
+# set up plot
+fig, axs = plt.subplots(nrows=2, ncols=1, figsize=(5,4), dpi=200, sharex=True, sharey=True, layout='constrained')
+fig.add_subplot(111,frameon=False)
+ax = fig.gca()
+plt.tick_params(labelcolor='none', which='both', top=False, bottom=False, left=False, right=False)
+
+# make box plot for surface
+axs[0].boxplot(all_slopes_surf, vert=True, labels=list(trimmed_mc_basin_surf.keys()))
+axs[0].axhline(y=0, color='r', linestyle='--')
+axs[0].set_ylim(-1.5, 1.5)
+axs[0].text(0.67, -1.35, 'Surface', fontsize=12)
+
+# make box plot for full depth
+axs[1].boxplot(all_slopes_full, vert=True, labels=list(trimmed_mc_basin.keys()))
+axs[1].axhline(y=0, color='r', linestyle='--')
+axs[1].set_ylim(-1.5, 1.5)
+axs[1].text(0.67, -1.35, 'Full Depth', fontsize=12)
+axs[1].tick_params(axis='x')#, labelrotation=90)
+
+ax.set_ylabel('Slope of Measured $A_{T}$ - ESPER-Estimated $A_{T}$\nover Time ($µmol$ $kg^{-1}$ $yr^{-1}$)')
+
+ax.yaxis.set_label_coords(-0.65,0.55)
+
+
+
+
+
+
+
+
 
 
 

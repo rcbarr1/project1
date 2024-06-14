@@ -935,6 +935,7 @@ def plot2dhist(esper_sel, esper_type, fig, ax, subplot_label, colorbar_flag):
 
     # calculate the difference in TA betwen GLODAP and ESPERS, store for regression
     del_alk = esper_sel.loc[:,'G2talk'] - esper_sel.loc[:,esper_type]
+    ###del_alk = esper_sel.loc[:,'G2talk']
     x = esper_sel['dectime'].to_numpy()
     y = del_alk.to_numpy()
 
@@ -950,8 +951,9 @@ def plot2dhist(esper_sel, esper_type, fig, ax, subplot_label, colorbar_flag):
     ax.plot(x_model[:,1], rlm_results.fittedvalues, lw=2.5, ls='--', color='gainsboro', label='RLM')
     #ax.plot(x_model[:,1], ols_results.fittedvalues, lw=1, ls='-', color='gainsboro', label='OLS')
     ax.set_ylim([-80, 120])
+    ###ax.set_ylim([2100, 2500])
     if colorbar_flag == 1:
-        fig.colorbar(h[3],label='Count')
+        fig.colorbar(h[3],label='Number of Occurrences')
     elif colorbar_flag == 2:
         fig.colorbar(h[3],label=' ')
 
@@ -960,9 +962,11 @@ def plot2dhist(esper_sel, esper_type, fig, ax, subplot_label, colorbar_flag):
     ##ax.text(1992.5, 80, 'RLM: m$={:+.3f}$, p$={:.1e}$'.format(rlm_results.params[1],rlm_results.pvalues[1]), fontsize=10)
     print('ols slope, p value: ' + str(ols_results.params[1]) + ', ' + str(ols_results.pvalues[1]))
     print('rlm slope, p value: ' + str(rlm_results.params[1]) + ', ' + str(rlm_results.pvalues[1]))
-    ax.text(1992.5, 105, 'OLS: m$={:+.3f}$, p$={:.1e}$'.format(ols_results.params[1],ols_results.pvalues[1]), fontsize=10) # for LIR-trained only
-    ax.text(1992.5, 90, 'RLM: m$={:+.3f}$, p$={:.1e}$'.format(rlm_results.params[1],rlm_results.pvalues[1]), fontsize=10) # for LIR-trained only
+    ax.text(1992.5, 105, 'OLS: $m={:+.3f}$, $p={:.1e}$'.format(ols_results.params[1],ols_results.pvalues[1]), fontsize=10) # for LIR-trained only
+    ax.text(1992.5, 90, 'RLM: $m={:+.3f}$, $p={:.1e}$'.format(rlm_results.params[1],rlm_results.pvalues[1]), fontsize=10) # for LIR-trained only
     ax.text(1992.5, -70, subplot_label, fontsize=12)
+    ###ax.text(1992.5, 2135, 'OLS: m$={:+.3f}$, p$={:.1e}$'.format(ols_results.params[1],ols_results.pvalues[1]), fontsize=10) # for LIR-trained only
+    ###ax.text(1992.5, 2110, 'RLM: m$={:+.3f}$, p$={:.1e}$'.format(rlm_results.params[1],rlm_results.pvalues[1]), fontsize=10) # for LIR-trained only
     ax.set_xlim([1991.66753234399, 2021.75842656012])
     
     
@@ -995,10 +999,14 @@ def plot_rlm_weights(esper_sel, esper_type, fig, ax, subplot_label, colorbar_fla
 def transect_box_plot(trimmed_mc, G2talk_mc, esper_type):
     # remove transects that have 0 or 1 repeats
     # ARC01W, I01, MED01, P02J, P03U, P06J, P09U, P10U, P13U
-    del trimmed_mc['ARC01W']
-    del trimmed_mc['I01']
-    del trimmed_mc['MED01']
-    del trimmed_mc['P17E']  
+    if 'ARC01W' in trimmed_mc:
+        del trimmed_mc['ARC01W']
+    if 'I01' in trimmed_mc:
+        del trimmed_mc['I01']
+    if 'MED01' in trimmed_mc:
+        del trimmed_mc['MED01']
+    if 'P17E' in trimmed_mc:
+        del trimmed_mc['P17E']  
     
     # get rid of empty dict entries
     del_keys = []
@@ -1020,7 +1028,7 @@ def transect_box_plot(trimmed_mc, G2talk_mc, esper_type):
         transect = trimmed_mc[key]
         x = transect.dectime
         
-        transect_mc = transect.iloc[:,116:] # pull only mc simulated G2talk for this transect
+        transect_mc = transect.iloc[:,-1*G2talk_mc.shape[1]:] # pull only mc simulated G2talk for this transect
         
         # calculate slope and p value for each mc run
         slopes = np.zeros(transect_mc.shape[1])
@@ -1031,8 +1039,10 @@ def transect_box_plot(trimmed_mc, G2talk_mc, esper_type):
         for i in range(0,transect_mc.shape[1]):
             if esper_type =='LIR':
                 y = transect_mc.iloc[:,i] - transect.Ensemble_Mean_TA_LIR # change ESPER method here
+                #y = transect_mc.iloc[:,i]
             elif esper_type =='NN':
                 y = transect_mc.iloc[:,i] - transect.Ensemble_Mean_TA_NN # change ESPER method here
+                #y = transect_mc.iloc[:,i]
             elif esper_type =='Mixed':
                 y = transect_mc.iloc[:,i] - transect.Ensemble_Mean_TA_Mixed # change ESPER method here
         
@@ -1081,7 +1091,7 @@ def compare_TA_var(var_name, esper_sel, esper_type, fig, ax, subplot_label, colo
     
     # turn colorbar on and off
     if colorbar_flag == 1:
-        fig.colorbar(h[3],label='Count')
+        fig.colorbar(h[3],label='Number of Occurrences')
     elif colorbar_flag == 2:
         fig.colorbar(h[3],label=' ')
       
