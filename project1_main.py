@@ -1124,13 +1124,49 @@ plt.ylabel('Number of Occurrences')
 # U = summation of u_esper and u_sample in quadrature
 # CALCULATES UNCERTANTIES FOR EACH BASIN
 
-basins = [north_atlantic, south_atlantic, north_pacific, south_pacific, indian, southern, arctic]
-mc_basins = [G2talk_mc_NA, G2talk_mc_SA, G2talk_mc_NP, G2talk_mc_SP, G2talk_mc_IO, G2talk_mc_SO, G2talk_mc_AO]
+df_empty = pd.DataFrame()
+basins = [north_atlantic, south_atlantic, north_pacific, south_pacific, indian,
+          southern, arctic, trimmed_mc['A02'], trimmed_mc['A05'],
+          trimmed_mc['A10'], trimmed_mc['A12'], trimmed_mc['A135'],
+          trimmed_mc['A16N'], trimmed_mc['A16S'], trimmed_mc['A17'],
+          trimmed_mc['A20'], trimmed_mc['A22'], trimmed_mc['A25'],
+          trimmed_mc['A29'], trimmed_mc['AR07E'], trimmed_mc['AR07W'],
+          trimmed_mc['ARC01E'], trimmed_mc['I03'], trimmed_mc['I05'],
+          trimmed_mc['I06'], trimmed_mc['I07'], trimmed_mc['I08N'],
+          trimmed_mc['I08S'], trimmed_mc['I09N'], trimmed_mc['I09S'],
+          trimmed_mc['I10'], trimmed_mc['P01'], trimmed_mc['P02'],
+          trimmed_mc['P03'], trimmed_mc['P06'], trimmed_mc['P09'],
+          trimmed_mc['P10'], trimmed_mc['P13'], trimmed_mc['P14'],
+          trimmed_mc['P15'], trimmed_mc['P16N'], trimmed_mc['P16S'],
+          trimmed_mc['P17N'], trimmed_mc['P18'], trimmed_mc['P21'],
+          trimmed_mc['S04I'], trimmed_mc['SR04'], trimmed_mc['S04P'],
+          trimmed_mc['SR01'], trimmed_mc['SR03']]
+
+
+mc_basins = [G2talk_mc_NA, G2talk_mc_SA, G2talk_mc_NP, G2talk_mc_SP,
+             G2talk_mc_IO, G2talk_mc_SO, G2talk_mc_AO, df_empty, df_empty,
+             df_empty, df_empty, df_empty, df_empty, df_empty, df_empty,
+             df_empty, df_empty, df_empty, df_empty, df_empty, df_empty,
+             df_empty, df_empty, df_empty, df_empty, df_empty, df_empty,
+             df_empty, df_empty, df_empty, df_empty, df_empty, df_empty,
+             df_empty, df_empty, df_empty, df_empty, df_empty, df_empty,
+             df_empty, df_empty, df_empty, df_empty, df_empty, df_empty,
+             df_empty, df_empty, df_empty, df_empty, df_empty]
 
 basin_U_surf_LIR = np.zeros(len(basins))
 basin_U_surf_NN = np.zeros(len(basins))
 basin_U_LIR = np.zeros(len(basins))
 basin_U_NN = np.zeros(len(basins))
+
+u_esper_LIR = np.zeros(len(basins))
+u_esper_NN = np.zeros(len(basins))
+u_esper_surf_LIR = np.zeros(len(basins))
+u_esper_surf_NN = np.zeros(len(basins))
+
+u_sample_surf_LIR = np.zeros(len(basins))
+u_sample_LIR = np.zeros(len(basins))
+u_sample_surf_NN = np.zeros(len(basins))
+u_sample_NN = np.zeros(len(basins))
 
 for basin, mc_basin, j in zip(basins, mc_basins, range(0,len(basins))):
     
@@ -1215,10 +1251,10 @@ for basin, mc_basin, j in zip(basins, mc_basins, range(0,len(basins))):
         #slopes_ols_surf_LIR[i] = ols_results_surf_LIR.params[1]
         #slopes_ols_surf_NN[i] = ols_results_surf_NN.params[1]
     
-    u_esper_LIR = slopes_rlm_LIR.std()
-    u_esper_NN = slopes_rlm_NN.std()
-    u_esper_surf_LIR = slopes_rlm_surf_LIR.std()
-    u_esper_surf_NN = slopes_rlm_surf_NN.std()
+    u_esper_LIR[j] = slopes_rlm_LIR.std()
+    u_esper_NN[j] = slopes_rlm_NN.std()
+    u_esper_surf_LIR[j] = slopes_rlm_surf_LIR.std()
+    u_esper_surf_NN[j] = slopes_rlm_surf_NN.std()
     
     #u_esper_LIR = slopes_ols_LIR.std()
     #u_esper_NN = slopes_ols_NN.std()
@@ -1239,19 +1275,19 @@ for basin, mc_basin, j in zip(basins, mc_basins, range(0,len(basins))):
     x_surf = all_trimmed_mc_basin_surf.dectime
 
     # preallocate arrays for storing slope and p-values
-    slopes_surf_LIR = np.zeros(G2talk_mc_basin.shape[1])
-    pvalues_surf_LIR = np.zeros(G2talk_mc_basin.shape[1])
+    slopes_surf_LIR = np.zeros(G2talk_mc.shape[1])
+    pvalues_surf_LIR = np.zeros(G2talk_mc.shape[1])
 
-    slopes_LIR = np.zeros(G2talk_mc_basin.shape[1])
-    pvalues_LIR = np.zeros(G2talk_mc_basin.shape[1])
+    slopes_LIR = np.zeros(G2talk_mc.shape[1])
+    pvalues_LIR = np.zeros(G2talk_mc.shape[1])
 
-    slopes_surf_NN = np.zeros(G2talk_mc_basin.shape[1])
-    pvalues_surf_NN = np.zeros(G2talk_mc_basin.shape[1])
+    slopes_surf_NN = np.zeros(G2talk_mc.shape[1])
+    pvalues_surf_NN = np.zeros(G2talk_mc.shape[1])
 
-    slopes_NN = np.zeros(G2talk_mc_basin.shape[1])
-    pvalues_NN = np.zeros(G2talk_mc_basin.shape[1])
+    slopes_NN = np.zeros(G2talk_mc.shape[1])
+    pvalues_NN = np.zeros(G2talk_mc.shape[1])
 
-    for i in range(0,G2talk_mc_basin.shape[1]): 
+    for i in range(0,G2talk_mc.shape[1]): 
         y_surf_LIR = all_trimmed_mc_basin_surf[str(i)] - all_trimmed_mc_basin_surf.Ensemble_Mean_TA_LIR
         y_LIR = all_trimmed_mc_basin[str(i)] - all_trimmed_mc_basin.Ensemble_Mean_TA_LIR
         y_surf_NN = all_trimmed_mc_basin_surf[str(i)] - all_trimmed_mc_basin_surf.Ensemble_Mean_TA_NN
@@ -1271,17 +1307,147 @@ for basin, mc_basin, j in zip(basins, mc_basins, range(0,len(basins))):
         slopes_NN[i] = slope_NN
         pvalues_NN[i] = pvalue_NN
     
-    u_sample_surf_LIR = slopes_surf_LIR.std() # for SURFACE, LIR
-    u_sample_LIR = slopes_LIR.std() # for FULL DEPTH, LIR
-    u_sample_surf_NN = slopes_surf_NN.std() # for SURFACE, NN
-    u_sample_NN = slopes_NN.std() # for FULL DEPTH, NN
+    u_sample_surf_LIR[j] = slopes_surf_LIR.std() # for SURFACE, LIR
+    u_sample_LIR[j] = slopes_LIR.std() # for FULL DEPTH, LIR
+    u_sample_surf_NN[j] = slopes_surf_NN.std() # for SURFACE, NN
+    u_sample_NN[j] = slopes_NN.std() # for FULL DEPTH, NN
     
-    basin_U_surf_LIR[j] = np.sqrt(u_esper_surf_LIR**2 + u_sample_surf_LIR**2)
-    basin_U_surf_NN[j] = np.sqrt(u_esper_surf_NN**2 + u_sample_surf_NN**2)
-    basin_U_LIR[j] = np.sqrt(u_esper_LIR**2 + u_sample_LIR**2)
-    basin_U_NN[j] = np.sqrt(u_esper_NN**2 + u_sample_NN**2)
+    basin_U_surf_LIR[j] = np.sqrt(u_esper_surf_LIR[j]**2 + u_sample_surf_LIR[j]**2)
+    basin_U_surf_NN[j] = np.sqrt(u_esper_surf_NN[j]**2 + u_sample_surf_NN[j]**2)
+    basin_U_LIR[j] = np.sqrt(u_esper_LIR[j]**2 + u_sample_LIR[j]**2)
+    basin_U_NN[j] = np.sqrt(u_esper_NN[j]**2 + u_sample_NN[j]**2)
     
 # %% calculate arrays of slopes as well
+
+basins = [north_atlantic, south_atlantic, north_pacific, south_pacific, indian,
+          southern, arctic, trimmed_mc['A02'], trimmed_mc['A05'],
+          trimmed_mc['A10'], trimmed_mc['A12'], trimmed_mc['A135'],
+          trimmed_mc['A16N'], trimmed_mc['A16S'], trimmed_mc['A17'],
+          trimmed_mc['A20'], trimmed_mc['A22'], trimmed_mc['A25'],
+          trimmed_mc['A29'], trimmed_mc['AR07E'], trimmed_mc['AR07W'],
+          trimmed_mc['ARC01E'], trimmed_mc['I03'], trimmed_mc['I05'],
+          trimmed_mc['I06'], trimmed_mc['I07'], trimmed_mc['I08N'],
+          trimmed_mc['I08S'], trimmed_mc['I09N'], trimmed_mc['I09S'],
+          trimmed_mc['I10'], trimmed_mc['P01'], trimmed_mc['P02'],
+          trimmed_mc['P03'], trimmed_mc['P06'], trimmed_mc['P09'],
+          trimmed_mc['P10'], trimmed_mc['P13'], trimmed_mc['P14'],
+          trimmed_mc['P15'], trimmed_mc['P16N'], trimmed_mc['P16S'],
+          trimmed_mc['P17N'], trimmed_mc['P18'], trimmed_mc['P21'],
+          trimmed_mc['S04I'], trimmed_mc['SR04'], trimmed_mc['S04P'],
+          trimmed_mc['SR01'], trimmed_mc['SR03']]
+
+basin_trend_surf_LIR = np.zeros(len(basins))
+basin_trend_surf_NN = np.zeros(len(basins))
+basin_trend_LIR = np.zeros(len(basins))
+basin_trend_NN = np.zeros(len(basins))
+
+for basin, j in zip(basins, range(0,len(basins))):
+    esper = basin
+    esper_surf = basin[basin.G2depth < basin.surface_depth] # do surface values (< 25 m) only
+
+    # sort by time
+    esper = esper.sort_values(by=['dectime'],ascending=True)
+    esper_surf = esper_surf.sort_values(by=['dectime'],ascending=True)
+
+    # calculate the difference in TA betwen GLODAP and ESPERS, store for regression
+    del_alk_surf_LIR = esper_surf.loc[:,'G2talk'] - esper_surf.loc[:,'Ensemble_Mean_TA_LIR']
+    x_surf_LIR = esper_surf['dectime'].to_numpy()
+    y_surf_LIR = del_alk_surf_LIR.to_numpy()
+    
+    del_alk_surf_NN = esper_surf.loc[:,'G2talk'] - esper_surf.loc[:,'Ensemble_Mean_TA_NN']
+    x_surf_NN = esper_surf['dectime'].to_numpy()
+    y_surf_NN = del_alk_surf_NN.to_numpy()
+    
+    del_alk_LIR = esper.loc[:,'G2talk'] - esper.loc[:,'Ensemble_Mean_TA_LIR']
+    x_LIR = esper['dectime'].to_numpy()
+    y_LIR = del_alk_LIR.to_numpy()
+    
+    del_alk_NN = esper.loc[:,'G2talk'] - esper.loc[:,'Ensemble_Mean_TA_NN']
+    x_NN = esper['dectime'].to_numpy()
+    y_NN = del_alk_NN.to_numpy()
+         
+    # fit model and print summary
+    x_model_surf_LIR = sm.add_constant(x_surf_LIR) # this is required in statsmodels to get an intercept
+    rlm_model_surf_LIR = sm.RLM(y_surf_LIR, x_model_surf_LIR, M=sm.robust.norms.HuberT())
+    rlm_results_surf_LIR = rlm_model_surf_LIR.fit()
+    
+    x_model_surf_NN = sm.add_constant(x_surf_NN) # this is required in statsmodels to get an intercept
+    rlm_model_surf_NN = sm.RLM(y_surf_NN, x_model_surf_NN, M=sm.robust.norms.HuberT())
+    rlm_results_surf_NN = rlm_model_surf_NN.fit()
+    
+    x_model_LIR = sm.add_constant(x_LIR) # this is required in statsmodels to get an intercept
+    rlm_model_LIR = sm.RLM(y_LIR, x_model_LIR, M=sm.robust.norms.HuberT())
+    rlm_results_LIR = rlm_model_LIR.fit()
+    
+    x_model_NN = sm.add_constant(x_NN) # this is required in statsmodels to get an intercept
+    rlm_model_NN = sm.RLM(y_NN, x_model_NN, M=sm.robust.norms.HuberT())
+    rlm_results_NN = rlm_model_NN.fit()
+    
+    basin_trend_surf_LIR[j] = rlm_results_surf_LIR.params[1]
+    basin_trend_surf_NN[j] = rlm_results_surf_NN.params[1]
+    basin_trend_LIR[j] = rlm_results_LIR.params[1]
+    basin_trend_NN[j] = rlm_results_NN.params[1]
+    
+    #x_model_surf_LIR = sm.add_constant(x_surf_LIR) # this is required in statsmodels to get an intercept
+    #ols_model_surf_LIR = sm.OLS(y_surf_LIR, x_model_surf_LIR)
+    #ols_results_surf_LIR = ols_model_surf_LIR.fit()
+    
+    #x_model_surf_NN = sm.add_constant(x_surf_NN) # this is required in statsmodels to get an intercept
+    #ols_model_surf_NN = sm.OLS(y_surf_NN, x_model_surf_NN)
+    #ols_results_surf_NN = ols_model_surf_NN.fit()
+    
+    #x_model_LIR = sm.add_constant(x_LIR) # this is required in statsmodels to get an intercept
+    #ols_model_LIR = sm.OLS(y_LIR, x_model_LIR)
+    #ols_results_LIR = ols_model_LIR.fit()
+    
+    #x_model_NN = sm.add_constant(x_NN) # this is required in statsmodels to get an intercept
+    #ols_model_NN = sm.OLS(y_NN, x_model_NN)
+    #ols_results_NN = ols_model_NN.fit()
+    
+    #basin_trend_surf_LIR[j] = ols_results_surf_LIR.params[1]
+    #basin_trend_surf_NN[j] = ols_results_surf_NN.params[1]
+    #basin_trend_LIR[j] = ols_results_LIR.params[1]
+    #basin_trend_NN[j] = ols_results_NN.params[1]
+    
+#%% plot trends with error bars
+fig, axs = plt.subplots(nrows=2, ncols=1, figsize=(8,4.5), dpi=200, sharex=True, sharey=True, layout='constrained')
+fig.add_subplot(111,frameon=False)
+ax = fig.gca()
+plt.tick_params(labelcolor='none', which='both', top=False, bottom=False, left=False, right=False)
+
+x = np.array(range(0,len(basin_trend_LIR)))
+
+axs[0].errorbar(x-0.15, basin_trend_surf_LIR, yerr=basin_U_surf_LIR, fmt="o", c='mediumvioletred', alpha = 0.5)
+axs[0].errorbar(x+0.15, basin_trend_surf_NN, yerr=basin_U_surf_NN, fmt="o", c='deepskyblue', alpha = 0.5)
+
+axs[1].errorbar(x-0.15, basin_trend_LIR, yerr=basin_U_LIR, fmt="o", c='mediumvioletred', label='ESPER LIR', alpha = 0.5)
+axs[1].errorbar(x+0.15, basin_trend_NN, yerr=basin_U_NN, fmt="o", c='deepskyblue', label='ESPER NN', alpha = 0.5)
+
+axs[0].axhline(y=0, color='k', linestyle='--')
+axs[1].axhline(y=0, color='k', linestyle='--')
+
+#axs[0].set_ylim([-0.5, 0.5])   
+#axs[1].set_ylim([-0.5, 0.5])   
+axs[1].set_xlim(-0.5, len(basin_trend_LIR) - 0.5) 
+ 
+basin_abbr = ['NAO', 'SAO', 'NPO', 'SPO', 'IO', 'SO', 'AO', 'A02', 'A05', 'A10',
+              'A12', 'A135', 'A16N', 'A16S', 'A17', 'A20', 'A22', 'A25', 'A29',
+              'AR07E', 'AR07W', 'ARC01E', 'I03', 'I05', 'I06', 'I07', 'I08N',
+              'I08S', 'I09N', 'I09S', 'I10', 'P01', 'P02', 'P03', 'P06', 'P09',
+              'P10', 'P13', 'P14', 'P15', 'P16N', 'P16S', 'P17N', 'P18', 'P21',
+              'S04I', 'SR04', 'S04P', 'SR01', 'SR03']
+axs[1].set_xticks(x, basin_abbr)
+
+ax.set_ylabel('Trend Measured $A_{T}$ - ESPER-Estimated $A_{T}$\nover Time ($µmol$ $kg^{-1}$ $yr^{-1}$)')
+ax.yaxis.set_label_coords(-0.62,0.55)
+axs[1].tick_params(axis='x', labelrotation=90)
+#axs[0].text(0, -0.45, 'Surface', fontsize=12)
+#axs[1].text(0, -0.45, 'Full Depth', fontsize=12)
+#axs[1].legend(bbox_to_anchor = (0.6, 0.21), ncol=2)
+
+axs[0].text(0, -2, 'A', fontsize=12)
+axs[1].text(0, -2, 'B', fontsize=12)
+axs[1].legend(bbox_to_anchor = (1, 0.21), ncol=2)
 
 
 # %% make box plot graph of transect slopes from mc simulation
@@ -1331,34 +1497,47 @@ trimmed_mc_basin_surf = {'NAO' : NA_mc_surf, 'SAO' : SA_mc_surf,
                          'AO' : AO_mc_surf}
 
 # SURFACE LIR
-all_slopes_surf = p1.transect_box_plot(trimmed_mc_basin_surf, G2talk_mc, 'NN')
+all_slopes_surf_LIR = p1.transect_box_plot(trimmed_mc_basin_surf, G2talk_mc, 'LIR')
+all_slopes_surf_NN = p1.transect_box_plot(trimmed_mc_basin_surf, G2talk_mc, 'NN')
 
 # FULL-OCEAN LIR
-all_slopes_full = p1.transect_box_plot(trimmed_mc_basin, G2talk_mc, 'NN')
+all_slopes_full_LIR = p1.transect_box_plot(trimmed_mc_basin, G2talk_mc, 'LIR')
+all_slopes_full_NN = p1.transect_box_plot(trimmed_mc_basin, G2talk_mc, 'NN')
 
 # set up plot
-fig, axs = plt.subplots(nrows=2, ncols=1, figsize=(5,4), dpi=200, sharex=True, sharey=True, layout='constrained')
+fig, axs = plt.subplots(nrows=2, ncols=2, figsize=(5,4), dpi=200, sharex=True, sharey=True, layout='constrained')
 fig.add_subplot(111,frameon=False)
 ax = fig.gca()
 plt.tick_params(labelcolor='none', which='both', top=False, bottom=False, left=False, right=False)
 
 # make box plot for surface
-axs[0].boxplot(all_slopes_surf, vert=True, labels=list(trimmed_mc_basin_surf.keys()))
-axs[0].axhline(y=0, color='r', linestyle='--')
-axs[0].set_ylim(-1.5, 1.5)
-axs[0].text(0.67, -1.35, 'Surface', fontsize=12)
+axs[0,0].boxplot(all_slopes_surf_LIR, vert=True, labels=list(trimmed_mc_basin_surf.keys()))
+axs[0,0].axhline(y=0, color='r', linestyle='--')
+axs[0,0].set_ylim(-1.5, 1.5)
+axs[0,0].text(0.67, -1.35, 'A', fontsize=12)
 
 # make box plot for full depth
-axs[1].boxplot(all_slopes_full, vert=True, labels=list(trimmed_mc_basin.keys()))
-axs[1].axhline(y=0, color='r', linestyle='--')
-axs[1].set_ylim(-1.5, 1.5)
-axs[1].text(0.67, -1.35, 'Full Depth', fontsize=12)
-axs[1].tick_params(axis='x')#, labelrotation=90)
+axs[1,0].boxplot(all_slopes_full_LIR, vert=True, labels=list(trimmed_mc_basin.keys()))
+axs[1,0].axhline(y=0, color='r', linestyle='--')
+axs[1,0].set_ylim(-1.5, 1.5)
+axs[1,0].text(0.67, -1.35, 'C', fontsize=12)
+
+axs[0,1].boxplot(all_slopes_surf_NN, vert=True, labels=list(trimmed_mc_basin_surf.keys()))
+axs[0,1].axhline(y=0, color='r', linestyle='--')
+axs[0,1].set_ylim(-1.5, 1.5)
+axs[0,1].text(0.67, -1.35, 'B', fontsize=12)
+
+# make box plot for full depth
+axs[1,1].boxplot(all_slopes_full_NN, vert=True, labels=list(trimmed_mc_basin.keys()))
+axs[1,1].axhline(y=0, color='r', linestyle='--')
+axs[1,1].set_ylim(-1.5, 1.5)
+axs[1,1].text(0.67, -1.35, 'D', fontsize=12)
 
 ax.set_ylabel('Slope of Measured $A_{T}$ - ESPER-Estimated $A_{T}$\nover Time ($µmol$ $kg^{-1}$ $yr^{-1}$)')
 
-ax.yaxis.set_label_coords(-0.65,0.55)
-
+ax.yaxis.set_label_coords(-0.63,0.55)
+axs[1,0].tick_params(axis='x', labelrotation=90)
+axs[1,1].tick_params(axis='x', labelrotation=90)
 
 
 
