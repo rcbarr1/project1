@@ -282,21 +282,25 @@ plt.tick_params(labelcolor='none', which='both', top=False, bottom=False, left=F
 # surface LIR
 esper_type = 'Ensemble_Mean_TA_LIR' # LIR, NN, or Mixed
 esper_sel = all_trimmed[all_trimmed.G2depth < all_trimmed.surface_depth] # do surface values (< 25 m) only
+esper_sel = esper_sel[esper_sel.dectime >= 2000]
 p1.plot2dhist(esper_sel, esper_type, fig, axs[0,0], 'A', 0)
 
 # full ocean LIR
 esper_type = 'Ensemble_Mean_TA_LIR' # LIR, NN, or Mixed
 esper_sel = all_trimmed # full depth
+esper_sel = esper_sel[esper_sel.dectime >= 2000]
 p1.plot2dhist(esper_sel, esper_type, fig, axs[1,0], 'C', 0)
 
 # surface NN
 esper_type = 'Ensemble_Mean_TA_NN' # LIR, NN, or Mixed
 esper_sel = all_trimmed[all_trimmed.G2depth < all_trimmed.surface_depth] # do surface values (< 25 m) only
+esper_sel = esper_sel[esper_sel.dectime >= 2000]
 p1.plot2dhist(esper_sel, esper_type, fig, axs[0,1], 'B', 1)
 
 # full ocean NN
 esper_type = 'Ensemble_Mean_TA_NN' # LIR, NN, or Mixed
 esper_sel = all_trimmed # full depth
+esper_sel = esper_sel[esper_sel.dectime >= 2000]
 p1.plot2dhist(esper_sel, esper_type, fig, axs[1,1], 'D', 1)
 
 ax.set_xlabel('Year')
@@ -334,7 +338,6 @@ ax.yaxis.set_label_coords(-0.62,0.28)
 #%% data points colored by weight assigned by robust regression (statsmodels rlm)
 # surface LIR
 esper_type = 'Ensemble_Mean_TA_LIR' # LIR, NN, or Mixed
-esper_sel = all_trimmed[all_trimmed.G2depth < all_trimmed.surface_depth] # do surface values (< 25 m) only
 
 # make figure
 fig, axs = plt.subplots(nrows=2, ncols=2, figsize=(7,4.5), dpi=400, sharex=True, sharey=True)
@@ -777,6 +780,51 @@ axs[1].set_ylim([-0.022, 0.022])
 axs[1].legend(bbox_to_anchor = (0.88, -0.35), ncol=2)
 
 plt.xticks(range(1,16))
+
+# %% compare ∆TA with salinity, temperature, nutrients, and E-P cycles
+
+var_name = 'G2nitrate'
+esper_type = 'Ensemble_Mean_TA_LIR'
+
+# make figure
+fig, axs = plt.subplots(nrows=2, ncols=3, figsize=(9.5,6), dpi=200, sharex=True, sharey=True, layout='constrained')
+fig.add_subplot(111,frameon=False)
+ax = fig.gca()
+plt.tick_params(labelcolor='none', which='both', top=False, bottom=False, left=False, right=False)
+
+# surface ocean, full timeseries
+esper_sel = all_trimmed[all_trimmed.G2depth < all_trimmed.surface_depth] # do surface values only
+p1.compare_TA_var(var_name, esper_sel, esper_type, fig, axs[0,0], 'Surface-only', 1, 100, 0)
+
+# surface ocean, pre-2005
+esper_sel = all_trimmed[all_trimmed.G2depth < all_trimmed.surface_depth] # do surface values only
+esper_sel = esper_sel[esper_sel.dectime <= 2005] # before 2005
+p1.compare_TA_var(var_name, esper_sel, esper_type, fig, axs[0,1], 'Surface-only, 1991-2005', 1, 100, 0)
+
+# surface ocean, post-2005
+esper_sel = all_trimmed[all_trimmed.G2depth < all_trimmed.surface_depth] # do surface values only
+esper_sel = esper_sel[esper_sel.dectime > 2005] # after 2005
+p1.compare_TA_var(var_name, esper_sel, esper_type, fig, axs[0,2], 'Surface-only, 2005-2021', 1, 100, 1)
+
+# full ocean, full timeseries
+esper_sel = all_trimmed
+p1.compare_TA_var(var_name, esper_sel, esper_type, fig, axs[1,0], 'Full depth', 1, 100, 0)
+
+# full ocean, pre-2005
+esper_sel = all_trimmed[all_trimmed.dectime <= 2005] # before 2005
+p1.compare_TA_var(var_name, esper_sel, esper_type, fig, axs[1,1], 'Full depth, 1991-2005', 1, 100, 0)
+
+# full ocean, post-2005
+esper_sel = all_trimmed[all_trimmed.dectime > 2005] # after 2005
+p1.compare_TA_var(var_name, esper_sel, esper_type, fig, axs[1,2], 'Full depth, 2005-2021', 1, 100, 1)
+
+#ax.set_xlabel('Salinity (PSU)')
+#ax.set_xlabel('Temperature (ºC)')
+ax.set_xlabel('Nitrate ($µmol\;kg^{-1}$)')
+ax.xaxis.set_label_coords(0.17,-0.65) # for 2d histogram
+ax.set_ylabel('Measured $A_{T}$ - ESPER-Estimated $A_{T}$ ($µmol\;kg^{-1}$)')
+ax.yaxis.set_label_coords(-0.62,0.28)
+
 # %% regional analysis
 # North Atlantic: A02, A05, A16N, A20, A22, A25, AR07E, AR07W, A17 (above 0º latitude)
 # South Atlantic: A10, A12, A135, A16S, A17 (below 0º and above -60º latitude)
@@ -945,7 +993,8 @@ ax.legend(bbox_to_anchor = (1, -0.1), ncol=4)
 # %% plot 2D histogram ∆TA trends for surface and deep for each region
 # with robust regression (statsmodels rlm)
 
-basin = north_atlantic
+basin = indian
+#basin = pd.concat([north_pacific, south_pacific])
 
 # make figure
 fig, axs = plt.subplots(nrows=1, ncols=2, figsize=(7.5,2.7), dpi=200, sharex=True, sharey=True, layout='constrained')
@@ -1449,7 +1498,6 @@ axs[0].text(0, -2, 'A', fontsize=12)
 axs[1].text(0, -2, 'B', fontsize=12)
 axs[1].legend(bbox_to_anchor = (1, 0.21), ncol=2)
 
-
 # %% make box plot graph of transect slopes from mc simulation
 
 # create dictionary with regional data + mc as values, regions as keys
@@ -1538,6 +1586,29 @@ ax.set_ylabel('Slope of Measured $A_{T}$ - ESPER-Estimated $A_{T}$\nover Time ($
 ax.yaxis.set_label_coords(-0.63,0.55)
 axs[1,0].tick_params(axis='x', labelrotation=90)
 axs[1,1].tick_params(axis='x', labelrotation=90)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -1062,7 +1062,7 @@ def transect_box_plot(trimmed_mc, G2talk_mc, esper_type):
         
     return all_slopes
 
-def compare_TA_var(var_name, esper_sel, esper_type, fig, ax, subplot_label, colorbar_flag):
+def compare_TA_var(var_name, esper_sel, esper_type, fig, ax, subplot_label, vmin, vmax, colorbar_flag):
     # sort by variable
     esper_sel = esper_sel.sort_values(by=[var_name],ascending=True)
     
@@ -1084,7 +1084,7 @@ def compare_TA_var(var_name, esper_sel, esper_type, fig, ax, subplot_label, colo
     ols_model = sm.OLS(y, x_model)
     ols_results = ols_model.fit()
 
-    h = ax.hist2d(x, y, bins=150, norm='log', cmap=cmo.matter) # for 2d histogram
+    h = ax.hist2d(x, y, bins=150, norm='log', cmap=cmo.matter, vmin=vmin, vmax=vmax) # for 2d histogram
     ax.plot(x_model[:,1], rlm_results.fittedvalues, lw=2.5, ls='--', color='gainsboro', label='RLM')
     #ax.plot(x_model[:,1], ols_results.fittedvalues, lw=1, ls='-', color='gainsboro', label='OLS')
     ax.set_ylim([-80, 100])
@@ -1098,15 +1098,21 @@ def compare_TA_var(var_name, esper_sel, esper_type, fig, ax, subplot_label, colo
     # change axis limits    
     if var_name == 'G2salinity':
         ax.set_xlim([30, 37])
-        ax.text(30.2, 80, 'OLS: m$={:+.3f}$, p$={:.1e}$'.format(ols_results.params[1],ols_results.pvalues[1]), fontsize=10)
-        ax.text(30.2, 60, 'RLM: m$={:+.3f}$, p$={:.1e}$'.format(rlm_results.params[1],rlm_results.pvalues[1]), fontsize=10)
-        ax.text(30.2, -70, subplot_label, fontsize=12)
+        ax.text(30.2, 87, 'OLS: m$={:+.3f}$, p$={:.1e}$'.format(ols_results.params[1],ols_results.pvalues[1]), fontsize=10)
+        ax.text(30.2, 75, 'RLM: m$={:+.3f}$, p$={:.1e}$'.format(rlm_results.params[1],rlm_results.pvalues[1]), fontsize=10)
+        ax.text(30.2, -75, subplot_label, fontsize=12)
         
     elif var_name == 'G2nitrate':
         ax.set_xlim([0, 47])
-        ax.text(1.3, 80, 'OLS: m$={:+.3f}$, p$={:.1e}$'.format(ols_results.params[1],ols_results.pvalues[1]), fontsize=10)
-        ax.text(1.3, 60, 'RLM: m$={:+.3f}$, p$={:.1e}$'.format(rlm_results.params[1],rlm_results.pvalues[1]), fontsize=10)
-        ax.text(1.3, -70, subplot_label, fontsize=12)
+        ax.text(1.3, 87, 'OLS: m$={:+.3f}$, p$={:.1e}$'.format(ols_results.params[1],ols_results.pvalues[1]), fontsize=10)
+        ax.text(1.3, 75, 'RLM: m$={:+.3f}$, p$={:.1e}$'.format(rlm_results.params[1],rlm_results.pvalues[1]), fontsize=10)
+        ax.text(1.3, -75, subplot_label, fontsize=12)
+        
+    elif var_name == 'G2temperature':
+        ax.set_xlim([-2, 32])
+        ax.text(-1, 87, 'OLS: m$={:+.3f}$, p$={:.1e}$'.format(ols_results.params[1],ols_results.pvalues[1]), fontsize=10)
+        ax.text(-1, 75, 'RLM: m$={:+.3f}$, p$={:.1e}$'.format(rlm_results.params[1],rlm_results.pvalues[1]), fontsize=10)
+        ax.text(-1, -75, subplot_label, fontsize=12)
         
     
 def find_MLD(lons, lats, MLD_da, latm, lonm, type_flag):
