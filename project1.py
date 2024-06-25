@@ -969,6 +969,40 @@ def plot2dhist(esper_sel, esper_type, fig, ax, subplot_label, colorbar_flag):
     ###ax.text(1992.5, 2110, 'RLM: m$={:+.3f}$, p$={:.1e}$'.format(rlm_results.params[1],rlm_results.pvalues[1]), fontsize=10) # for LIR-trained only
     ax.set_xlim([1991.66753234399, 2021.75842656012])
     
+def plot2dhist_S(esper_sel, esper_type, fig, ax, subplot_label, colorbar_flag):
+    # sort by time
+    esper_sel = esper_sel.sort_values(by=['dectime'],ascending=True)
+
+    # calculate the difference in TA betwen GLODAP and ESPERS, store for regression
+    del_alk = esper_sel.loc[:,'G2talk'] - esper_sel.loc[:,esper_type]
+    del_alk_S = del_alk / esper_sel.loc[:,'G2salinity']
+    x = esper_sel['dectime'].to_numpy()
+    y = del_alk_S.to_numpy()
+
+    # fit model and print summary
+    x_model = sm.add_constant(x) # this is required in statsmodels to get an intercept
+    rlm_model = sm.RLM(y, x_model, M=sm.robust.norms.HuberT())
+    rlm_results = rlm_model.fit()
+
+    ols_model = sm.OLS(y, x_model)
+    ols_results = ols_model.fit()
+
+    h = ax.hist2d(x, y, bins=100, norm='log', cmap=cmo.matter) # for 2d histogram
+    ax.plot(x_model[:,1], rlm_results.fittedvalues, lw=2.5, ls='--', color='gainsboro', label='RLM')
+    #ax.plot(x_model[:,1], ols_results.fittedvalues, lw=1, ls='-', color='gainsboro', label='OLS')
+    ax.set_ylim([-3.5, 3.5])
+    if colorbar_flag == 1:
+        fig.colorbar(h[3],label='Number of Occurrences')
+    elif colorbar_flag == 2:
+        fig.colorbar(h[3],label=' ')
+
+    # print equations & p values for each regression type
+    print('ols slope, p value: ' + str(ols_results.params[1]) + ', ' + str(ols_results.pvalues[1]))
+    print('rlm slope, p value: ' + str(rlm_results.params[1]) + ', ' + str(rlm_results.pvalues[1]))
+    ax.text(1992.5, 2.9, 'OLS: $m={:+.1e}$, $p={:.1e}$'.format(ols_results.params[1],ols_results.pvalues[1]), fontsize=10) # for LIR-trained only
+    ax.text(1992.5, 2.25, 'RLM: $m={:+.1e}$, $p={:.1e}$'.format(rlm_results.params[1],rlm_results.pvalues[1]), fontsize=10) # for LIR-trained only
+    ax.text(1992.5, -3, subplot_label, fontsize=12)
+    ax.set_xlim([1991.66753234399, 2021.75842656012])
     
 def plot_rlm_weights(esper_sel, esper_type, fig, ax, subplot_label, colorbar_flag):
     esper_sel = esper_sel.sort_values(by=['dectime'],ascending=True)

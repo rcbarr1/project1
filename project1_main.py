@@ -105,6 +105,11 @@ kl_div = p1.kl_divergence(espers)
 # %% calculate ensemble mean TA for each data point
 espers = p1.ensemble_mean(espers)
 
+# %% drop pre-2010 Japan cruises --> MOVE THIS TO GO-SHIP NUMS FUNCTION
+#JPN_drop = [461, 468, 502, 504, 272, 497, 495, 567, 602, 505, 459, 488]
+#mask = espers['G2cruise'].isin(JPN_drop)
+#espers = espers[~mask]
+
 # %% trim GO-SHIP + associated cruises to pick out data points on the standard transect
 trimmed = p1.trim_go_ship(espers, go_ship_cruise_nums_2023)
 all_trimmed = pd.concat(trimmed.values(), ignore_index=True) # flatten from dict of dataframes into one large dataframe
@@ -119,6 +124,7 @@ all_trimmed = all_trimmed.drop_duplicates(ignore_index=True) # drop duplicates
 
 G2talk_mc = pd.read_csv(filepath + input_mc_cruise_file, na_values = -9999)
 G2talk_std = G2talk_mc.std(axis=1)
+all_trimmed_mc = pd.concat([all_trimmed, G2talk_mc], axis=1)
 
 # %% run (or upload) MC simulation to create array of simulated G2talk values (individual point offset)
 #num_mc_runs = 1000
@@ -128,6 +134,7 @@ G2talk_std = G2talk_mc.std(axis=1)
 #G2talk_mc.to_csv(filepath + input_mc_individual_file, index=False)
 
 G2talk_mc = pd.read_csv(filepath + input_mc_individual_file, na_values = -9999)
+all_trimmed_mc = pd.concat([all_trimmed, G2talk_mc], axis=1)
 
 #%% show layered histograms of distance from ensemble mean for each equation
 
@@ -273,6 +280,11 @@ plt.colorbar(pts, ax=ax, label='Measured $A_{T}$ - ESPER-Estimated $A_{T}$ \n($�
 #%% 2D histogram for global ensemble mean regression for all trimmed GO-SHIP
 # with robust regression (statsmodels rlm)
 
+winter = all_trimmed.loc[((all_trimmed.datetime.dt.month.isin([12, 1, 2])) & (all_trimmed['G2latitude'] > 10)) | ((all_trimmed.datetime.dt.month.isin([6, 7, 8])) & (all_trimmed['G2latitude'] < 10))]
+spring = all_trimmed.loc[((all_trimmed.datetime.dt.month.isin([3, 4, 5])) & (all_trimmed['G2latitude'] > 10)) | ((all_trimmed.datetime.dt.month.isin([9, 10, 11])) & (all_trimmed['G2latitude'] < 10))]
+summer = all_trimmed.loc[((all_trimmed.datetime.dt.month.isin([12, 1, 2])) & (all_trimmed['G2latitude'] < 10)) | ((all_trimmed.datetime.dt.month.isin([6, 7, 8])) & (all_trimmed['G2latitude'] > 10))]
+fall = all_trimmed.loc[((all_trimmed.datetime.dt.month.isin([3, 4, 5])) & (all_trimmed['G2latitude'] < 10)) | ((all_trimmed.datetime.dt.month.isin([9, 10, 11])) & (all_trimmed['G2latitude'] > 10))]
+
 # make figure
 fig, axs = plt.subplots(nrows=2, ncols=2, figsize=(6.5,4), dpi=200, sharex=True, sharey=True, layout='constrained')
 fig.add_subplot(111,frameon=False)
@@ -281,27 +293,73 @@ plt.tick_params(labelcolor='none', which='both', top=False, bottom=False, left=F
 
 # surface LIR
 esper_type = 'Ensemble_Mean_TA_LIR' # LIR, NN, or Mixed
-esper_sel = all_trimmed[all_trimmed.G2depth < all_trimmed.surface_depth] # do surface values (< 25 m) only
-esper_sel = esper_sel[esper_sel.dectime >= 2000]
+esper_sel = all_trimmed
+#esper_sel = fall
+esper_sel = esper_sel[esper_sel.G2depth < esper_sel.surface_depth] # do surface values (< 25 m) only
+#esper_sel = esper_sel[esper_sel.dectime >= 2000]
 p1.plot2dhist(esper_sel, esper_type, fig, axs[0,0], 'A', 0)
+#p1.plot2dhist(esper_sel, esper_type, fig, axs[0,0], 'Surface (< 25 m), LIR', 0)
 
 # full ocean LIR
 esper_type = 'Ensemble_Mean_TA_LIR' # LIR, NN, or Mixed
 esper_sel = all_trimmed # full depth
-esper_sel = esper_sel[esper_sel.dectime >= 2000]
+#esper_sel = fall
+#esper_sel = esper_sel[esper_sel.dectime >= 2000]
 p1.plot2dhist(esper_sel, esper_type, fig, axs[1,0], 'C', 0)
+#p1.plot2dhist(esper_sel, esper_type, fig, axs[1,0], 'Full Depth, LIR', 0)
 
 # surface NN
 esper_type = 'Ensemble_Mean_TA_NN' # LIR, NN, or Mixed
-esper_sel = all_trimmed[all_trimmed.G2depth < all_trimmed.surface_depth] # do surface values (< 25 m) only
-esper_sel = esper_sel[esper_sel.dectime >= 2000]
+esper_sel = all_trimmed
+#esper_sel = fall
+esper_sel = esper_sel[esper_sel.G2depth < esper_sel.surface_depth] # do surface values (< 25 m) only
+#esper_sel = esper_sel[esper_sel.dectime >= 2000]
 p1.plot2dhist(esper_sel, esper_type, fig, axs[0,1], 'B', 1)
+#p1.plot2dhist(esper_sel, esper_type, fig, axs[0,1], 'Surface (< 25 m), NN', 1)
 
 # full ocean NN
 esper_type = 'Ensemble_Mean_TA_NN' # LIR, NN, or Mixed
 esper_sel = all_trimmed # full depth
-esper_sel = esper_sel[esper_sel.dectime >= 2000]
+#esper_sel = fall
+#esper_sel = esper_sel[esper_sel.dectime >= 2000]
 p1.plot2dhist(esper_sel, esper_type, fig, axs[1,1], 'D', 1)
+#p1.plot2dhist(esper_sel, esper_type, fig, axs[1,1], 'Full Depth, NN', 1)
+
+ax.set_xlabel('Year')
+ax.xaxis.set_label_coords(0.17,-0.65) # for 2d histogram
+ax.set_ylabel('Measured $A_{T}$ - ESPER-Estimated $A_{T}$ ($µmol\;kg^{-1}$)')
+ax.yaxis.set_label_coords(-0.62,0.28)
+
+#%% (∆TA/S) 2D histogram for global ensemble mean regression for all trimmed GO-SHIP
+# with robust regression (statsmodels rlm)
+
+# make figure
+fig, axs = plt.subplots(nrows=2, ncols=2, figsize=(7,4), dpi=200, sharex=True, sharey=True, layout='constrained')
+fig.add_subplot(111,frameon=False)
+ax = fig.gca()
+plt.tick_params(labelcolor='none', which='both', top=False, bottom=False, left=False, right=False)
+
+# surface LIR
+esper_type = 'Ensemble_Mean_TA_LIR' # LIR, NN, or Mixed
+esper_sel = all_trimmed
+esper_sel = esper_sel[esper_sel.G2depth < esper_sel.surface_depth] # do surface values (< 25 m) only
+p1.plot2dhist_S(esper_sel, esper_type, fig, axs[0,0], 'A', 0)
+
+# full ocean LIR
+esper_type = 'Ensemble_Mean_TA_LIR' # LIR, NN, or Mixed
+esper_sel = all_trimmed # full depth
+p1.plot2dhist_S(esper_sel, esper_type, fig, axs[1,0], 'C', 0)
+
+# surface NN
+esper_type = 'Ensemble_Mean_TA_NN' # LIR, NN, or Mixed
+esper_sel = all_trimmed
+esper_sel = esper_sel[esper_sel.G2depth < esper_sel.surface_depth] # do surface values (< 25 m) only
+p1.plot2dhist_S(esper_sel, esper_type, fig, axs[0,1], 'B', 1)
+
+# full ocean NN
+esper_type = 'Ensemble_Mean_TA_NN' # LIR, NN, or Mixed
+esper_sel = all_trimmed # full depth
+p1.plot2dhist_S(esper_sel, esper_type, fig, axs[1,1], 'D', 1)
 
 ax.set_xlabel('Year')
 ax.xaxis.set_label_coords(0.17,-0.65) # for 2d histogram
@@ -376,9 +434,16 @@ fig.colorbar(pts, ax=axs.ravel().tolist(), label='Weight Assigned by RLM')
 
 # %% loop through monte carlo simulation-produced G2talk to do global ensemble mean regression
 
+# create seasons
+winter_mc = all_trimmed_mc.loc[((all_trimmed_mc.datetime.dt.month.isin([12, 1, 2])) & (all_trimmed_mc['G2latitude'] > 10)) | ((all_trimmed_mc.datetime.dt.month.isin([6, 7, 8])) & (all_trimmed_mc['G2latitude'] < 10))]
+spring_mc = all_trimmed_mc.loc[((all_trimmed_mc.datetime.dt.month.isin([3, 4, 5])) & (all_trimmed_mc['G2latitude'] > 10)) | ((all_trimmed_mc.datetime.dt.month.isin([9, 10, 11])) & (all_trimmed_mc['G2latitude'] < 10))]
+summer_mc = all_trimmed_mc.loc[((all_trimmed_mc.datetime.dt.month.isin([12, 1, 2])) & (all_trimmed_mc['G2latitude'] < 10)) | ((all_trimmed_mc.datetime.dt.month.isin([6, 7, 8])) & (all_trimmed_mc['G2latitude'] > 10))]
+fall_mc = all_trimmed_mc.loc[((all_trimmed_mc.datetime.dt.month.isin([3, 4, 5])) & (all_trimmed_mc['G2latitude'] < 10)) | ((all_trimmed_mc.datetime.dt.month.isin([9, 10, 11])) & (all_trimmed_mc['G2latitude'] > 10))]
+
 # plot surface values and do regular linear regression
-all_trimmed_mc = pd.concat([all_trimmed, G2talk_mc], axis=1)
-all_trimmed_mc_surf = all_trimmed_mc[all_trimmed_mc.G2depth < all_trimmed_mc.surface_depth]
+mc_sel = all_trimmed_mc
+#mc_sel = fall_mc
+all_trimmed_mc_surf = mc_sel[mc_sel.G2depth < mc_sel.surface_depth]
 x = all_trimmed_mc.dectime
 x_surf = all_trimmed_mc_surf.dectime
 
@@ -452,15 +517,12 @@ plt.ylabel('Number of Occurrences')
 
 # SURFACE LIR
 # pull surface values
-all_trimmed_mc = pd.concat([all_trimmed, G2talk_mc], axis=1)
 all_trimmed_mc = all_trimmed_mc[all_trimmed_mc.G2depth < all_trimmed_mc.surface_depth]
 # turn into dict with transects as keys
 trimmed_mc = p1.trim_go_ship(all_trimmed_mc, go_ship_cruise_nums_2023)
 all_slopes_surf = p1.transect_box_plot(trimmed_mc, G2talk_mc, 'LIR')
 
 # FULL-OCEAN LIR
-# pull all values
-all_trimmed_mc = pd.concat([all_trimmed, G2talk_mc], axis=1)
 # turn into dict with transects as keys
 trimmed_mc = p1.trim_go_ship(all_trimmed_mc, go_ship_cruise_nums_2023)
 all_slopes_full = p1.transect_box_plot(trimmed_mc, G2talk_mc, 'LIR')
@@ -499,7 +561,8 @@ ax.yaxis.set_label_coords(-0.63,0.55)
 # calculate u_esper
 esper_type = 'LIRtalk' # LIR, NN, or Mixed (change separately for u_sample below)
 esper_sel = all_trimmed
-esper_sel = all_trimmed[all_trimmed.G2depth < all_trimmed.surface_depth] # do surface values (< 25 m) only
+#esper_sel = fall
+esper_sel = esper_sel[esper_sel.G2depth < esper_sel.surface_depth] # do surface values (< 25 m) only
 slopes_rlm = np.zeros(16)
 slopes_ols = np.zeros(16)
 
@@ -530,8 +593,11 @@ u_esper = slopes_rlm.std() # change if RLM or OLS used for u_esper here
 # calculate u_sample
 u_sample = slopes_surf_LIR.std() # for SURFACE, LIR
 #u_sample = slopes_LIR.std() # for FULL DEPTH, LIR
+#u_sample = slopes_surf_NN.std() # for SURFACE, NN
+#u_sample = slopes_NN.std() # for FULL DEPTH, NN
 
 U = np.sqrt(u_esper**2 + u_sample**2)
+print(U)
 
 # %% plot global ensemble mean regression for each GO-SHIP transect
 
@@ -993,7 +1059,7 @@ ax.legend(bbox_to_anchor = (1, -0.1), ncol=4)
 # %% plot 2D histogram ∆TA trends for surface and deep for each region
 # with robust regression (statsmodels rlm)
 
-basin = indian
+basin = north_pacific_JPNnew
 #basin = pd.concat([north_pacific, south_pacific])
 
 # make figure
@@ -1006,12 +1072,14 @@ plt.tick_params(labelcolor='none', which='both', top=False, bottom=False, left=F
 esper_type = 'Ensemble_Mean_TA_LIR' # LIR, NN, or Mixed
 #esper_type = 'Ensemble_Mean_TA_NN' # LIR, NN, or Mixed
 basin_sel = basin[basin.G2depth < basin.surface_depth] # do surface values (< 25 m) only
+#basin_sel = basin_sel[basin_sel.dectime >= 2010]
 p1.plot2dhist(basin_sel, esper_type, fig, axs[0], 'Surface (< 25 m)', 1)
 
 # full ocean LIR
 esper_type = 'Ensemble_Mean_TA_LIR' # LIR, NN, or Mixed
 #esper_type = 'Ensemble_Mean_TA_NN' # LIR, NN, or Mixed
 basin_sel = basin # full depth
+#basin_sel = basin_sel[basin_sel.dectime >= 2010]
 p1.plot2dhist(basin_sel, esper_type, fig, axs[1], 'Full Depth', 1)
 
 ax.set_xlabel('Year')
@@ -1037,13 +1105,13 @@ ax.set_ylabel('Number of $A_{T}$ Measurements')
 #%% do each season over time too
 fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(7,4), dpi=200, sharex=True, sharey=True, layout='constrained')
 
-DJF = all_trimmed[all_trimmed.datetime.dt.month.isin([12, 1, 2])]
-MAM = all_trimmed[all_trimmed.datetime.dt.month.isin([3, 4, 5])]
-JJA = all_trimmed[all_trimmed.datetime.dt.month.isin([6, 7, 8])]
-SON = all_trimmed[all_trimmed.datetime.dt.month.isin([9, 10, 11])]
+winter = all_trimmed.loc[((all_trimmed.datetime.dt.month.isin([12, 1, 2])) & (all_trimmed['G2latitude'] > 10)) | ((all_trimmed.datetime.dt.month.isin([6, 7, 8])) & (all_trimmed['G2latitude'] < 10))]
+spring = all_trimmed.loc[((all_trimmed.datetime.dt.month.isin([3, 4, 5])) & (all_trimmed['G2latitude'] > 10)) | ((all_trimmed.datetime.dt.month.isin([9, 10, 11])) & (all_trimmed['G2latitude'] < 10))]
+summer = all_trimmed.loc[((all_trimmed.datetime.dt.month.isin([12, 1, 2])) & (all_trimmed['G2latitude'] < 10)) | ((all_trimmed.datetime.dt.month.isin([6, 7, 8])) & (all_trimmed['G2latitude'] > 10))]
+fall = all_trimmed.loc[((all_trimmed.datetime.dt.month.isin([3, 4, 5])) & (all_trimmed['G2latitude'] < 10)) | ((all_trimmed.datetime.dt.month.isin([9, 10, 11])) & (all_trimmed['G2latitude'] > 10))]
 
-seasons = [DJF, MAM, JJA, SON]
-season_names = ['DJF', 'MAM', 'JJA', 'SON']
+seasons = [winter, spring, summer, fall]
+season_names = ['Winter', 'Spring', 'Summer', 'Fall']
 
 for season, name in zip(seasons, season_names):
     grouped = season.groupby('datetime').count()
@@ -1487,7 +1555,7 @@ basin_abbr = ['NAO', 'SAO', 'NPO', 'SPO', 'IO', 'SO', 'AO', 'A02', 'A05', 'A10',
               'S04I', 'SR04', 'S04P', 'SR01', 'SR03']
 axs[1].set_xticks(x, basin_abbr)
 
-ax.set_ylabel('Trend Measured $A_{T}$ - ESPER-Estimated $A_{T}$\nover Time ($µmol$ $kg^{-1}$ $yr^{-1}$)')
+ax.set_ylabel('Temporal Trend in Measured $A_{T}$ - ESPER-Estimated $A_{T}$\n($µmol$ $kg^{-1}$ $yr^{-1}$)')
 ax.yaxis.set_label_coords(-0.62,0.55)
 axs[1].tick_params(axis='x', labelrotation=90)
 #axs[0].text(0, -0.45, 'Surface', fontsize=12)
