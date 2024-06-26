@@ -1373,10 +1373,10 @@ for basin, mc_basin, j in zip(basins, mc_basins, range(0,len(basins))):
     u_esper_surf_LIR[j] = slopes_rlm_surf_LIR.std()
     u_esper_surf_NN[j] = slopes_rlm_surf_NN.std()
     
-    #u_esper_LIR = slopes_ols_LIR.std()
-    #u_esper_NN = slopes_ols_NN.std()
-    #u_esper_surf_LIR = slopes_ols_surf_LIR.std()
-    #u_esper_surf_NN = slopes_ols_surf_NN.std()
+    #u_esper_LIR[j] = slopes_ols_LIR.std()
+    #u_esper_NN[j] = slopes_ols_NN.std()
+    #u_esper_surf_LIR[j] = slopes_ols_surf_LIR.std()
+    #u_esper_surf_NN[j] = slopes_ols_surf_NN.std()
     
     # calculate u_sample
     # loop through monte carlo simulation-produced G2talk to do global ensemble mean regression

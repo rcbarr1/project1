@@ -159,10 +159,6 @@ ax1.set_ylim([0,600000])
 ax1.ticklabel_format(axis='y', style='sci', scilimits=(-1,1))
 fig.text(0.14, 0.825, 'A', fontsize=11)
 
-# calculate average and std of ∆TA calculated with LIR
-LIR_mean = np.nanmean(hist_data)
-LIR_std = np.nanstd(hist_data)
-
 # plot ESPER NN results
 hist_data = np.zeros((all_trimmed.shape[0], 16))
 for i in range(0,16):
@@ -172,10 +168,6 @@ ax2.hist(hist_data, bins=np.arange(np.nanmin(hist_data.flatten()), np.nanmax(his
 ax2.set_xlim([-5,5])
 ax2.set_ylim([0,600000])
 ax2.ticklabel_format(axis='y', style='sci', scilimits=(-1,1))
-
-# calculate average and std of ∆TA calculated with NN
-NN_mean = np.nanmean(hist_data)
-NN_std = np.nanstd(hist_data)
 
 # label axis, set up legend
 plt.ylabel('Number of $∆A_{T}$ Calculations')
@@ -487,7 +479,7 @@ plt.tick_params(labelcolor='none', which='both', top=False, bottom=False, left=F
 
 axs[0,0].hist(slopes_surf_LIR, bins=100)
 axs[0,0].set_xlim([-0.15, 0.15]) # per cruise offset
-#axs[0,0].set_xlim([-0.07, 0.07]) # individual offset
+#axs[0,0].set_xlim([-0.075, 0.075]) # individual offset
 mu = slopes_surf_LIR.mean()
 sigma = slopes_surf_LIR.std()
 fig.text(0.14, 0.825, 'A', fontsize=14)
@@ -838,11 +830,11 @@ axs[1].set_xlabel('Equation Number')
 axs[1].set_ylabel('Slope of Difference between $A_{T}$ Predicted\nby Each Eqn. and Eqn. 16 over Time\n($µmol\;kg^{-1}\;yr^{-1}$)')
 axs[1].yaxis.set_label_coords(-0.1,1.1)
 
-axs[0].text(0.6, -0.02, 'A', fontsize=12)
-axs[1].text(0.6, -0.02, 'B', fontsize=12)
+axs[0].text(0.4, -0.02, 'A', fontsize=12)
+axs[1].text(0.4, -0.02, 'B', fontsize=12)
 
-axs[0].set_ylim([-0.022, 0.022])
-axs[1].set_ylim([-0.022, 0.022])
+axs[0].set_ylim([-0.027, 0.027])
+axs[1].set_ylim([-0.027, 0.027])
 
 axs[1].legend(bbox_to_anchor = (0.88, -0.35), ncol=2)
 
@@ -1047,7 +1039,14 @@ for basin, name in zip(basins, basin_names):
     # if lon > 180, subtract 360
     basin.G2longitude[basin.G2longitude > 180] -= 360
     
-    ax.scatter(basin.G2longitude,basin.G2latitude,transform=ccrs.PlateCarree(),marker='o',edgecolors='none',s=10,label=name)
+    # round lat and lon to nearest 2º to make map prettier
+    round_to = 4
+    lat = basin.G2latitude
+    lat = (lat / round_to).round().astype(int) * round_to
+    lon = basin.G2longitude
+    lon = (lon / round_to).round().astype(int) * round_to
+    
+    ax.scatter(lon,lat,transform=ccrs.PlateCarree(),marker='o',edgecolors='none',s=15,label=name)
 
 ax.coastlines(resolution='110m',color='k')
 g1 = ax.gridlines(crs=ccrs.PlateCarree(),draw_labels=False,alpha=0)
@@ -1055,7 +1054,6 @@ g1.bottom_labels = True
 g1.left_labels = True
 ax.add_feature(cfeature.LAND,color='k', zorder=12)
 ax.legend(bbox_to_anchor = (1, -0.1), ncol=4)
-
 
 # %% plot 2D histogram ∆TA trends for surface and deep for each region
 # with robust regression (statsmodels rlm)
@@ -1132,27 +1130,27 @@ ax.set_ylabel('Number of $A_{T}$ Measurements')
 #    G2talk_mc = p1.create_mc_cruise_offset(basin, num_mc_runs)
 #    # export dataframe of simulated G2talk columns as .csv to put back with go_ship dataframe and run through espers        
 #    G2talk_mc = pd.DataFrame(G2talk_mc)
-#    G2talk_mc.to_csv(filepath + 'G2talk_mc_simulated_' + abbr + '.csv' , index=False)
+#    G2talk_mc.to_csv(filepath + 'G2talk_mc_simulated_' + abbr + '_JPN.csv' , index=False)
 
-G2talk_mc_NA = pd.read_csv(filepath + 'G2talk_mc_simulated_NA.csv', na_values = -9999)
+G2talk_mc_NA = pd.read_csv(filepath + 'G2talk_mc_simulated_NA_JPN.csv', na_values = -9999)
 G2talk_std_NA = G2talk_mc_NA.std(axis=1)
 
-G2talk_mc_SA = pd.read_csv(filepath + 'G2talk_mc_simulated_SA.csv', na_values = -9999)
+G2talk_mc_SA = pd.read_csv(filepath + 'G2talk_mc_simulated_SA_JPN.csv', na_values = -9999)
 G2talk_std_SA = G2talk_mc_SA.std(axis=1)
 
-G2talk_mc_NP = pd.read_csv(filepath + 'G2talk_mc_simulated_NP.csv', na_values = -9999)
+G2talk_mc_NP = pd.read_csv(filepath + 'G2talk_mc_simulated_NP_JPN.csv', na_values = -9999)
 G2talk_std_NP = G2talk_mc_NP.std(axis=1)
 
-G2talk_mc_SP = pd.read_csv(filepath + 'G2talk_mc_simulated_SP.csv', na_values = -9999)
+G2talk_mc_SP = pd.read_csv(filepath + 'G2talk_mc_simulated_SP_JPN.csv', na_values = -9999)
 G2talk_std_SP = G2talk_mc_SP.std(axis=1)
 
-G2talk_mc_IO = pd.read_csv(filepath + 'G2talk_mc_simulated_IO.csv', na_values = -9999)
+G2talk_mc_IO = pd.read_csv(filepath + 'G2talk_mc_simulated_IO_JPN.csv', na_values = -9999)
 G2talk_std_IO = G2talk_mc_IO.std(axis=1)
 
-G2talk_mc_SO = pd.read_csv(filepath + 'G2talk_mc_simulated_SO.csv', na_values = -9999)
+G2talk_mc_SO = pd.read_csv(filepath + 'G2talk_mc_simulated_SO_JPN.csv', na_values = -9999)
 G2talk_std_SO = G2talk_mc_SO.std(axis=1)
 
-G2talk_mc_AO = pd.read_csv(filepath + 'G2talk_mc_simulated_AO.csv', na_values = -9999)
+G2talk_mc_AO = pd.read_csv(filepath + 'G2talk_mc_simulated_AO_JPN.csv', na_values = -9999)
 G2talk_std_AO = G2talk_mc_AO.std(axis=1)
 
 G2talk_mc_regions = [G2talk_mc_NA, G2talk_mc_SA, G2talk_mc_NP, G2talk_mc_SP, G2talk_mc_IO, G2talk_mc_SO, G2talk_mc_AO]
@@ -1249,16 +1247,15 @@ basins = [north_atlantic, south_atlantic, north_pacific, south_pacific, indian,
           trimmed_mc['A16N'], trimmed_mc['A16S'], trimmed_mc['A17'],
           trimmed_mc['A20'], trimmed_mc['A22'], trimmed_mc['A25'],
           trimmed_mc['A29'], trimmed_mc['AR07E'], trimmed_mc['AR07W'],
-          trimmed_mc['ARC01E'], trimmed_mc['I03'], trimmed_mc['I05'],
-          trimmed_mc['I06'], trimmed_mc['I07'], trimmed_mc['I08N'],
-          trimmed_mc['I08S'], trimmed_mc['I09N'], trimmed_mc['I09S'],
-          trimmed_mc['I10'], trimmed_mc['P01'], trimmed_mc['P02'],
-          trimmed_mc['P03'], trimmed_mc['P06'], trimmed_mc['P09'],
-          trimmed_mc['P10'], trimmed_mc['P13'], trimmed_mc['P14'],
-          trimmed_mc['P15'], trimmed_mc['P16N'], trimmed_mc['P16S'],
-          trimmed_mc['P17N'], trimmed_mc['P18'], trimmed_mc['P21'],
-          trimmed_mc['S04I'], trimmed_mc['SR04'], trimmed_mc['S04P'],
-          trimmed_mc['SR01'], trimmed_mc['SR03']]
+          trimmed_mc['ARC01E'], trimmed_mc['I05'], trimmed_mc['I06'],
+          trimmed_mc['I07'], trimmed_mc['I08N'], trimmed_mc['I08S'],
+          trimmed_mc['I09N'], trimmed_mc['I09S'], trimmed_mc['I10'],
+          trimmed_mc['P01'], trimmed_mc['P03'], trimmed_mc['P06'],
+          trimmed_mc['P09'], trimmed_mc['P10'], trimmed_mc['P13'],
+          trimmed_mc['P14'], trimmed_mc['P15'], trimmed_mc['P16N'],
+          trimmed_mc['P16S'], trimmed_mc['P17N'], trimmed_mc['P18'],
+          trimmed_mc['P21'], trimmed_mc['S04I'], trimmed_mc['SR04'],
+          trimmed_mc['S04P'], trimmed_mc['SR01'], trimmed_mc['SR03']]
 
 
 mc_basins = [G2talk_mc_NA, G2talk_mc_SA, G2talk_mc_NP, G2talk_mc_SP,
@@ -1269,7 +1266,7 @@ mc_basins = [G2talk_mc_NA, G2talk_mc_SA, G2talk_mc_NP, G2talk_mc_SP,
              df_empty, df_empty, df_empty, df_empty, df_empty, df_empty,
              df_empty, df_empty, df_empty, df_empty, df_empty, df_empty,
              df_empty, df_empty, df_empty, df_empty, df_empty, df_empty,
-             df_empty, df_empty, df_empty, df_empty, df_empty]
+             df_empty, df_empty, df_empty]
 
 basin_U_surf_LIR = np.zeros(len(basins))
 basin_U_surf_NN = np.zeros(len(basins))
@@ -1374,10 +1371,10 @@ for basin, mc_basin, j in zip(basins, mc_basins, range(0,len(basins))):
     u_esper_surf_LIR[j] = slopes_rlm_surf_LIR.std()
     u_esper_surf_NN[j] = slopes_rlm_surf_NN.std()
     
-    #u_esper_LIR = slopes_ols_LIR.std()
-    #u_esper_NN = slopes_ols_NN.std()
-    #u_esper_surf_LIR = slopes_ols_surf_LIR.std()
-    #u_esper_surf_NN = slopes_ols_surf_NN.std()
+    #u_esper_LIR[j] = slopes_ols_LIR.std()
+    #u_esper_NN[j] = slopes_ols_NN.std()
+    #u_esper_surf_LIR[j] = slopes_ols_surf_LIR.std()
+    #u_esper_surf_NN[j] = slopes_ols_surf_NN.std()
     
     # calculate u_sample
     # loop through monte carlo simulation-produced G2talk to do global ensemble mean regression
@@ -1443,16 +1440,15 @@ basins = [north_atlantic, south_atlantic, north_pacific, south_pacific, indian,
           trimmed_mc['A16N'], trimmed_mc['A16S'], trimmed_mc['A17'],
           trimmed_mc['A20'], trimmed_mc['A22'], trimmed_mc['A25'],
           trimmed_mc['A29'], trimmed_mc['AR07E'], trimmed_mc['AR07W'],
-          trimmed_mc['ARC01E'], trimmed_mc['I03'], trimmed_mc['I05'],
-          trimmed_mc['I06'], trimmed_mc['I07'], trimmed_mc['I08N'],
-          trimmed_mc['I08S'], trimmed_mc['I09N'], trimmed_mc['I09S'],
-          trimmed_mc['I10'], trimmed_mc['P01'], trimmed_mc['P02'],
-          trimmed_mc['P03'], trimmed_mc['P06'], trimmed_mc['P09'],
-          trimmed_mc['P10'], trimmed_mc['P13'], trimmed_mc['P14'],
-          trimmed_mc['P15'], trimmed_mc['P16N'], trimmed_mc['P16S'],
-          trimmed_mc['P17N'], trimmed_mc['P18'], trimmed_mc['P21'],
-          trimmed_mc['S04I'], trimmed_mc['SR04'], trimmed_mc['S04P'],
-          trimmed_mc['SR01'], trimmed_mc['SR03']]
+          trimmed_mc['ARC01E'], trimmed_mc['I05'], trimmed_mc['I06'],
+          trimmed_mc['I07'], trimmed_mc['I08N'], trimmed_mc['I08S'],
+          trimmed_mc['I09N'], trimmed_mc['I09S'], trimmed_mc['I10'],
+          trimmed_mc['P01'], trimmed_mc['P03'], trimmed_mc['P06'],
+          trimmed_mc['P09'], trimmed_mc['P10'], trimmed_mc['P13'],
+          trimmed_mc['P14'], trimmed_mc['P15'], trimmed_mc['P16N'],
+          trimmed_mc['P16S'], trimmed_mc['P17N'], trimmed_mc['P18'],
+          trimmed_mc['P21'], trimmed_mc['S04I'], trimmed_mc['SR04'],
+          trimmed_mc['S04P'], trimmed_mc['SR01'], trimmed_mc['SR03']]
 
 basin_trend_surf_LIR = np.zeros(len(basins))
 basin_trend_surf_NN = np.zeros(len(basins))
@@ -1544,28 +1540,28 @@ axs[1].errorbar(x+0.15, basin_trend_NN, yerr=basin_U_NN, fmt="o", c='deepskyblue
 axs[0].axhline(y=0, color='k', linestyle='--')
 axs[1].axhline(y=0, color='k', linestyle='--')
 
-#axs[0].set_ylim([-0.5, 0.5])   
-#axs[1].set_ylim([-0.5, 0.5])   
+axs[0].set_ylim([-0.5, 0.5])   
+axs[1].set_ylim([-0.5, 0.5])   
 axs[1].set_xlim(-0.5, len(basin_trend_LIR) - 0.5) 
  
 basin_abbr = ['NAO', 'SAO', 'NPO', 'SPO', 'IO', 'SO', 'AO', 'A02', 'A05', 'A10',
               'A12', 'A135', 'A16N', 'A16S', 'A17', 'A20', 'A22', 'A25', 'A29',
-              'AR07E', 'AR07W', 'ARC01E', 'I03', 'I05', 'I06', 'I07', 'I08N',
-              'I08S', 'I09N', 'I09S', 'I10', 'P01', 'P02', 'P03', 'P06', 'P09',
-              'P10', 'P13', 'P14', 'P15', 'P16N', 'P16S', 'P17N', 'P18', 'P21',
-              'S04I', 'SR04', 'S04P', 'SR01', 'SR03']
+              'AR07E', 'AR07W', 'ARC01E', 'I05', 'I06', 'I07', 'I08N', 'I08S',
+              'I09N', 'I09S', 'I10', 'P01', 'P03', 'P06', 'P09', 'P10', 'P13',
+              'P14', 'P15', 'P16N', 'P16S', 'P17N', 'P18', 'P21', 'S04I',
+              'SR04', 'S04P', 'SR01', 'SR03']
 axs[1].set_xticks(x, basin_abbr)
 
 ax.set_ylabel('Temporal Trend in Measured $A_{T}$ - ESPER-Estimated $A_{T}$\n($µmol$ $kg^{-1}$ $yr^{-1}$)')
 ax.yaxis.set_label_coords(-0.62,0.55)
 axs[1].tick_params(axis='x', labelrotation=90)
-#axs[0].text(0, -0.45, 'Surface', fontsize=12)
-#axs[1].text(0, -0.45, 'Full Depth', fontsize=12)
-#axs[1].legend(bbox_to_anchor = (0.6, 0.21), ncol=2)
+axs[0].text(0, -0.45, 'A', fontsize=12)
+axs[1].text(0, -0.45, 'B', fontsize=12)
+axs[1].legend(bbox_to_anchor = (0.6, 0.21), ncol=2)
 
-axs[0].text(0, -2, 'A', fontsize=12)
-axs[1].text(0, -2, 'B', fontsize=12)
-axs[1].legend(bbox_to_anchor = (1, 0.21), ncol=2)
+#axs[0].text(0, -2, 'A', fontsize=12)
+#axs[1].text(0, -2, 'B', fontsize=12)
+#axs[1].legend(bbox_to_anchor = (1, 0.21), ncol=2)
 
 # %% make box plot graph of transect slopes from mc simulation
 

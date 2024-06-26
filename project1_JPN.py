@@ -915,6 +915,9 @@ def plot2dhist(esper_sel, esper_type, fig, ax, subplot_label, colorbar_flag):
     ###del_alk = esper_sel.loc[:,'G2talk']
     x = esper_sel['dectime'].to_numpy()
     y = del_alk.to_numpy()
+    
+    print("average ∆TA: " + str(np.nanmean(y)))
+    print("std: " + str(np.nanstd(y)))
 
     # fit model and print summary
     x_model = sm.add_constant(x) # this is required in statsmodels to get an intercept
@@ -1019,7 +1022,9 @@ def transect_box_plot(trimmed_mc, G2talk_mc, esper_type):
     if 'P17E' in trimmed_mc:
         del trimmed_mc['P17E'] 
     if 'I03' in trimmed_mc:
-        del trimmed_mc['P17E'] 
+        del trimmed_mc['I03'] 
+    if 'P02' in trimmed_mc:
+        del trimmed_mc['P02'] 
     
     # get rid of empty dict entries
     del_keys = []
