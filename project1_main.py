@@ -105,11 +105,6 @@ kl_div = p1.kl_divergence(espers)
 # %% calculate ensemble mean TA for each data point
 espers = p1.ensemble_mean(espers)
 
-# %% drop pre-2010 Japan cruises --> MOVE THIS TO GO-SHIP NUMS FUNCTION
-#JPN_drop = [461, 468, 502, 504, 272, 497, 495, 567, 602, 505, 459, 488]
-#mask = espers['G2cruise'].isin(JPN_drop)
-#espers = espers[~mask]
-
 # %% trim GO-SHIP + associated cruises to pick out data points on the standard transect
 trimmed = p1.trim_go_ship(espers, go_ship_cruise_nums_2023)
 all_trimmed = pd.concat(trimmed.values(), ignore_index=True) # flatten from dict of dataframes into one large dataframe
@@ -655,8 +650,8 @@ for keys in trimmed:
 #%% calculate average ESPERs coefficients
 
 # read in coefficients extracted from MATLAB (already averaged across all 16 equations)
-#coeffs = pd.read_csv(filepath + coeffs_file, names=['x', 'TA_S', 'TA_T', 'TA_N', 'TA_O', 'TA_Si'])
-coeffs = pd.read_csv(filepath + 'ESPER_LIR_coeffs_eqn_10.csv', names=['x', 'TA_S', 'TA_T', 'TA_N', 'TA_O', 'TA_Si'])
+coeffs = pd.read_csv(filepath + coeffs_file, names=['x', 'TA_S', 'TA_T', 'TA_N', 'TA_O', 'TA_Si'])
+#coeffs = pd.read_csv(filepath + 'ESPER_LIR_coeffs_eqn_10.csv', names=['x', 'TA_S', 'TA_T', 'TA_N', 'TA_O', 'TA_Si'])
 
 # attach G2cruise, G2station, G2depth, and surface_depth columns so trimming will work
 coeffs = pd.concat([coeffs, espers[['G2expocode', 'G2cruise', 'G2station',

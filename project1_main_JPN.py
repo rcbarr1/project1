@@ -24,6 +24,7 @@ import cartopy.feature as cfeature
 import statsmodels.api as sm
 import cmocean
 import cmocean.cm as cmo
+import PyCO2SYS as pyco2
 
 
 filepath = '/Users/Reese/Documents/Research Projects/project1/data/' # where GLODAP data is stored
@@ -113,6 +114,7 @@ espers = p1.ensemble_mean(espers)
 
 # %% trim GO-SHIP + associated cruises to pick out data points on the standard transect
 trimmed = p1.trim_go_ship(espers, go_ship_cruise_nums_2023)
+#del trimmed['SR04'] # to delete SR04 for testing
 all_trimmed = pd.concat(trimmed.values(), ignore_index=True) # flatten from dict of dataframes into one large dataframe
 all_trimmed = all_trimmed.drop_duplicates(ignore_index=True) # drop duplicates
 
@@ -370,7 +372,8 @@ plt.tick_params(labelcolor='none', which='both', top=False, bottom=False, left=F
 
 # surface LIR
 esper_type = 'Ensemble_Mean_TA_LIR' # LIR, NN, or Mixed
-esper_sel = all_trimmed[all_trimmed.G2depth < all_trimmed.surface_depth] # do surface values (< 25 m) only
+esper_sel = all_trimmed # full depth
+#esper_sel = all_trimmed[all_trimmed.G2depth < all_trimmed.surface_depth] # do surface values (< 25 m) only
 p1.plot2dhist(esper_sel, esper_type, fig, axs[0], 'A', 1)
 
 # full ocean LIR
@@ -502,6 +505,30 @@ mu = slopes_NN.mean()
 sigma = slopes_NN.std()
 fig.text(0.56, 0.415, 'D', fontsize=14)
 fig.text(0.661, 0.43, '$\mu={:.4f}, \sigma={:.4f}$'.format(mu, sigma), fontsize=12)
+
+plt.xlabel('Slope of Measured $A_{T}$ - ESPER-Estimated $A_{T}$ over Time ($µmol\;kg^{-1}\;yr^{-1}$)')
+plt.ylabel('Number of Occurrences')
+
+#%% just plot LIR surface and full depth
+
+fig, axs = plt.subplots(nrows=1, ncols=2, figsize=(8,3), dpi=200, sharex=True, sharey=True)
+fig.add_subplot(111,frameon=False)
+plt.tick_params(labelcolor='none', which='both', top=False, bottom=False, left=False, right=False)
+
+axs[0].hist(slopes_surf_LIR, bins=100)
+axs[0].set_xlim([-0.15, 0.15]) # per cruise offset
+axs[0].set_ylim([0, 50]) # per cruise offset
+#axs[0].set_xlim([-0.075, 0.075]) # individual offset
+mu = slopes_surf_LIR.mean()
+sigma = slopes_surf_LIR.std()
+axs[0].text(-0.14, 45, 'ESPER_LIR (< 25 m)', fontsize=14)
+axs[0].text(-0.14, 35, '$\mu={:.4f}$\n$\sigma={:.4f}$'.format(mu, sigma), fontsize=12)
+
+axs[1].hist(slopes_LIR, bins=100)
+mu = slopes_LIR.mean()
+sigma = slopes_LIR.std()
+axs[1].text(-0.14, 45, 'ESPER_LIR (Full Depth)', fontsize=14)
+axs[1].text(-0.14, 35, '$\mu={:.4f}$\n$\sigma={:.4f}$'.format(mu, sigma), fontsize=12)
 
 plt.xlabel('Slope of Measured $A_{T}$ - ESPER-Estimated $A_{T}$ over Time ($µmol\;kg^{-1}\;yr^{-1}$)')
 plt.ylabel('Number of Occurrences')
@@ -648,8 +675,8 @@ for keys in trimmed:
 #%% calculate average ESPERs coefficients
 
 # read in coefficients extracted from MATLAB (already averaged across all 16 equations)
-#coeffs = pd.read_csv(filepath + coeffs_file, names=['x', 'TA_S', 'TA_T', 'TA_N', 'TA_O', 'TA_Si'])
-coeffs = pd.read_csv(filepath + 'ESPER_LIR_coeffs_eqn_10.csv', names=['x', 'TA_S', 'TA_T', 'TA_N', 'TA_O', 'TA_Si'])
+coeffs = pd.read_csv(filepath + coeffs_file, names=['x', 'TA_S', 'TA_T', 'TA_N', 'TA_O', 'TA_Si'])
+#coeffs = pd.read_csv(filepath + 'ESPER_LIR_coeffs_eqn_10.csv', names=['x', 'TA_S', 'TA_T', 'TA_N', 'TA_O', 'TA_Si'])
 
 # attach G2cruise, G2station, G2depth, and surface_depth columns so trimming will work
 coeffs = pd.concat([coeffs, espers[['G2expocode', 'G2cruise', 'G2station',
@@ -666,7 +693,7 @@ coeffs_all_trimmed = pd.concat(coeffs_trimmed.values(), ignore_index=True) # fla
 coeffs_all_trimmed = coeffs_all_trimmed.drop_duplicates(ignore_index=True) # drop duplicates
 
 # constrain to surface depth only
-coeffs_all_trimmed = coeffs_all_trimmed[coeffs_all_trimmed.G2depth < coeffs_all_trimmed.surface_depth]
+#coeffs_all_trimmed = coeffs_all_trimmed[coeffs_all_trimmed.G2depth < coeffs_all_trimmed.surface_depth]
 
 # average across all samples
 coeffs_all_trimmed = coeffs_all_trimmed.drop(columns=['G2expocode', 'G2cruise',
@@ -1241,24 +1268,27 @@ plt.ylabel('Number of Occurrences')
 # CALCULATES UNCERTANTIES FOR EACH BASIN
 
 df_empty = pd.DataFrame()
-basins = [north_atlantic, south_atlantic, north_pacific, south_pacific, indian,
-          southern, arctic, trimmed_mc['A02'], trimmed_mc['A05'],
-          trimmed_mc['A10'], trimmed_mc['A12'], trimmed_mc['A135'],
-          trimmed_mc['A16N'], trimmed_mc['A16S'], trimmed_mc['A17'],
-          trimmed_mc['A20'], trimmed_mc['A22'], trimmed_mc['A25'],
-          trimmed_mc['A29'], trimmed_mc['AR07E'], trimmed_mc['AR07W'],
-          trimmed_mc['ARC01E'], trimmed_mc['I05'], trimmed_mc['I06'],
-          trimmed_mc['I07'], trimmed_mc['I08N'], trimmed_mc['I08S'],
-          trimmed_mc['I09N'], trimmed_mc['I09S'], trimmed_mc['I10'],
-          trimmed_mc['P01'], trimmed_mc['P03'], trimmed_mc['P06'],
-          trimmed_mc['P09'], trimmed_mc['P10'], trimmed_mc['P13'],
-          trimmed_mc['P14'], trimmed_mc['P15'], trimmed_mc['P16N'],
-          trimmed_mc['P16S'], trimmed_mc['P17N'], trimmed_mc['P18'],
-          trimmed_mc['P21'], trimmed_mc['S04I'], trimmed_mc['SR04'],
-          trimmed_mc['S04P'], trimmed_mc['SR01'], trimmed_mc['SR03']]
+trimmed_mc = p1.trim_go_ship(all_trimmed_mc, go_ship_cruise_nums_2023)
+
+basins = [all_trimmed_mc, north_atlantic, south_atlantic, north_pacific,
+          south_pacific, indian, southern, arctic, trimmed_mc['A02'],
+          trimmed_mc['A05'], trimmed_mc['A10'], trimmed_mc['A12'],
+          trimmed_mc['A135'], trimmed_mc['A16N'], trimmed_mc['A16S'],
+          trimmed_mc['A17'], trimmed_mc['A20'], trimmed_mc['A22'],
+          trimmed_mc['A25'], trimmed_mc['A29'], trimmed_mc['AR07E'],
+          trimmed_mc['AR07W'], trimmed_mc['ARC01E'], trimmed_mc['I05'],
+          trimmed_mc['I06'], trimmed_mc['I07'], trimmed_mc['I08N'],
+          trimmed_mc['I08S'], trimmed_mc['I09N'], trimmed_mc['I09S'],
+          trimmed_mc['I10'], trimmed_mc['P01'], trimmed_mc['P03'],
+          trimmed_mc['P06'], trimmed_mc['P09'], trimmed_mc['P10'],
+          trimmed_mc['P13'], trimmed_mc['P14'], trimmed_mc['P15'],
+          trimmed_mc['P16N'], trimmed_mc['P16S'], trimmed_mc['P17N'],
+          trimmed_mc['P18'], trimmed_mc['P21'], trimmed_mc['S04I'],
+          trimmed_mc['SR04'], trimmed_mc['S04P'], trimmed_mc['SR01'],
+          trimmed_mc['SR03']]
 
 
-mc_basins = [G2talk_mc_NA, G2talk_mc_SA, G2talk_mc_NP, G2talk_mc_SP,
+mc_basins = [df_empty, G2talk_mc_NA, G2talk_mc_SA, G2talk_mc_NP, G2talk_mc_SP,
              G2talk_mc_IO, G2talk_mc_SO, G2talk_mc_AO, df_empty, df_empty,
              df_empty, df_empty, df_empty, df_empty, df_empty, df_empty,
              df_empty, df_empty, df_empty, df_empty, df_empty, df_empty,
@@ -1434,22 +1464,6 @@ for basin, mc_basin, j in zip(basins, mc_basins, range(0,len(basins))):
     
 # %% calculate arrays of slopes as well
 
-basins = [north_atlantic, south_atlantic, north_pacific, south_pacific, indian,
-          southern, arctic, trimmed_mc['A02'], trimmed_mc['A05'],
-          trimmed_mc['A10'], trimmed_mc['A12'], trimmed_mc['A135'],
-          trimmed_mc['A16N'], trimmed_mc['A16S'], trimmed_mc['A17'],
-          trimmed_mc['A20'], trimmed_mc['A22'], trimmed_mc['A25'],
-          trimmed_mc['A29'], trimmed_mc['AR07E'], trimmed_mc['AR07W'],
-          trimmed_mc['ARC01E'], trimmed_mc['I05'], trimmed_mc['I06'],
-          trimmed_mc['I07'], trimmed_mc['I08N'], trimmed_mc['I08S'],
-          trimmed_mc['I09N'], trimmed_mc['I09S'], trimmed_mc['I10'],
-          trimmed_mc['P01'], trimmed_mc['P03'], trimmed_mc['P06'],
-          trimmed_mc['P09'], trimmed_mc['P10'], trimmed_mc['P13'],
-          trimmed_mc['P14'], trimmed_mc['P15'], trimmed_mc['P16N'],
-          trimmed_mc['P16S'], trimmed_mc['P17N'], trimmed_mc['P18'],
-          trimmed_mc['P21'], trimmed_mc['S04I'], trimmed_mc['SR04'],
-          trimmed_mc['S04P'], trimmed_mc['SR01'], trimmed_mc['SR03']]
-
 basin_trend_surf_LIR = np.zeros(len(basins))
 basin_trend_surf_NN = np.zeros(len(basins))
 basin_trend_LIR = np.zeros(len(basins))
@@ -1531,11 +1545,11 @@ plt.tick_params(labelcolor='none', which='both', top=False, bottom=False, left=F
 
 x = np.array(range(0,len(basin_trend_LIR)))
 
-axs[0].errorbar(x-0.15, basin_trend_surf_LIR, yerr=basin_U_surf_LIR, fmt="o", c='mediumvioletred', alpha = 0.5)
-axs[0].errorbar(x+0.15, basin_trend_surf_NN, yerr=basin_U_surf_NN, fmt="o", c='deepskyblue', alpha = 0.5)
+axs[0].errorbar(x-0.15, basin_trend_surf_LIR, yerr=basin_U_surf_LIR, fmt="o", c='indigo', alpha = 0.5)
+axs[0].errorbar(x+0.15, basin_trend_surf_NN, yerr=basin_U_surf_NN, fmt="o", c='dodgerblue', alpha = 0.5)
 
-axs[1].errorbar(x-0.15, basin_trend_LIR, yerr=basin_U_LIR, fmt="o", c='mediumvioletred', label='ESPER LIR', alpha = 0.5)
-axs[1].errorbar(x+0.15, basin_trend_NN, yerr=basin_U_NN, fmt="o", c='deepskyblue', label='ESPER NN', alpha = 0.5)
+axs[1].errorbar(x-0.15, basin_trend_LIR, yerr=basin_U_LIR, fmt="o", c='indigo', label='ESPER LIR', alpha = 0.5)
+axs[1].errorbar(x+0.15, basin_trend_NN, yerr=basin_U_NN, fmt="o", c='dodgerblue', label='ESPER NN', alpha = 0.5)
 
 axs[0].axhline(y=0, color='k', linestyle='--')
 axs[1].axhline(y=0, color='k', linestyle='--')
@@ -1544,7 +1558,7 @@ axs[0].set_ylim([-0.5, 0.5])
 axs[1].set_ylim([-0.5, 0.5])   
 axs[1].set_xlim(-0.5, len(basin_trend_LIR) - 0.5) 
  
-basin_abbr = ['NAO', 'SAO', 'NPO', 'SPO', 'IO', 'SO', 'AO', 'A02', 'A05', 'A10',
+basin_abbr = ['Global', 'NAO', 'SAO', 'NPO', 'SPO', 'IO', 'SO', 'AO', 'A02', 'A05', 'A10',
               'A12', 'A135', 'A16N', 'A16S', 'A17', 'A20', 'A22', 'A25', 'A29',
               'AR07E', 'AR07W', 'ARC01E', 'I05', 'I06', 'I07', 'I08N', 'I08S',
               'I09N', 'I09S', 'I10', 'P01', 'P03', 'P06', 'P09', 'P10', 'P13',
@@ -1555,8 +1569,8 @@ axs[1].set_xticks(x, basin_abbr)
 ax.set_ylabel('Temporal Trend in Measured $A_{T}$ - ESPER-Estimated $A_{T}$\n($µmol$ $kg^{-1}$ $yr^{-1}$)')
 ax.yaxis.set_label_coords(-0.62,0.55)
 axs[1].tick_params(axis='x', labelrotation=90)
-axs[0].text(0, -0.45, 'A', fontsize=12)
-axs[1].text(0, -0.45, 'B', fontsize=12)
+axs[0].text(0, -0.45, '< 25 m', fontsize=12)
+axs[1].text(0, -0.45, 'Full Depth', fontsize=12)
 axs[1].legend(bbox_to_anchor = (0.6, 0.21), ncol=2)
 
 #axs[0].text(0, -2, 'A', fontsize=12)
@@ -1652,14 +1666,35 @@ ax.yaxis.set_label_coords(-0.63,0.55)
 axs[1,0].tick_params(axis='x', labelrotation=90)
 axs[1,1].tick_params(axis='x', labelrotation=90)
 
+#%% do calculations on OA amplification for conclusion
+esper_sel = espers[espers.G2depth < espers.surface_depth]
+avg_TA = esper_sel.G2talk.mean(skipna=True)
+print(avg_TA)
 
+ppm_1994 = 358.96 # unc = 0.12, at Mauna Loa, https://gml.noaa.gov/webdata/ccgg/trends/co2/co2_annmean_mlo.txt
+ppm_2024 = 426.91 # unc = 0.12, at Mauna Loa, https://gml.noaa.gov/ccgg/trends/mlo.html
 
+# DIC in 1994
+results_1994 = pyco2.sys(par1=avg_TA, par1_type=1, par2=ppm_1994, par2_type=9)
+print(results_1994['dic'])
+print(results_1994['pH'])
 
+# DIC in 2024 (assuming fixed TA)
+results_2024 = pyco2.sys(par1=avg_TA, par1_type=1, par2=ppm_2024, par2_type=9)
+print(results_2024['dic'])
+print(results_2024['pH'])
 
+# DIC in 2024 (assuming elevated TA from CO2-biotic calcification feedback)
+TA_past_30 = 0.080 * 30 # umol/kg, using surface ocean ESPER LIR ∆TA trend
+results_2024_bc = pyco2.sys(par1=(avg_TA+TA_past_30), par1_type=1, par2=ppm_2024, par2_type=9)
+print(results_2024_bc['dic'])
+print(results_2024_bc['pH'])
 
+# dic increase with bc feedback
+print(results_2024_bc['dic']/results_2024['dic']*100)
 
-
-
+# pH increase with bc feedback (MORE ALKALINE?)
+print(results_2024_bc['pH']/results_2024['pH']*100)
 
 
 
