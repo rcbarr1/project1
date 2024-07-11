@@ -372,8 +372,8 @@ plt.tick_params(labelcolor='none', which='both', top=False, bottom=False, left=F
 
 # surface LIR
 esper_type = 'Ensemble_Mean_TA_LIR' # LIR, NN, or Mixed
-esper_sel = all_trimmed # full depth
-#esper_sel = all_trimmed[all_trimmed.G2depth < all_trimmed.surface_depth] # do surface values (< 25 m) only
+#esper_sel = all_trimmed # full depth
+esper_sel = all_trimmed[all_trimmed.G2depth < all_trimmed.surface_depth] # do surface values (< 25 m) only
 p1.plot2dhist(esper_sel, esper_type, fig, axs[0], 'A', 1)
 
 # full ocean LIR
@@ -1575,8 +1575,8 @@ axs[1].errorbar(x+0.15, basin_trend_NN, yerr=basin_U_NN, fmt="o", c='dodgerblue'
 axs[0].axhline(y=0, color='k', linestyle='--')
 axs[1].axhline(y=0, color='k', linestyle='--')
 
-#axs[0].set_ylim([-0.5, 0.5])   
-#axs[1].set_ylim([-0.5, 0.5])   
+axs[0].set_ylim([-0.5, 0.5])   
+axs[1].set_ylim([-0.5, 0.5])   
 axs[1].set_xlim(-0.5, len(basin_trend_LIR) - 0.5) 
  
 basin_abbr = ['Global', 'NAO', 'SAO', 'NPO', 'SPO', 'IO', 'SO', 'AO', 'A02', 'A05', 'A10',
@@ -1590,13 +1590,13 @@ axs[1].set_xticks(x, basin_abbr)
 ax.set_ylabel('Temporal Trend in Measured $A_{T}$ - ESPER-Estimated $A_{T}$\n($µmol$ $kg^{-1}$ $yr^{-1}$)')
 ax.yaxis.set_label_coords(-0.62,0.55)
 axs[1].tick_params(axis='x', labelrotation=90)
-#axs[0].text(0, -0.45, 'A', fontsize=12)
-#axs[1].text(0, -0.45, 'B', fontsize=12)
-#axs[1].legend(bbox_to_anchor = (0.6, 0.21), ncol=2)
+axs[0].text(0, -0.45, 'A', fontsize=12)
+axs[1].text(0, -0.45, 'B', fontsize=12)
+axs[1].legend(bbox_to_anchor = (0.6, 0.21), ncol=2)
 
-axs[0].text(0, -2, 'A', fontsize=12)
-axs[1].text(0, -2, 'B', fontsize=12)
-axs[1].legend(bbox_to_anchor = (1, 0.21), ncol=2)
+#axs[0].text(0, -2, 'A', fontsize=12)
+#axs[1].text(0, -2, 'B', fontsize=12)
+#axs[1].legend(bbox_to_anchor = (1, 0.21), ncol=2)
 
 # %% make box plot graph of transect slopes from mc simulation
 
