@@ -23,6 +23,7 @@ import statsmodels.api as sm
 import cmocean
 import cmocean.cm as cmo
 import PyCO2SYS as pyco2
+import xarray as xr
 
 
 filepath = '/Users/Reese_1/Documents/Research Projects/project1/data/' # where GLODAP data is stored
@@ -32,6 +33,7 @@ input_mc_cruise_file = 'G2talk_mc_simulated_JPN2.csv' # MC (per cruise) simulate
 input_mc_individual_file = 'G2talk_mc_individual_simulated_JPN2.csv' # MC (per cruise) simulated data
 coeffs_file = 'ESPER_LIR_coeffs.csv' # ESPER LIR coefficients saved from MATLAB
 monthly_clim_file = 'monthlyclim.mat'
+gridded_data_file = 'pottmp.mon.ltm.1991-2020.nc'
 
 # %% import GLODAP data file
 glodap = pd.read_csv(filepath + input_GLODAP_file, na_values = -9999)
@@ -518,8 +520,8 @@ fig.add_subplot(111,frameon=False)
 plt.tick_params(labelcolor='none', which='both', top=False, bottom=False, left=False, right=False)
 
 axs[0,0].hist(slopes_surf_LIR, bins=100)
-#axs[0,0].set_xlim([-0.15, 0.15]) # per cruise offset
-axs[0,0].set_xlim([-0.075, 0.075]) # individual offset
+axs[0,0].set_xlim([-0.15, 0.15]) # per cruise offset
+#axs[0,0].set_xlim([-0.075, 0.075]) # individual offset
 mu = slopes_surf_LIR.mean()
 sigma = slopes_surf_LIR.std()
 fig.text(0.14, 0.825, 'A', fontsize=14)
@@ -617,7 +619,7 @@ ax.yaxis.set_label_coords(-0.63,0.55)
 
 # calculate u_esper
 esper_type = 'LIRtalk' # LIR, NN, or Mixed (change separately for u_sample below)
-esper_sel = espers
+esper_sel = all_trimmed
 #esper_sel = data_not_used_for_espers_mc
 esper_sel = esper_sel[esper_sel.G2depth < esper_sel.surface_depth] # do surface values (< 25 m) only
 slopes_rlm = np.zeros(16)
@@ -645,7 +647,7 @@ for i in range(0,16):
     slopes_rlm[i] = rlm_results.params[1]
     slopes_ols[i] = ols_results.params[1]
 
-u_esper = slopes_rlm.std() # change if RLM or OLS used for u_esper here
+u_esper = slopes_ols.std() # change if RLM or OLS used for u_esper here
 
 # calculate u_sample
 u_sample = slopes_surf_LIR.std() # for SURFACE, LIR
@@ -1752,12 +1754,14 @@ percent_change = 100*(((results_2024_bc['dic'] - results_1994['dic']) - (results
 print(percent_change, '%')
 
 # mass change
-# mass of surface ocean is 2.7e19 kg
+# mass of surface ocean
+surface_area_ocean = 360e6 * (10**3)**2
+depth_surf_ocean = 25
+mass_surf_ocean = surface_area_ocean * depth_surf_ocean * 1025
 # molar mass of carbon is 12.011 g/mol
-mass_change = (results_2024_bc['dic'] - results_2024['dic'])*1e-6*2.7e19*12.011
+mass_change = (results_2024_bc['dic'] - results_2024['dic'])*1e-6*mass_surf_ocean*12.011
 print(mass_change, 'g')
 print(mass_change/1e15, 'Pg')
-
 
 
 
