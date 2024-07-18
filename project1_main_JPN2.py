@@ -24,6 +24,7 @@ import cmocean
 import cmocean.cm as cmo
 import PyCO2SYS as pyco2
 import xarray as xr
+from haversine import haversine, Unit
 
 
 filepath = '/Users/Reese_1/Documents/Research Projects/project1/data/' # where GLODAP data is stored
@@ -468,12 +469,12 @@ fig.colorbar(pts, ax=axs.ravel().tolist(), label='Weight Assigned by RLM')
 # %% loop through monte carlo simulation-produced G2talk to do global ensemble mean regression
 
 # create seasons
-winter_mc = all_trimmed_mc.loc[((all_trimmed_mc.datetime.dt.month.isin([12, 1, 2])) & (all_trimmed_mc['G2latitude'] > 10)) | ((all_trimmed_mc.datetime.dt.month.isin([6, 7, 8])) & (all_trimmed_mc['G2latitude'] < 10))]
-spring_mc = all_trimmed_mc.loc[((all_trimmed_mc.datetime.dt.month.isin([3, 4, 5])) & (all_trimmed_mc['G2latitude'] > 10)) | ((all_trimmed_mc.datetime.dt.month.isin([9, 10, 11])) & (all_trimmed_mc['G2latitude'] < 10))]
-summer_mc = all_trimmed_mc.loc[((all_trimmed_mc.datetime.dt.month.isin([12, 1, 2])) & (all_trimmed_mc['G2latitude'] < 10)) | ((all_trimmed_mc.datetime.dt.month.isin([6, 7, 8])) & (all_trimmed_mc['G2latitude'] > 10))]
-fall_mc = all_trimmed_mc.loc[((all_trimmed_mc.datetime.dt.month.isin([3, 4, 5])) & (all_trimmed_mc['G2latitude'] < 10)) | ((all_trimmed_mc.datetime.dt.month.isin([9, 10, 11])) & (all_trimmed_mc['G2latitude'] > 10))]
+#winter_mc = all_trimmed_mc.loc[((all_trimmed_mc.datetime.dt.month.isin([12, 1, 2])) & (all_trimmed_mc['G2latitude'] > 10)) | ((all_trimmed_mc.datetime.dt.month.isin([6, 7, 8])) & (all_trimmed_mc['G2latitude'] < 10))]
+#spring_mc = all_trimmed_mc.loc[((all_trimmed_mc.datetime.dt.month.isin([3, 4, 5])) & (all_trimmed_mc['G2latitude'] > 10)) | ((all_trimmed_mc.datetime.dt.month.isin([9, 10, 11])) & (all_trimmed_mc['G2latitude'] < 10))]
+#summer_mc = all_trimmed_mc.loc[((all_trimmed_mc.datetime.dt.month.isin([12, 1, 2])) & (all_trimmed_mc['G2latitude'] < 10)) | ((all_trimmed_mc.datetime.dt.month.isin([6, 7, 8])) & (all_trimmed_mc['G2latitude'] > 10))]
+#fall_mc = all_trimmed_mc.loc[((all_trimmed_mc.datetime.dt.month.isin([3, 4, 5])) & (all_trimmed_mc['G2latitude'] < 10)) | ((all_trimmed_mc.datetime.dt.month.isin([9, 10, 11])) & (all_trimmed_mc['G2latitude'] > 10))]
 
-data_not_used_for_espers_mc =  all_trimmed_mc.loc[((all_trimmed_mc['G2cruise'] > 2106) & (all_trimmed_mc['G2cruise'] < 9999))]
+#data_not_used_for_espers_mc =  all_trimmed_mc.loc[((all_trimmed_mc['G2cruise'] > 2106) & (all_trimmed_mc['G2cruise'] < 9999))]
 
 # plot surface values and do regular linear regression
 mc_sel = all_trimmed_mc
@@ -556,17 +557,17 @@ plt.tick_params(labelcolor='none', which='both', top=False, bottom=False, left=F
 
 axs[0].hist(slopes_surf_LIR, bins=100)
 axs[0].set_xlim([-0.15, 0.15]) # per cruise offset
-#axs[0].set_ylim([0, 50]) # per cruise offset
-axs[0].set_xlim([-0.075, 0.075]) # individual offset
+axs[0].set_ylim([0, 50]) # per cruise offset
+#axs[0].set_xlim([-0.075, 0.075]) # individual offset
 mu = slopes_surf_LIR.mean()
 sigma = slopes_surf_LIR.std()
-axs[0].text(-0.14, 45, 'ESPER_LIR (< 25 m)', fontsize=14)
+axs[0].text(-0.14, 45, 'ESPER_LIR (< 25 m)', fontsize=12)
 axs[0].text(-0.14, 35, '$\mu={:.4f}$\n$\sigma={:.4f}$'.format(mu, sigma), fontsize=12)
 
 axs[1].hist(slopes_LIR, bins=100)
 mu = slopes_LIR.mean()
 sigma = slopes_LIR.std()
-axs[1].text(-0.14, 45, 'ESPER_LIR (Full Depth)', fontsize=14)
+axs[1].text(-0.14, 45, 'ESPER_LIR (Full Depth)', fontsize=12)
 axs[1].text(-0.14, 35, '$\mu={:.4f}$\n$\sigma={:.4f}$'.format(mu, sigma), fontsize=12)
 
 plt.xlabel('Slope of Measured $A_{T}$ - ESPER-Estimated $A_{T}$ over Time ($µmol\;kg^{-1}\;yr^{-1}$)')
@@ -1763,5 +1764,52 @@ mass_change = (results_2024_bc['dic'] - results_2024['dic'])*1e-6*mass_surf_ocea
 print(mass_change, 'g')
 print(mass_change/1e15, 'Pg')
 
+# %% use gridded data product to calculate surface ocean volume
+gridded_data = xr.open_dataset(filepath + gridded_data_file)
+surface_ocean = gridded_data.sel(level=slice(5,25))
+surface_ocean = surface_ocean.isel(time=0)
+surface_ocean = surface_ocean.drop('time',dim=None)
+surface_ocean = surface_ocean.drop_vars(['climatology_bounds','valid_yr_count'])
 
+# longitude and latitude resolution
+lat_res = 1.0/3.0
+lon_res = 1.0
+
+#go through each box in top 25 m, if potential temperature is not NaN, calculate volume of box and sum to total
+total_volume = 0
+num_nans = 0
+
+for depths in surface_ocean['pottmp']:
+    for lats in depths:
+        for lons in lats:
+            if lons.isnull():
+                num_nans += 1
+            else:
+                lat = lons.lat.values
+                lon = lons.lon.values
+                
+                # if lon >= 179.5, subtract 360
+                if lons.lon.values > 180:
+                    lon -= 360
+                
+                # if lon = -180, make it = 180
+                if lons.lon.values == -180:
+                    lon = 180
+                
+                lat_len = haversine((lat, lon),(lat + lat_res, lon), unit = Unit.METERS)
+                
+                if lon + lon_res <= 180: 
+                    lon_len = haversine((lat, lon),(lat, lon + lon_res), unit = Unit.METERS)
+                else:
+                    lon_len = haversine((lat, lon),(lat, lon_res), unit = Unit.METERS)
+                
+                if lons.level.values == 5:
+                    z_len = 5
+                else:
+                    z_len = 10
+                    
+                total_volume += lat_len * lon_len * z_len
+
+# convert volume in m^3 to mass in kg (1025 kg/m^3)
+total_mass = total_volume * 1025
 
