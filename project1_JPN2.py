@@ -150,10 +150,10 @@ def go_ship_only(glodap):
                      'P18' : [279, 345, 1045],
                      'P21' : [270, 1038],
                      'S04I' : [67, 73, 288, 1050, 1051],
+                     'SR04' : [4, 5, 8, 11, 13, 15, 19, 20],
                      'S04P' : [295, 717, 3031],
                      'SR01' : [15, 19, 28, 332, 333, 675, 1111, 1113, 1114, 1115, 3043],
-                     'SR03' : [65, 67, 68, 69, 70, 75, 76, 1021, 1022, 2008],
-                     'SR04' : [4, 5, 8, 11, 13, 15, 19, 20]}
+                     'SR03' : [65, 67, 68, 69, 70, 75, 76, 1021, 1022, 2008]}
     
     # select all cruises from above
     flat_nums = [element for sublist in (list(go_ship_cruise_nums_2023.values())) for element in sublist] # flatten dictionary into one list
@@ -782,8 +782,8 @@ def trim_go_ship(espers, go_ship_cruise_nums_2023):
                'P01' : P01, 'P02' : P02, 'P03' : P03, 'P06' : P06, 'P09' : P09,
                'P10' : P10, 'P13' : P13, 'P14' : P14, 'P15' : P15,
                'P16N' : P16N, 'P16S' : P16S, 'P17E' : P17E, 'P17N' : P17N,
-               'P18' : P18, 'P21' : P21, 'S04I' : S04I, 'S04P' : S04P,
-               'SR01' : SR01, 'SR03' : SR03, 'SR04' : SR04}
+               'P18' : P18, 'P21' : P21, 'S04I' : S04I, 'SR04' : SR04,
+               'S04P' : S04P, 'SR01' : SR01, 'SR03' : SR03}
     
     return trimmed
 
