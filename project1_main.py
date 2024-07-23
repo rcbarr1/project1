@@ -26,8 +26,8 @@ import PyCO2SYS as pyco2
 filepath = '/Users/Reese_1/Documents/Research Projects/project1/data/' # where GLODAP data is stored
 #input_GLODAP_file = 'GLODAPv2.2022_Merged_Master_File.csv' # GLODAP data filename (2022)
 input_GLODAP_file = 'GLODAPv2.2023_Merged_Master_File.csv' # GLODAP data filename (2023)
-input_mc_cruise_file = 'G2talk_mc_simulated_JPN.csv' # MC (per cruise) simulated data
-input_mc_individual_file = 'G2talk_mc_individual_simulated_JPN.csv' # MC (per cruise) simulated data
+input_mc_cruise_file = 'G2talk_mc_simulated.csv' # MC (per cruise) simulated data
+input_mc_individual_file = 'G2talk_mc_individual_simulated.csv' # MC (per cruise) simulated data
 coeffs_file = 'ESPER_LIR_coeffs.csv' # ESPER LIR coefficients saved from MATLAB
 monthly_clim_file = 'monthlyclim.mat'
 
@@ -78,12 +78,6 @@ espers = pd.read_csv(filepath + 'GLODAP_with_ESPER_TA.csv') # to do the normal E
 #espers = pd.read_csv(filepath + 'GLODAP_with_ESPER_TA_GO-SHIP_LIR.csv') # to do the GO-SHIP trained ESPER
 espers['datetime'] = pd.to_datetime(espers['datetime']) # recast datetime as datetime data type
 
-# drop pre-2010 Japanese cruises here also so I don't have to re-run espers
-# p1.go_ship_only and p1.trim_go_ship already updated in this version
-JPN_drop = [461, 468, 502, 504, 272, 497, 495, 567, 602, 505, 459, 488]
-mask = espers['G2cruise'].isin(JPN_drop)
-espers = espers[~mask]
-
 # %% set depth to use as boundary between surface and deep ocean
 
 # static depth boundary
@@ -113,11 +107,6 @@ trimmed = p1.trim_go_ship(espers, go_ship_cruise_nums_2023)
 #del trimmed['SR04'] # to delete SR04 for testing
 all_trimmed = pd.concat(trimmed.values(), ignore_index=True) # flatten from dict of dataframes into one large dataframe
 all_trimmed = all_trimmed.drop_duplicates(ignore_index=True) # drop duplicates
-#%% 
-all_trimmed = all_trimmed[all_trimmed.G2cruise != 477]
-all_trimmed = all_trimmed[all_trimmed.G2cruise != 486]
-all_trimmed = all_trimmed[all_trimmed.G2cruise != 487]
-all_trimmed = all_trimmed[all_trimmed.G2cruise != 507]
 
 # %% run (or upload) MC simulation to create array of simulated G2talk values (by cruise offset)
 #num_mc_runs = 1000
@@ -273,6 +262,11 @@ cmap = cmocean.tools.crop(cmo.balance, to_plot.del_alk.min(), to_plot.del_alk.ma
 pts = ax.scatter(to_plot.G2longitude,to_plot.G2latitude,transform=ccrs.PlateCarree(),s=30,c=to_plot.del_alk,cmap=cmap, alpha=0.15,edgecolors='none')
 plt.colorbar(pts, ax=ax, label='Measured $A_{T}$ - ESPER-Estimated $A_{T}$ \n($µmol\;kg^{-1}$)')
 
+per_data = 100*(1-len(to_plot)/len(diff))
+print('% data removed to improve colorbar scale:', per_data, '%')
+
+print('average error:', diff.mean(skipna=True),'$µmol kg^{-1}$')
+
 #%% 2D histogram for global ensemble mean regression for all trimmed GO-SHIP
 # with robust regression (statsmodels rlm)
 
@@ -319,6 +313,7 @@ esper_sel = esper_sel[esper_sel.G2depth < esper_sel.surface_depth] # do surface 
 p1.plot2dhist(esper_sel, esper_type, fig, axs[0,1], 'B', 1)
 #p1.plot2dhist(esper_sel, esper_type, fig, axs[0,1], 'Surface (< 25 m), NN', 1)
 
+
 # full ocean NN
 esper_type = 'Ensemble_Mean_TA_NN' # LIR, NN, or Mixed
 #esper_type = 'NNtalk16'
@@ -332,6 +327,23 @@ ax.set_xlabel('Year')
 ax.xaxis.set_label_coords(0.17,-0.65) # for 2d histogram
 ax.set_ylabel('Measured $A_{T}$ - ESPER-Estimated $A_{T}$ ($µmol\;kg^{-1}$)')
 ax.yaxis.set_label_coords(-0.62,0.28)
+
+#%% calculate metrics
+
+# number of TA measurements
+print('Number of TA measurements:', len(all_trimmed.G2talk))
+
+# number of cruises
+print('Number of cruises:', len(all_trimmed.G2cruise.unique()))
+
+# average ∆TA with ESPER LIR (± standard deviation)
+del_alk = all_trimmed.loc[:,'G2talk'] - all_trimmed.loc[:,'Ensemble_Mean_TA_LIR']
+print('Average ∆TA with ESPER LIR (± standard deviation):', del_alk.mean(skipna=True), '±', del_alk.std(skipna=True))
+
+# average ∆TA with ESPER NN (± standard deviation)
+del_alk = all_trimmed.loc[:,'G2talk'] - all_trimmed.loc[:,'Ensemble_Mean_TA_NN']
+print('Average ∆TA with ESPER NN (± standard deviation):', del_alk.mean(skipna=True), '±', del_alk.std(skipna=True))
+
 
 #%% plot data by season
 # set up map
@@ -465,7 +477,6 @@ ax.set_ylabel('Measured $A_{T}$ - ESPER-Estimated $A_{T}$ ($µmol\;kg^{-1}$)', l
 # add single colorbar
 fig.colorbar(pts, ax=axs.ravel().tolist(), label='Weight Assigned by RLM')
 
-
 # %% loop through monte carlo simulation-produced G2talk to do global ensemble mean regression
 
 # create seasons
@@ -478,7 +489,7 @@ data_not_used_for_espers_mc =  all_trimmed_mc.loc[((all_trimmed_mc['G2cruise'] >
 
 # plot surface values and do regular linear regression
 mc_sel = all_trimmed_mc
-mc_sel = data_not_used_for_espers_mc
+#mc_sel = fall_mc
 mc_sel_surf = mc_sel[mc_sel.G2depth < mc_sel.surface_depth]
 x = mc_sel.dectime
 x_surf = mc_sel_surf.dectime
@@ -549,6 +560,19 @@ fig.text(0.661, 0.43, '$\mu={:.4f}, \sigma={:.4f}$'.format(mu, sigma), fontsize=
 plt.xlabel('Slope of Measured $A_{T}$ - ESPER-Estimated $A_{T}$ over Time ($µmol\;kg^{-1}\;yr^{-1}$)')
 plt.ylabel('Number of Occurrences')
 
+#%% print statistics
+perc_pos = 100*(1 - len(slopes_surf_LIR[slopes_surf_LIR<0])/1000.0)
+print('% of simulations with positive trend, surface ESPER LIR:', perc_pos, '%')
+
+perc_pos = 100*(1 - len(slopes_surf_NN[slopes_surf_NN<0])/1000.0)
+print('% of simulations with positive trend, surface ESPER NN:', perc_pos, '%')
+
+perc_pos = 100*(1 - len(slopes_LIR[slopes_LIR<0])/1000.0)
+print('% of simulations with positive trend, ESPER LIR:', perc_pos, '%')
+
+perc_pos = 100*(1 - len(slopes_NN[slopes_NN<0])/1000.0)
+print('% of simulations with positive trend, ESPER NN:', perc_pos, '%')
+
 #%% just plot LIR surface and full depth
 
 fig, axs = plt.subplots(nrows=1, ncols=2, figsize=(8,3), dpi=200, sharex=True, sharey=True)
@@ -577,10 +601,10 @@ plt.ylabel('Number of Occurrences')
 
 # SURFACE LIR
 # pull surface values
-all_trimmed_mc = all_trimmed_mc[all_trimmed_mc.G2depth < all_trimmed_mc.surface_depth]
+all_trimmed_mc_surf = all_trimmed_mc[all_trimmed_mc.G2depth < all_trimmed_mc.surface_depth]
 # turn into dict with transects as keys
-trimmed_mc = p1.trim_go_ship(all_trimmed_mc, go_ship_cruise_nums_2023)
-all_slopes_surf = p1.transect_box_plot(trimmed_mc, G2talk_mc, 'LIR')
+trimmed_mc_surf = p1.trim_go_ship(all_trimmed_mc_surf, go_ship_cruise_nums_2023)
+all_slopes_surf = p1.transect_box_plot(trimmed_mc_surf, G2talk_mc, 'LIR')
 
 # FULL-OCEAN LIR
 # turn into dict with transects as keys
@@ -620,8 +644,8 @@ ax.yaxis.set_label_coords(-0.63,0.55)
 
 # calculate u_esper
 esper_type = 'LIRtalk' # LIR, NN, or Mixed (change separately for u_sample below)
-esper_sel = espers
-#esper_sel = data_not_used_for_espers_mc
+esper_sel = all_trimmed
+#esper_sel = fall_mc
 esper_sel = esper_sel[esper_sel.G2depth < esper_sel.surface_depth] # do surface values (< 25 m) only
 slopes_rlm = np.zeros(16)
 slopes_ols = np.zeros(16)
@@ -657,7 +681,7 @@ u_sample = slopes_surf_LIR.std() # for SURFACE, LIR
 #u_sample = slopes_NN.std() # for FULL DEPTH, NN
 
 U = np.sqrt(u_esper**2 + u_sample**2)
-print(U)
+print(round(U,3))
 
 # %% plot global ensemble mean regression for each GO-SHIP transect
 
@@ -1003,89 +1027,6 @@ arctic = {key: value for key, value in trimmed.items() if key in {'ARC01E', 'ARC
 arctic = pd.concat(arctic.values(), ignore_index=True) # flatten from dict of dataframes into one large dataframe
 arctic = arctic.drop_duplicates(ignore_index=True) # drop duplicates
 
-# %% break north pacific into three groups
-# north pacific cruises: P01, P02, P03, P09, P10, P13, P14, P16N, P18 (above 0º latitude)
-
-# group 1: american cruises
-# 276, 277, 279, 280, 286, 296, 299, 301, 302, 304, 306, 307, 345, 1035, 1043,
-# 1044, 1045
-# any adjustments here? 302 = -12, 307 = +6
-
-# group 2: japanese single or spec
-# 272, 461, 468, 495, 497, 502, 504, 505, 567, 598, 602, 609, 1050, 1053, 1060,
-# 1063, 1064, 1066, 1067, 1069, 1070, 1071, 1076, 1078, 1079, 1081, 1082, 1083,
-# 1086, 1087, 1090, 1092, 1093, 1096, 1098, 1099, 1100, 1101, 2038, 2041, 2047,
-# 2050, 2054, 2057, 2062, 2064, 2067, 2075, 2080, 2084, 2087, 2091, 2094, 2096,
-# 2097, 2098, 2099, 2102, 2103, 4065, 4066, 4068, 4069, 4071, 4074, 4076, 4078,
-# 4081, 4083, 4087, 4089, 5014, 5017
-# any adjustments here? 461 = +6, 468 = +13, 567 = +20, 602 = +6, 1067 = +8, 
-# 1069 = +6, 1071 = +4, 1078 = +3, 1079 = +4, 1090 = +6, 2091 = +4, 5017 = +3 
-
-# group 3: japanese unknown, up to year 2008
-# 406, 407, 408, 412, 439, 440, 459, 515, 517, 545, 546, 547, 548, 549, 550,
-# 551, 552, 553, 554, 555, 556, 557, 558, 559, 560, 561, 562, 563, 564, 565,
-# 566, 568, 569, 570, 571, 572, 573, 574, 575, 576, 577, 579, 580, 581, 582,
-# 583, 584, 585, 586, 587, 588, 589, 590, 591, 592, 593, 594, 595, 596, 597,
-# 598, 599, 600, 601, 603, 604, 605, 606, 607, 608, 1056, 1057, 1058, 1080
-# any adjustments here? 459 = +14
-
-# keep only cruise numbers from group one
-north_pacific_USA = north_pacific[
-    north_pacific['G2cruise'].isin([276, 277, 279, 280, 286, 296, 299, 301,
-                                    302, 304, 306, 307, 345, 1035, 1043, 1044,
-                                    1045])]
-
-# keep only cruise numbers from group two
-north_pacific_JPNnew = north_pacific[
-    north_pacific['G2cruise'].isin([272, 461, 468, 495, 497, 502, 504, 505,
-                                    567, 598, 602, 609, 1050, 1053, 1060, 1063,
-                                    1064, 1066, 1067, 1069, 1070, 1071, 1076,
-                                    1078, 1079, 1081, 1082, 1083, 1086, 1087,
-                                    1090, 1092, 1093, 1096, 1098, 1099, 1100,
-                                    1101, 2038, 2041, 2047, 2050, 2054, 2057,
-                                    2062, 2064, 2067, 2075, 2080, 2084, 2087,
-                                    2091, 2094, 2096, 2097, 2098, 2099, 2102,
-                                    2103, 4065, 4066, 4068, 4069, 4071, 4074,
-                                    4076, 4078, 4081, 4083, 4087, 4089, 5014,
-                                    5017])]
-
-# keep only cruise numbers from group three
-north_pacific_JPNold = north_pacific[
-    north_pacific['G2cruise'].isin([406, 407, 408, 412, 439, 440, 459, 515,
-                                    517, 545, 546, 547, 548, 549, 550, 551,
-                                    552, 553, 554, 555, 556, 557, 558, 559,
-                                    560, 561, 562, 563, 564, 565, 566, 568,
-                                    569, 570, 571, 572, 573, 574, 575, 576,
-                                    577, 579, 580, 581, 582, 583, 584, 585,
-                                    586, 587, 588, 589, 590, 591, 592, 593,
-                                    594, 595, 596, 597, 598, 599, 600, 601,
-                                    603, 604, 605, 606, 607, 608, 1056, 1057,
-                                    1058, 1080])]
-
-# %% method change in indian ocean?
-# 255, 252, 488, 251, 253, 355, 682, 254, 3034, 3041, 339, 4062, 249, 352, 1046, 250, 353, 3035, 72, 82, 256, 1054
-# 255 (1995-96): closed-cell automated potentiometric titration systems
-# 252 (1995): closed-cell automated potentiometric titration systems
-# 488 (2003-4): nippon gran titration
-# 251 (1995): closed-cell automated potentiometric titration systems
-# 253 (1995): closed-cell automated potentiometric titration systems, bradshaw & brewer 1988
-# 355 (2007): potentiometric, 2007 dickson guide
-# 682 (2002): potentiometric
-# 254 (1995): closed-cell automated potentiometric titration systems, bradshaw & brewer 1988
-# 3034 (2018): HCl titration in close cell (potentiometric)
-# 339 (1995): single-point titration (millero, 1993)
-# 4062 (2019): spectrophotometry, yao & byrne, 1998
-# 249 (1994): closed-cell automated potentiometric titration systems, millero 1993 & 1998
-# 352 (2007): closed-cell
-# 1046 (2016): two-stage open cell acidimetric, potentiometric
-# 250 (1995): closed-cell automated potentiometric titration systems, bradshaw & brewer 1988
-# 353 (2007): open-cell potentiometric
-# 3035 (2016): two-stage open cell acidimetric, potentiometric
-# 72 (2004-5): ??
-# 82 (2000): potentiometric titration system similar to that described by brewer 1986
-# 256 (1995): closed-cell automated potentiometric titration systems, millero 1993 & 1998
-# 1054 (2015-16): spectrophotometry, nippon
-
 # %% plot regions on a map colored separately
 # set up map
 fig = plt.figure(figsize=(10,3.5), dpi=200)
@@ -1197,27 +1138,27 @@ ax.set_ylabel('Number of $A_{T}$ Measurements')
 #    G2talk_mc = p1.create_mc_cruise_offset(basin, num_mc_runs)
 #    # export dataframe of simulated G2talk columns as .csv to put back with go_ship dataframe and run through espers        
 #    G2talk_mc = pd.DataFrame(G2talk_mc)
-#    G2talk_mc.to_csv(filepath + 'G2talk_mc_simulated_' + abbr + '_JPN.csv' , index=False)
+#    G2talk_mc.to_csv(filepath + 'G2talk_mc_simulated_' + abbr + '.csv' , index=False)
 
-G2talk_mc_NA = pd.read_csv(filepath + 'G2talk_mc_simulated_NA_JPN.csv', na_values = -9999)
+G2talk_mc_NA = pd.read_csv(filepath + 'G2talk_mc_simulated_NA.csv', na_values = -9999)
 G2talk_std_NA = G2talk_mc_NA.std(axis=1)
 
-G2talk_mc_SA = pd.read_csv(filepath + 'G2talk_mc_simulated_SA_JPN.csv', na_values = -9999)
+G2talk_mc_SA = pd.read_csv(filepath + 'G2talk_mc_simulated_SA.csv', na_values = -9999)
 G2talk_std_SA = G2talk_mc_SA.std(axis=1)
 
-G2talk_mc_NP = pd.read_csv(filepath + 'G2talk_mc_simulated_NP_JPN.csv', na_values = -9999)
+G2talk_mc_NP = pd.read_csv(filepath + 'G2talk_mc_simulated_NP.csv', na_values = -9999)
 G2talk_std_NP = G2talk_mc_NP.std(axis=1)
 
-G2talk_mc_SP = pd.read_csv(filepath + 'G2talk_mc_simulated_SP_JPN.csv', na_values = -9999)
+G2talk_mc_SP = pd.read_csv(filepath + 'G2talk_mc_simulated_SP.csv', na_values = -9999)
 G2talk_std_SP = G2talk_mc_SP.std(axis=1)
 
-G2talk_mc_IO = pd.read_csv(filepath + 'G2talk_mc_simulated_IO_JPN.csv', na_values = -9999)
+G2talk_mc_IO = pd.read_csv(filepath + 'G2talk_mc_simulated_IO.csv', na_values = -9999)
 G2talk_std_IO = G2talk_mc_IO.std(axis=1)
 
-G2talk_mc_SO = pd.read_csv(filepath + 'G2talk_mc_simulated_SO_JPN.csv', na_values = -9999)
+G2talk_mc_SO = pd.read_csv(filepath + 'G2talk_mc_simulated_SO.csv', na_values = -9999)
 G2talk_std_SO = G2talk_mc_SO.std(axis=1)
 
-G2talk_mc_AO = pd.read_csv(filepath + 'G2talk_mc_simulated_AO_JPN.csv', na_values = -9999)
+G2talk_mc_AO = pd.read_csv(filepath + 'G2talk_mc_simulated_AO.csv', na_values = -9999)
 G2talk_std_AO = G2talk_mc_AO.std(axis=1)
 
 G2talk_mc_regions = [G2talk_mc_NA, G2talk_mc_SA, G2talk_mc_NP, G2talk_mc_SP, G2talk_mc_IO, G2talk_mc_SO, G2talk_mc_AO]
@@ -1337,16 +1278,16 @@ basins = [all_trimmed_mc, north_atlantic, south_atlantic, north_pacific,
           trimmed_mc['A135'], trimmed_mc['A16N'], trimmed_mc['A16S'],
           trimmed_mc['A17'], trimmed_mc['A20'], trimmed_mc['A22'],
           trimmed_mc['A25'], trimmed_mc['A29'], trimmed_mc['AR07E'],
-          trimmed_mc['AR07W'], trimmed_mc['ARC01E'], trimmed_mc['I05'],
-          trimmed_mc['I06'], trimmed_mc['I07'], trimmed_mc['I08N'],
-          trimmed_mc['I08S'], trimmed_mc['I09N'], trimmed_mc['I09S'],
-          trimmed_mc['I10'], trimmed_mc['P01'], trimmed_mc['P03'],
-          trimmed_mc['P06'], trimmed_mc['P09'], trimmed_mc['P10'],
-          trimmed_mc['P13'], trimmed_mc['P14'], trimmed_mc['P15'],
-          trimmed_mc['P16N'], trimmed_mc['P16S'], trimmed_mc['P17N'],
-          trimmed_mc['P18'], trimmed_mc['P21'], trimmed_mc['S04I'],
-          trimmed_mc['SR04'], trimmed_mc['S04P'], trimmed_mc['SR01'],
-          trimmed_mc['SR03']]
+          trimmed_mc['AR07W'], trimmed_mc['ARC01E'], trimmed_mc['I03'],
+          trimmed_mc['I05'], trimmed_mc['I06'], trimmed_mc['I07'],
+          trimmed_mc['I08N'], trimmed_mc['I08S'], trimmed_mc['I09N'],
+          trimmed_mc['I09S'], trimmed_mc['I10'], trimmed_mc['P01'],
+          trimmed_mc['P02'], trimmed_mc['P03'], trimmed_mc['P06'],
+          trimmed_mc['P09'], trimmed_mc['P10'], trimmed_mc['P13'],
+          trimmed_mc['P14'], trimmed_mc['P15'], trimmed_mc['P16N'],
+          trimmed_mc['P16S'], trimmed_mc['P17N'], trimmed_mc['P18'],
+          trimmed_mc['P21'], trimmed_mc['S04I'], trimmed_mc['SR04'],
+          trimmed_mc['S04P'], trimmed_mc['SR01'], trimmed_mc['SR03']]
 
 
 mc_basins = [df_empty, G2talk_mc_NA, G2talk_mc_SA, G2talk_mc_NP, G2talk_mc_SP,
@@ -1357,7 +1298,7 @@ mc_basins = [df_empty, G2talk_mc_NA, G2talk_mc_SA, G2talk_mc_NP, G2talk_mc_SP,
              df_empty, df_empty, df_empty, df_empty, df_empty, df_empty,
              df_empty, df_empty, df_empty, df_empty, df_empty, df_empty,
              df_empty, df_empty, df_empty, df_empty, df_empty, df_empty,
-             df_empty, df_empty, df_empty]
+             df_empty, df_empty, df_empty, df_empty, df_empty]
 
 basin_U_surf_LIR = np.zeros(len(basins))
 basin_U_surf_NN = np.zeros(len(basins))
@@ -1598,6 +1539,14 @@ for basin, j in zip(basins, range(0,len(basins))):
     #basin_trend_LIR[j] = ols_results_LIR.params[1]
     #basin_trend_NN[j] = ols_results_NN.params[1]
     
+    
+#%% print trend ± uncertainty
+for i in range(0,8):
+    print(round(basin_trend_surf_LIR[i],3), '±', round(basin_U_surf_LIR[i],3))
+    #print(round(basin_trend_LIR[i],3), '±', round(basin_U_LIR[i],3))
+    #print(round(basin_trend_surf_NN[i],3), '±', round(basin_U_surf_NN[i],3))
+    #print(round(basin_trend_NN[i],3), '±', round(basin_U_NN[i],3))
+
 #%% plot trends with error bars
 fig, axs = plt.subplots(nrows=2, ncols=1, figsize=(8,4.5), dpi=200, sharex=True, sharey=True, layout='constrained')
 fig.add_subplot(111,frameon=False)
@@ -1615,14 +1564,14 @@ axs[1].errorbar(x+0.15, basin_trend_NN, yerr=basin_U_NN, fmt="o", c='dodgerblue'
 axs[0].axhline(y=0, color='k', linestyle='--')
 axs[1].axhline(y=0, color='k', linestyle='--')
 
-axs[0].set_ylim([-0.5, 0.5])   
-axs[1].set_ylim([-0.5, 0.5])   
+#axs[0].set_ylim([-0.5, 0.5])   
+#axs[1].set_ylim([-0.5, 0.5])   
 axs[1].set_xlim(-0.5, len(basin_trend_LIR) - 0.5) 
  
 basin_abbr = ['Global', 'NAO', 'SAO', 'NPO', 'SPO', 'IO', 'SO', 'AO', 'A02', 'A05', 'A10',
               'A12', 'A135', 'A16N', 'A16S', 'A17', 'A20', 'A22', 'A25', 'A29',
-              'AR07E', 'AR07W', 'ARC01E', 'I05', 'I06', 'I07', 'I08N', 'I08S',
-              'I09N', 'I09S', 'I10', 'P01', 'P03', 'P06', 'P09', 'P10', 'P13',
+              'AR07E', 'AR07W', 'ARC01E', 'I03', 'I05', 'I06', 'I07', 'I08N', 'I08S',
+              'I09N', 'I09S', 'I10', 'P01', 'P02', 'P03', 'P06', 'P09', 'P10', 'P13',
               'P14', 'P15', 'P16N', 'P16S', 'P17N', 'P18', 'P21', 'S04I',
               'SR04', 'S04P', 'SR01', 'SR03']
 axs[1].set_xticks(x, basin_abbr)
@@ -1630,13 +1579,13 @@ axs[1].set_xticks(x, basin_abbr)
 ax.set_ylabel('Temporal Trend in Measured $A_{T}$ - ESPER-Estimated $A_{T}$\n($µmol$ $kg^{-1}$ $yr^{-1}$)')
 ax.yaxis.set_label_coords(-0.62,0.55)
 axs[1].tick_params(axis='x', labelrotation=90)
-axs[0].text(0, -0.45, 'A', fontsize=12)
-axs[1].text(0, -0.45, 'B', fontsize=12)
-axs[1].legend(bbox_to_anchor = (0.6, 0.21), ncol=2)
+#axs[0].text(0, -0.45, 'A', fontsize=12)
+#axs[1].text(0, -0.45, 'B', fontsize=12)
+#axs[1].legend(bbox_to_anchor = (0.6, 0.21), ncol=2)
 
-#axs[0].text(0, -2, 'A', fontsize=12)
-#axs[1].text(0, -2, 'B', fontsize=12)
-#axs[1].legend(bbox_to_anchor = (1, 0.21), ncol=2)
+axs[0].text(0, -2, 'A', fontsize=12)
+axs[1].text(0, -2, 'B', fontsize=12)
+axs[1].legend(bbox_to_anchor = (1, 0.21), ncol=2)
 
 # %% make box plot graph of transect slopes from mc simulation
 
@@ -1728,7 +1677,7 @@ axs[1,0].tick_params(axis='x', labelrotation=90)
 axs[1,1].tick_params(axis='x', labelrotation=90)
 
 #%% do calculations on OA amplification for conclusion
-esper_sel = espers[espers.G2depth < espers.surface_depth]
+esper_sel = all_trimmed[all_trimmed.G2depth < all_trimmed.surface_depth]
 avg_TA = esper_sel.G2talk.mean(skipna=True)
 print(avg_TA)
 
@@ -1746,19 +1695,19 @@ print(results_2024['dic'])
 print(results_2024['pH'])
 
 # DIC in 2024 (assuming elevated TA from CO2-biotic calcification feedback)
-TA_past_30 = 0.080 * 30 # umol/kg, using surface ocean ESPER LIR ∆TA trend
+TA_past_30 = 0.072 * 30 # umol/kg, using surface ocean ESPER LIR ∆TA trend
 results_2024_bc = pyco2.sys(par1=(avg_TA+TA_past_30), par1_type=1, par2=ppm_2024, par2_type=9)
 print(results_2024_bc['dic'])
 print(results_2024_bc['pH'])
 
 # % change with bc feedback
-percent_change = 100*(((results_2024_bc['dic'] - results_1994['dic']) - (results_2024['dic'] - results_1994['dic']))/(results_2024['dic'] - results_1994['dic']))
+percent_change = 100*(((results_2024_bc['dic'] - results_1994['dic']) 4- (results_2024['dic'] - results_1994['dic']))/(results_2024['dic'] - results_1994['dic']))
 print(percent_change, '%')
 
 # mass change
-# mass of surface ocean is 2.7e19 kg
+# mass of surface ocean is 9.2e18 k
 # molar mass of carbon is 12.011 g/mol
-mass_change = (results_2024_bc['dic'] - results_2024['dic'])*1e-6*2.7e19*12.011
+mass_change = (results_2024_bc['dic'] - results_2024['dic'])*1e-6*9.2e18*12.011
 print(mass_change, 'g')
 print(mass_change/1e15, 'Pg')
 
