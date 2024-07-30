@@ -102,6 +102,10 @@ kl_div = p1.kl_divergence(espers)
 # %% calculate ensemble mean TA for each data point
 espers = p1.ensemble_mean(espers)
 
+# %% calculate ensemble mean A_T prediction minus eqn. 16 A_T prediction
+espers['TA_Ensemble_-_16_LIR'] = espers.Ensemble_Mean_TA_LIR - espers.LIRtalk16
+espers['TA_Ensemble_-_16_NN'] = espers.Ensemble_Mean_TA_NN - espers.NNtalk16
+
 # %% trim GO-SHIP + associated cruises to pick out data points on the standard transect
 trimmed = p1.trim_go_ship(espers, go_ship_cruise_nums_2023)
 #del trimmed['SR04'] # to delete SR04 for testing
@@ -259,7 +263,7 @@ to_plot = to_plot.sort_values('abs_del_alk',axis=0,ascending=True)
 cmap = cmocean.tools.crop(cmo.balance, to_plot.del_alk.min(), to_plot.del_alk.max(), 0)
 
 # plot data
-pts = ax.scatter(to_plot.G2longitude,to_plot.G2latitude,transform=ccrs.PlateCarree(),s=30,c=to_plot.del_alk,cmap=cmap, alpha=0.15,edgecolors='none')
+pts = ax.scatter(to_plot.G2longitude,to_plot.G2latitude,transform=ccrs.PlateCarree(),s=30,c=to_plot.del_alk,cmap=cmap,edgecolors='none')
 plt.colorbar(pts, ax=ax, label='Measured $A_{T}$ - ESPER-Estimated $A_{T}$ \n($µmol\;kg^{-1}$)')
 
 per_data = 100*(1-len(to_plot)/len(diff))
@@ -739,8 +743,8 @@ for keys in trimmed:
 #%% calculate average ESPERs coefficients
 
 # read in coefficients extracted from MATLAB (already averaged across all 16 equations)
-coeffs = pd.read_csv(filepath + coeffs_file, names=['x', 'TA_S', 'TA_T', 'TA_N', 'TA_O', 'TA_Si'])
-#coeffs = pd.read_csv(filepath + 'ESPER_LIR_coeffs_eqn_10.csv', names=['x', 'TA_S', 'TA_T', 'TA_N', 'TA_O', 'TA_Si'])
+#coeffs = pd.read_csv(filepath + coeffs_file, names=['x', 'TA_S', 'TA_T', 'TA_N', 'TA_O', 'TA_Si'])
+coeffs = pd.read_csv(filepath + 'ESPER_LIR_coeffs_eqn_16.csv', names=['x', 'TA_S', 'TA_T', 'TA_N', 'TA_O', 'TA_Si'])
 
 # attach G2cruise, G2station, G2depth, and surface_depth columns so trimming will work
 coeffs = pd.concat([coeffs, espers[['G2expocode', 'G2cruise', 'G2station',
@@ -757,7 +761,7 @@ coeffs_all_trimmed = pd.concat(coeffs_trimmed.values(), ignore_index=True) # fla
 coeffs_all_trimmed = coeffs_all_trimmed.drop_duplicates(ignore_index=True) # drop duplicates
 
 # constrain to surface depth only
-#coeffs_all_trimmed = coeffs_all_trimmed[coeffs_all_trimmed.G2depth < coeffs_all_trimmed.surface_depth]
+coeffs_all_trimmed = coeffs_all_trimmed[coeffs_all_trimmed.G2depth < coeffs_all_trimmed.surface_depth]
 
 # average across all samples
 coeffs_all_trimmed = coeffs_all_trimmed.drop(columns=['G2expocode', 'G2cruise',
@@ -770,8 +774,7 @@ coeffs_all_trimmed = coeffs_all_trimmed.drop(columns=['G2expocode', 'G2cruise',
                                                       'G2salinity', 'G2oxygen',
                                                       'G2nitrate',
                                                       'G2silicate',
-                                                      'G2phosphate', 'G2talk',
-                                                      'x'])
+                                                      'G2phosphate', 'G2talk'])
 avg_coeffs = coeffs_all_trimmed.mean(axis=0)
 
 # calculate ratio of TA to S in surface ocean (GLODAP data)
@@ -921,8 +924,8 @@ axs[1].set_xlabel('Equation Number')
 axs[1].set_ylabel('Slope of Difference between $A_{T}$ Predicted\nby Each Eqn. and Eqn. 16 over Time\n($µmol\;kg^{-1}\;yr^{-1}$)')
 axs[1].yaxis.set_label_coords(-0.1,1.1)
 
-axs[0].text(0.4, -0.02, 'A', fontsize=12)
-axs[1].text(0.4, -0.02, 'B', fontsize=12)
+axs[0].text(0.4, -0.024, 'A', fontsize=12)
+axs[1].text(0.4, -0.024, 'B', fontsize=12)
 
 axs[0].set_ylim([-0.027, 0.027])
 axs[1].set_ylim([-0.027, 0.027])
@@ -1481,18 +1484,22 @@ for basin, j in zip(basins, range(0,len(basins))):
 
     # calculate the difference in TA betwen GLODAP and ESPERS, store for regression
     del_alk_surf_LIR = esper_surf.loc[:,'G2talk'] - esper_surf.loc[:,'Ensemble_Mean_TA_LIR']
+    #del_alk_surf_LIR = esper_surf.loc[:,'G2talk'] - esper_surf.loc[:,'TA_Ensemble_-_16_LIR']
     x_surf_LIR = esper_surf['dectime'].to_numpy()
     y_surf_LIR = del_alk_surf_LIR.to_numpy()
     
     del_alk_surf_NN = esper_surf.loc[:,'G2talk'] - esper_surf.loc[:,'Ensemble_Mean_TA_NN']
+    #del_alk_surf_NN = esper_surf.loc[:,'G2talk'] - esper_surf.loc[:,'TA_Ensemble_-_16_NN']
     x_surf_NN = esper_surf['dectime'].to_numpy()
     y_surf_NN = del_alk_surf_NN.to_numpy()
     
     del_alk_LIR = esper.loc[:,'G2talk'] - esper.loc[:,'Ensemble_Mean_TA_LIR']
+    #del_alk_LIR = esper.loc[:,'G2talk'] - esper.loc[:,'TA_Ensemble_-_16_LIR']
     x_LIR = esper['dectime'].to_numpy()
     y_LIR = del_alk_LIR.to_numpy()
     
     del_alk_NN = esper.loc[:,'G2talk'] - esper.loc[:,'Ensemble_Mean_TA_NN']
+    #del_alk_NN = esper.loc[:,'G2talk'] - esper.loc[:,'TA_Ensemble_-_16_NN']
     x_NN = esper['dectime'].to_numpy()
     y_NN = del_alk_NN.to_numpy()
          
@@ -1564,8 +1571,8 @@ axs[1].errorbar(x+0.15, basin_trend_NN, yerr=basin_U_NN, fmt="o", c='dodgerblue'
 axs[0].axhline(y=0, color='k', linestyle='--')
 axs[1].axhline(y=0, color='k', linestyle='--')
 
-#axs[0].set_ylim([-0.5, 0.5])   
-#axs[1].set_ylim([-0.5, 0.5])   
+axs[0].set_ylim([-0.5, 0.5])   
+axs[1].set_ylim([-0.5, 0.5])   
 axs[1].set_xlim(-0.5, len(basin_trend_LIR) - 0.5) 
  
 basin_abbr = ['Global', 'NAO', 'SAO', 'NPO', 'SPO', 'IO', 'SO', 'AO', 'A02', 'A05', 'A10',
@@ -1577,15 +1584,53 @@ basin_abbr = ['Global', 'NAO', 'SAO', 'NPO', 'SPO', 'IO', 'SO', 'AO', 'A02', 'A0
 axs[1].set_xticks(x, basin_abbr)
 
 ax.set_ylabel('Temporal Trend in Measured $A_{T}$ - ESPER-Estimated $A_{T}$\n($µmol$ $kg^{-1}$ $yr^{-1}$)')
+#ax.set_ylabel('Temporal Trend in Measured $A_{T}$ - (Ensemble Mean\nESPER-Estimated $A_{T}$ - Eqn. 16 Estimate), ($µmol$ $kg^{-1}$ $yr^{-1}$)')
 ax.yaxis.set_label_coords(-0.62,0.55)
 axs[1].tick_params(axis='x', labelrotation=90)
-#axs[0].text(0, -0.45, 'A', fontsize=12)
-#axs[1].text(0, -0.45, 'B', fontsize=12)
-#axs[1].legend(bbox_to_anchor = (0.6, 0.21), ncol=2)
+axs[0].text(0, -0.45, 'A', fontsize=12)
+axs[1].text(0, -0.45, 'B', fontsize=12)
+axs[1].legend(bbox_to_anchor = (0.6, 0.21), ncol=2)
 
-axs[0].text(0, -2, 'A', fontsize=12)
-axs[1].text(0, -2, 'B', fontsize=12)
-axs[1].legend(bbox_to_anchor = (1, 0.21), ncol=2)
+#axs[0].text(0, -2, 'A', fontsize=12)
+#axs[1].text(0, -2, 'B', fontsize=12)
+#axs[1].legend(bbox_to_anchor = (1, 0.21), ncol=2)
+
+#%% plot trends with error bars - REGIONS ONLY (for presentation)
+fig, axs = plt.subplots(nrows=2, ncols=1, figsize=(5,4), dpi=200, sharex=True, sharey=True, layout='constrained')
+fig.add_subplot(111,frameon=False)
+ax = fig.gca()
+plt.tick_params(labelcolor='none', which='both', top=False, bottom=False, left=False, right=False)
+
+x = np.array(range(0,len(basin_trend_LIR[0:8])))
+
+axs[0].errorbar(x-0.15, basin_trend_surf_LIR[0:8], yerr=basin_U_surf_LIR[0:8], fmt="o", c='indigo', alpha = 0.5)
+axs[0].errorbar(x+0.15, basin_trend_surf_NN[0:8], yerr=basin_U_surf_NN[0:8], fmt="o", c='dodgerblue', alpha = 0.5)
+
+axs[1].errorbar(x-0.15, basin_trend_LIR[0:8], yerr=basin_U_LIR[0:8], fmt="o", c='indigo', label='ESPER LIR', alpha = 0.5)
+axs[1].errorbar(x+0.15, basin_trend_NN[0:8], yerr=basin_U_NN[0:8], fmt="o", c='dodgerblue', label='ESPER NN', alpha = 0.5)
+
+axs[0].axhline(y=0, color='k', linestyle='--')
+axs[1].axhline(y=0, color='k', linestyle='--')
+
+axs[0].set_ylim([-0.25, 0.25])   
+axs[1].set_ylim([-0.25, 0.25])   
+axs[1].set_xlim(-0.5, len(basin_trend_LIR[0:8]) - 0.5) 
+ 
+basin_abbr = ['Global', 'N. Atlantic', 'S. Atlantic', 'N. Pacific', 'S. Pacific', 'Indian', 'Southern', 'Arctic']
+axs[1].set_xticks(x, basin_abbr)
+
+ax.set_ylabel('Temporal Trend in $∆A_{T}$ ($µmol$ $kg^{-1}$ $yr^{-1}$)',fontsize=10)
+ax.yaxis.set_label_coords(-0.62,0.58)
+axs[1].tick_params(axis='x', labelrotation=45)
+axs[0].text(-0.35, -0.22, 'Surface (< 25 m)', fontsize=10)
+axs[1].text(-0.35, -0.22, 'Full Depth', fontsize=10)
+#axs[1].legend(bbox_to_anchor = (0.8, -0.75), ncol=2)
+axs[1].legend(bbox_to_anchor = (1.0, 0.25), ncol=2)
+
+
+#axs[0].text(0, -2, 'A', fontsize=12)
+#axs[1].text(0, -2, 'B', fontsize=12)
+#axs[1].legend(bbox_to_anchor = (1, 0.21), ncol=2)
 
 # %% make box plot graph of transect slopes from mc simulation
 
@@ -1677,39 +1722,35 @@ axs[1,0].tick_params(axis='x', labelrotation=90)
 axs[1,1].tick_params(axis='x', labelrotation=90)
 
 #%% do calculations on OA amplification for conclusion
-esper_sel = all_trimmed[all_trimmed.G2depth < all_trimmed.surface_depth]
-avg_TA = esper_sel.G2talk.mean(skipna=True)
-print(avg_TA)
+avg_surf_TA = 2305 # µmol/kg, carter et al., 2014
+avg_TA = 2362 # carter et al., 2014
 
 ppm_1994 = 358.96 # unc = 0.12, at Mauna Loa, https://gml.noaa.gov/webdata/ccgg/trends/co2/co2_annmean_mlo.txt
 ppm_2024 = 426.91 # unc = 0.12, at Mauna Loa, https://gml.noaa.gov/ccgg/trends/mlo.html
 
 # DIC in 1994
-results_1994 = pyco2.sys(par1=avg_TA, par1_type=1, par2=ppm_1994, par2_type=9)
-print(results_1994['dic'])
-print(results_1994['pH'])
+results_1994 = pyco2.sys(par1=avg_surf_TA, par1_type=1, par2=ppm_1994, par2_type=9)
+print('Surface DIC in 1994:', results_1994['dic'])
 
 # DIC in 2024 (assuming fixed TA)
-results_2024 = pyco2.sys(par1=avg_TA, par1_type=1, par2=ppm_2024, par2_type=9)
-print(results_2024['dic'])
-print(results_2024['pH'])
+results_2024 = pyco2.sys(par1=avg_surf_TA, par1_type=1, par2=ppm_2024, par2_type=9)
+print('Surface DIC in 2024 (no feedback):', results_2024['dic'])
 
 # DIC in 2024 (assuming elevated TA from CO2-biotic calcification feedback)
 TA_past_30 = 0.072 * 30 # umol/kg, using surface ocean ESPER LIR ∆TA trend
-results_2024_bc = pyco2.sys(par1=(avg_TA+TA_past_30), par1_type=1, par2=ppm_2024, par2_type=9)
-print(results_2024_bc['dic'])
-print(results_2024_bc['pH'])
+results_2024_bc = pyco2.sys(par1=(avg_surf_TA+TA_past_30), par1_type=1, par2=ppm_2024, par2_type=9)
+print('Surface DIC in 2024 (yes feedback):', results_2024_bc['dic'])
 
 # % change with bc feedback
-percent_change = 100*(((results_2024_bc['dic'] - results_1994['dic']) 4- (results_2024['dic'] - results_1994['dic']))/(results_2024['dic'] - results_1994['dic']))
-print(percent_change, '%')
+percent_change = 100*(((results_2024_bc['dic'] - results_1994['dic']) - (results_2024['dic'] - results_1994['dic']))/(results_2024['dic'] - results_1994['dic']))
+print('% change in surface DIC:', percent_change, '%')
 
 # mass change
 # mass of surface ocean is 9.2e18 k
 # molar mass of carbon is 12.011 g/mol
 mass_change = (results_2024_bc['dic'] - results_2024['dic'])*1e-6*9.2e18*12.011
-print(mass_change, 'g')
-print(mass_change/1e15, 'Pg')
+print('Mass change in surface DIC:', mass_change, 'g')
+print('Mass change in surface DIC:', mass_change/1e15, 'Pg')
 
 
 
