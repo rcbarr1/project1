@@ -265,6 +265,102 @@ def ensemble_mean(espers):
     
     return espers_out
 
+def ensemble_mean_1_8(espers):
+    """
+    Calculates ensemble mean of ESPER alkalinity predictions and mean of
+    uncertainties of alkalinity predictions.
+    EQUATIONS 1 - 8 ONLY
+    
+    Keyword arguments:
+        espers = ESPER prediction dataframe for all 16 equations for each of
+                 the three methods
+                 
+    Returns:
+        espers_out = "espers" dataframe with added columns "Ensemble_Mean_TA"
+                      and "Ensemble_Mean_TA_Uncert"
+        
+    """
+    
+    talk_subset_LIR = espers[['LIRtalk1', 'LIRtalk2', 'LIRtalk3', 'LIRtalk4', 
+                              'LIRtalk5', 'LIRtalk6', 'LIRtalk7', 'LIRtalk8']]
+    
+    if 'NNtalk1' in espers.columns:
+        talk_subset_NN = espers[['NNtalk1', 'NNtalk2', 'NNtalk3', 'NNtalk4',
+                                 'NNtalk5', 'NNtalk6', 'NNtalk7', 'NNtalk8']]
+    
+    uncertainty_subset_LIR = espers[['LIRtalk_uncert1', 'LIRtalk_uncert2',
+                                     'LIRtalk_uncert3', 'LIRtalk_uncert4',
+                                     'LIRtalk_uncert5', 'LIRtalk_uncert6',
+                                     'LIRtalk_uncert7', 'LIRtalk_uncert8']]
+    
+    if 'NNtalk_uncert1' in espers.columns:
+        uncertainty_subset_NN = espers[['NNtalk_uncert1', 'NNtalk_uncert2',
+                                        'NNtalk_uncert3', 'NNtalk_uncert4',
+                                        'NNtalk_uncert5', 'NNtalk_uncert6',
+                                        'NNtalk_uncert7', 'NNtalk_uncert8']]
+
+
+    espers['Ensemble_Mean_TA_LIR_1-8'] = talk_subset_LIR.mean(axis=1)
+    espers['Ensemble_Std_TA_LIR_1-8'] = talk_subset_LIR.std(axis=1)
+    espers['Ensemble_Mean_TA_Uncert_LIR_1-8'] = uncertainty_subset_LIR.mean(axis=1)
+    if 'NNtalk1' in espers.columns:
+        espers['Ensemble_Mean_TA_NN_1-8'] = talk_subset_NN.mean(axis=1)
+        espers['Ensemble_Std_TA_NN_1-8'] = talk_subset_NN.std(axis=1)
+        espers['Ensemble_Mean_TA_Uncert_NN_1-8'] = uncertainty_subset_NN.mean(axis=1)
+
+    espers_out = espers
+    
+    return espers_out
+
+def ensemble_mean_9_16(espers):
+    """
+    Calculates ensemble mean of ESPER alkalinity predictions and mean of
+    uncertainties of alkalinity predictions.
+    EQUATIONS 9 - 16 ONLY
+    
+    Keyword arguments:
+        espers = ESPER prediction dataframe for all 16 equations for each of
+                 the three methods
+                 
+    Returns:
+        espers_out = "espers" dataframe with added columns "Ensemble_Mean_TA"
+                      and "Ensemble_Mean_TA_Uncert"
+        
+    """
+        
+    talk_subset_LIR = espers[['LIRtalk9', 'LIRtalk10', 'LIRtalk11',
+                              'LIRtalk12', 'LIRtalk13', 'LIRtalk14',
+                              'LIRtalk15', 'LIRtalk16']]
+    
+    if 'NNtalk1' in espers.columns:
+        talk_subset_NN = espers[['NNtalk9', 'NNtalk10', 'NNtalk11', 'NNtalk12',
+                                 'NNtalk13', 'NNtalk14', 'NNtalk15', 'NNtalk16']]
+
+    uncertainty_subset_LIR = espers[['LIRtalk_uncert9', 'LIRtalk_uncert10',
+                                     'LIRtalk_uncert11', 'LIRtalk_uncert12',
+                                     'LIRtalk_uncert13', 'LIRtalk_uncert14',
+                                     'LIRtalk_uncert15', 'LIRtalk_uncert16']]
+    
+    if 'NNtalk_uncert1' in espers.columns:
+        uncertainty_subset_NN = espers[['NNtalk_uncert9', 'NNtalk_uncert10',
+                                        'NNtalk_uncert11', 'NNtalk_uncert12',
+                                        'NNtalk_uncert13', 'NNtalk_uncert14',
+                                        'NNtalk_uncert15', 'NNtalk_uncert16']]
+
+
+    espers['Ensemble_Mean_TA_LIR_9-16'] = talk_subset_LIR.mean(axis=1)
+    espers['Ensemble_Std_TA_LIR_9-16'] = talk_subset_LIR.std(axis=1)
+    espers['Ensemble_Mean_TA_Uncert_LIR_9-16'] = uncertainty_subset_LIR.mean(axis=1)
+    if 'NNtalk1' in espers.columns:
+        espers['Ensemble_Mean_TA_NN_9-16'] = talk_subset_NN.mean(axis=1)
+        espers['Ensemble_Std_TA_NN_9-16'] = talk_subset_NN.std(axis=1)
+        espers['Ensemble_Mean_TA_Uncert_NN_9-16'] = uncertainty_subset_NN.mean(axis=1)
+
+    espers_out = espers
+    
+    return espers_out
+
+
 def trim_go_ship(espers, go_ship_cruise_nums_2023):
     """
     1. Selects only measured (not calculated) alkalinity
@@ -961,9 +1057,65 @@ def plot2dhist(esper_sel, esper_type, fig, ax, subplot_label, colorbar_flag):
     ##ax.text(1992.5, 80, 'RLM: m$={:+.3f}$, p$={:.1e}$'.format(rlm_results.params[1],rlm_results.pvalues[1]), fontsize=10)
     print('ols slope, p value: ' + str(ols_results.params[1]) + ', ' + str(ols_results.pvalues[1]))
     print('rlm slope, p value: ' + str(rlm_results.params[1]) + ', ' + str(rlm_results.pvalues[1]))
+    frac_above_zero = len(del_alk[del_alk > 0])/len(del_alk) * 100
+    print('% of data above zero: ' + str(round(frac_above_zero,2)) + '%')
     ax.text(1992.5, 105, 'OLS: $m={:+.3f}$, $p={:.1e}$'.format(ols_results.params[1],ols_results.pvalues[1]), fontsize=10) # for LIR-trained only
     ax.text(1992.5, 90, 'RLM: $m={:+.3f}$, $p={:.1e}$'.format(rlm_results.params[1],rlm_results.pvalues[1]), fontsize=10) # for LIR-trained only
     ax.text(1992.5, -70, subplot_label, fontsize=12)
+    ###ax.text(1992.5, 2135, 'OLS: m$={:+.3f}$, p$={:.1e}$'.format(ols_results.params[1],ols_results.pvalues[1]), fontsize=10) # for LIR-trained only
+    ###ax.text(1992.5, 2110, 'RLM: m$={:+.3f}$, p$={:.1e}$'.format(rlm_results.params[1],rlm_results.pvalues[1]), fontsize=10) # for LIR-trained only
+    ax.set_xlim([1991.66753234399, 2021.75842656012])
+
+def plot2dhist_1d(esper_sel, esper_type, fig, ax, subplot_label, colorbar_flag, surf_flag):
+    # sort by time
+    esper_sel = esper_sel.sort_values(by=['dectime'],ascending=True)
+
+    # calculate the difference in TA betwen GLODAP and ESPERS, store for regression
+    del_alk = esper_sel.loc[:,'G2talk'] - esper_sel.loc[:,esper_type]
+    ###del_alk = esper_sel.loc[:,'G2talk']
+    x = esper_sel['dectime'].to_numpy()
+    y = del_alk.to_numpy()
+    
+    print("average ∆TA: " + str(np.nanmean(y)))
+    print("std: " + str(np.nanstd(y)))
+
+    # fit model and print summary
+    x_model = sm.add_constant(x) # this is required in statsmodels to get an intercept
+    rlm_model = sm.RLM(y, x_model, M=sm.robust.norms.HuberT())
+    rlm_results = rlm_model.fit()
+
+    ols_model = sm.OLS(y, x_model)
+    ols_results = ols_model.fit()
+
+    h = ax.hist2d(x, y, bins=100, norm='log', cmap=cmo.matter) # for 2d histogram
+    ax.plot(x_model[:,1], rlm_results.fittedvalues, lw=2.5, ls='--', color='gainsboro', label='RLM')
+    ax2 = ax.twinx()
+    ax2.hist(x, bins=30,color='silver',alpha=0.7)
+    #ax.plot(x_model[:,1], ols_results.fittedvalues, lw=1, ls='-', color='gainsboro', label='OLS')
+    ax.set_ylim([-80, 120])
+    if surf_flag == 1:
+        ax2.set_ylim([0, 3000])
+    else:
+        ax2.set_ylim([0, 30000])
+    ax2.ticklabel_format(axis='y',style='sci',scilimits=(0,0))
+    ###ax.set_ylim([2100, 2500])
+    if colorbar_flag == 1:
+        fig.colorbar(h[3],label='Number of Occurrences')
+    elif colorbar_flag == 2:
+        fig.colorbar(h[3],label=' ')
+    else:
+        ax2.tick_params(axis='y', colors='white')
+
+    # print equations & p values for each regression type
+    ##ax.text(1992.5, 100, 'OLS: m$={:+.3f}$, p$={:.1e}$'.format(ols_results.params[1],ols_results.pvalues[1]), fontsize=10)
+    ##ax.text(1992.5, 80, 'RLM: m$={:+.3f}$, p$={:.1e}$'.format(rlm_results.params[1],rlm_results.pvalues[1]), fontsize=10)
+    print('ols slope, p value: ' + str(ols_results.params[1]) + ', ' + str(ols_results.pvalues[1]))
+    print('rlm slope, p value: ' + str(rlm_results.params[1]) + ', ' + str(rlm_results.pvalues[1]))
+    frac_above_zero = len(del_alk[del_alk > 0])/len(del_alk) * 100
+    print('% of data above zero: ' + str(round(frac_above_zero,2)) + '%')
+    ax.text(1992.5, 105, 'OLS: $m={:+.3f}$, $p={:.1e}$'.format(ols_results.params[1],ols_results.pvalues[1]), fontsize=10) # for LIR-trained only
+    ax.text(1992.5, 90, 'RLM: $m={:+.3f}$, $p={:.1e}$'.format(rlm_results.params[1],rlm_results.pvalues[1]), fontsize=10) # for LIR-trained only
+    ax.text(1992.5, -60, subplot_label, fontsize=12)
     ###ax.text(1992.5, 2135, 'OLS: m$={:+.3f}$, p$={:.1e}$'.format(ols_results.params[1],ols_results.pvalues[1]), fontsize=10) # for LIR-trained only
     ###ax.text(1992.5, 2110, 'RLM: m$={:+.3f}$, p$={:.1e}$'.format(rlm_results.params[1],rlm_results.pvalues[1]), fontsize=10) # for LIR-trained only
     ax.set_xlim([1991.66753234399, 2021.75842656012])
