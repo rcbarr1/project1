@@ -12,6 +12,7 @@ Description: Main script for Project 1, calls functions written in project1.py
 import project1 as p1
 import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib.patches as patches
 import numpy as np
 from scipy import stats
 from scipy.io import loadmat
@@ -74,8 +75,8 @@ glodap_out = go_ship[['G2expocode','G2cruise','G2station','G2region','G2cast',
 glodap_out.to_csv(filepath + 'GLODAPv2.2023_for_Brendan.csv', index=False) # for 2023
  
 # %% upload ESPERs outputs to here
-espers = pd.read_csv(filepath + 'GLODAP_with_ESPER_TA.csv') # to do the normal ESPER
-#espers = pd.read_csv(filepath + 'GLODAP_with_ESPER_TA_GO-SHIP_LIR.csv') # to do the GO-SHIP trained ESPER
+#espers = pd.read_csv(filepath + 'GLODAP_with_ESPER_TA.csv') # to do the normal ESPER
+espers = pd.read_csv(filepath + 'GLODAP_with_ESPER_TA_GO-SHIP_LIR.csv') # to do the GO-SHIP trained ESPER
 espers['datetime'] = pd.to_datetime(espers['datetime']) # recast datetime as datetime data type
 
 # %% set depth to use as boundary between surface and deep ocean
@@ -139,6 +140,36 @@ all_trimmed_mc = pd.concat([all_trimmed, G2talk_mc], axis=1)
 G2talk_mc = pd.read_csv(filepath + input_mc_individual_file, na_values = -9999)
 all_trimmed_mc = pd.concat([all_trimmed, G2talk_mc], axis=1)
 
+#%% drop indian ocean data for testing
+trimmed_mc = p1.trim_go_ship(all_trimmed_mc, go_ship_cruise_nums_2023)
+trimmed_mc['I01'] = trimmed_mc['I01'][trimmed_mc['I01'].G2latitude < -60]
+trimmed_mc['I03'] = trimmed_mc['I03'][trimmed_mc['I03'].G2latitude < -60]
+trimmed_mc['I05'] = trimmed_mc['I05'][trimmed_mc['I05'].G2latitude < -60]
+trimmed_mc['I06'] = trimmed_mc['I06'][trimmed_mc['I06'].G2latitude < -60]
+trimmed_mc['I07'] = trimmed_mc['I07'][trimmed_mc['I07'].G2latitude < -60]
+trimmed_mc['I08N'] = trimmed_mc['I08N'][trimmed_mc['I08N'].G2latitude < -60]
+trimmed_mc['I08S'] = trimmed_mc['I08S'][trimmed_mc['I08S'].G2latitude < -60]
+trimmed_mc['I09N'] = trimmed_mc['I09N'][trimmed_mc['I09N'].G2latitude < -60]
+trimmed_mc['I09S'] = trimmed_mc['I09S'][trimmed_mc['I09S'].G2latitude < -60]
+trimmed_mc['I10'] = trimmed_mc['I10'][trimmed_mc['I10'].G2latitude < -60]
+
+trimmed['I01'] = trimmed['I01'][trimmed['I01'].G2latitude < -60]
+trimmed['I03'] = trimmed['I03'][trimmed['I03'].G2latitude < -60]
+trimmed['I05'] = trimmed['I05'][trimmed['I05'].G2latitude < -60]
+trimmed['I06'] = trimmed['I06'][trimmed['I06'].G2latitude < -60]
+trimmed['I07'] = trimmed['I07'][trimmed['I07'].G2latitude < -60]
+trimmed['I08N'] = trimmed['I08N'][trimmed['I08N'].G2latitude < -60]
+trimmed['I08S'] = trimmed['I08S'][trimmed['I08S'].G2latitude < -60]
+trimmed['I09N'] = trimmed['I09N'][trimmed['I09N'].G2latitude < -60]
+trimmed['I09S'] = trimmed['I09S'][trimmed['I09S'].G2latitude < -60]
+trimmed['I10'] = trimmed['I10'][trimmed['I10'].G2latitude < -60]
+
+all_trimmed_mc = pd.concat(trimmed_mc.values(), ignore_index=True) # flatten from dict of dataframes into one large dataframe
+all_trimmed_mc = all_trimmed_mc.drop_duplicates(ignore_index=True) # drop duplicates
+
+all_trimmed = pd.concat(trimmed.values(), ignore_index=True) # flatten from dict of dataframes into one large dataframe
+all_trimmed = all_trimmed.drop_duplicates(ignore_index=True) # drop duplicates
+
 #%% show layered histograms of distance from ensemble mean for each equation
 
 fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(7,4), dpi=200, sharex=True)
@@ -155,26 +186,33 @@ binwidth = 0.25
 labels = ['Eqn. 1', 'Eqn. 2', 'Eqn. 3', 'Eqn. 4', 'Eqn. 5', 'Eqn. 6', 'Eqn. 7',
           'Eqn. 8', 'Eqn. 9', 'Eqn. 10', 'Eqn. 11', 'Eqn. 12', 'Eqn. 13',
           'Eqn. 14', 'Eqn. 15', 'Eqn. 16']
-ax1.hist(hist_data, bins=np.arange(np.nanmin(hist_data.flatten()), np.nanmax(hist_data.flatten()) + binwidth, binwidth), histtype ='step', stacked=True,fill=False, label=labels)
+ax1.hist(hist_data, bins=np.arange(np.nanmin(hist_data.flatten()), np.nanmax(hist_data.flatten()) + binwidth, binwidth), histtype ='step', stacked=True,fill=True, label=labels)
 ax1.set_xlim([-5,5])
 ax1.set_ylim([0,600000])
 ax1.ticklabel_format(axis='y', style='sci', scilimits=(-1,1))
-fig.text(0.14, 0.825, 'A', fontsize=11)
+fig.text(0.14, 0.825, 'A: ESPER_LIR', fontsize=11)
 
 # plot ESPER NN results
 hist_data = np.zeros((all_trimmed.shape[0], 16))
 for i in range(0,16):
     hist_data[:,i] = all_trimmed['NNtalk' + str(i+1)] - all_trimmed['Ensemble_Mean_TA_NN']
 
-ax2.hist(hist_data, bins=np.arange(np.nanmin(hist_data.flatten()), np.nanmax(hist_data.flatten()) + binwidth, binwidth), histtype ='step', stacked=True,fill=False, label=labels)
+ax2.hist(hist_data, bins=np.arange(np.nanmin(hist_data.flatten()), np.nanmax(hist_data.flatten()) + binwidth, binwidth), histtype ='step', stacked=True,fill=True, label=labels)
 ax2.set_xlim([-5,5])
 ax2.set_ylim([0,600000])
 ax2.ticklabel_format(axis='y', style='sci', scilimits=(-1,1))
 
 # label axis, set up legend
-plt.ylabel('Number of $∆A_{T}$ Calculations')
-plt.xlabel('ESPER-Estimated $A_{T}$ - Ensemble Mean $A_{T}$ ($µmol\;kg^{-1}$)')
-fig.text(0.14, 0.41, 'B', fontsize=11)
+plt.ylabel('Number of $∆A_\mathrm{T}$ Calculations ($x$ $10^{5}$)')
+plt.xlabel('ESPER-Estimated $A_\mathrm{T}$ - Ensemble Mean $A_\mathrm{T}$ ($µmol\;kg^{-1}$)')
+fig.text(0.14, 0.41, 'B: ESPER_NN', fontsize=11)
+
+# remove "1e5" from axis bc included in axis label
+fig.patches.extend([plt.Rectangle((0.125,0.883),0.1,0.031, fill=True, color='w',
+                                  zorder=1000, transform=fig.transFigure, figure=fig)])
+
+fig.patches.extend([plt.Rectangle((0.125,0.48),0.1,0.031, fill=True, color='w',
+                                  zorder=1000, transform=fig.transFigure, figure=fig)])
 
 handles, labels = ax2.get_legend_handles_labels()
 ax2.legend(handles[::-1], labels[::-1], bbox_to_anchor = (1.05, 2.35), loc='upper left')
@@ -222,8 +260,14 @@ lon = count_positions.lon
 lat = count_positions.lat
 counts = count_positions.counts
 
-im = ax.scatter(lon,lat,c=counts, cmap=cmo.dense, transform=ccrs.PlateCarree(), marker='o', edgecolors='none', s=15)
-fig.colorbar(im, label='Number of Unique Years an\n$A_{T}$ Measurement Was Made', pad=0.02)
+cropped_cmap = cmocean.tools.crop_by_percent(cmo.dense, 10, which='min', N=None)
+base = plt.cm.get_cmap(cropped_cmap)
+color_list = base(np.linspace(0, 1, 15))
+cmap_name = base.name + str(15)
+cmap = base.from_list(cmap_name, color_list, 15)
+
+im = ax.scatter(lon,lat,c=counts, cmap=cmap, transform=ccrs.PlateCarree(), marker='o', edgecolors='none', s=15)
+fig.colorbar(im, label='Number of Unique Years an\n$A_\mathrm{T}$ Measurement Was Made', pad=0.02)
 
 #cmap = cmo.dense
 #cmap.set_under('w',1)
@@ -247,7 +291,7 @@ ax.add_feature(cfeature.LAND,color='k', zorder=12)
 
 # set up figure
 fig = plt.figure(figsize=(10,4), dpi=200)
-ax = plt.axes(projection=ccrs.PlateCarree(central_longitude=180))
+ax = plt.axes(projection=ccrs.PlateCarree(central_longitude=0))
 ax.coastlines(resolution='110m',color='k')
 g1 = ax.gridlines(crs=ccrs.PlateCarree(),draw_labels=True,alpha=0)
 g1.top_labels = False
@@ -271,7 +315,7 @@ cmap = cmocean.tools.crop(cmo.balance, to_plot.del_alk.min(), to_plot.del_alk.ma
 
 # plot data
 pts = ax.scatter(to_plot.G2longitude,to_plot.G2latitude,transform=ccrs.PlateCarree(),s=30,c=to_plot.del_alk,cmap=cmap,edgecolors='none')
-plt.colorbar(pts, ax=ax, label='Measured $A_{T}$ - ESPER-Estimated $A_{T}$ \n($µmol\;kg^{-1}$)')
+plt.colorbar(pts, ax=ax, label='$∆A_\mathrm{T}$ \n($µmol\;kg^{-1}$)')
 
 per_data = 100*(1-len(to_plot)/len(diff))
 print('% data removed to improve colorbar scale:', per_data, '%')
@@ -289,6 +333,12 @@ fall = all_trimmed.loc[((all_trimmed.datetime.dt.month.isin([3, 4, 5])) & (all_t
 # espers was trained on GLODAPv2.2020, new cruises by GLODAPv2.2023 are cruise number > 2106 & < 9999
 data_not_used_for_espers =  all_trimmed.loc[((all_trimmed['G2cruise'] > 2106) & (all_trimmed['G2cruise'] < 9999))]
 
+# looking at four A05 cruises that start in winter
+A05_test = all_trimmed[(all_trimmed.G2cruise == 341) | (all_trimmed.G2cruise == 699) | (all_trimmed.G2cruise == 1030) | (all_trimmed.G2cruise == 1109)]
+
+# looking at subarctic waters
+subarctic = all_trimmed[(all_trimmed.G2latitude > 45) & (all_trimmed.G2latitude  < 85)]
+
 # make figure
 fig, axs = plt.subplots(nrows=2, ncols=2, figsize=(6.5,4), dpi=200, sharex=True, sharey=True, layout='constrained')
 fig.add_subplot(111,frameon=False)
@@ -300,7 +350,8 @@ esper_type = 'Ensemble_Mean_TA_LIR' # LIR, NN, or Mixed
 #esper_type = 'Ensemble_Mean_TA_LIR_9-16' # LIR, NN, or Mixed
 #esper_type = 'LIRtalk16'
 #esper_sel = all_trimmed
-esper_sel = summer
+esper_sel = all_trimmed
+#esper_sel = subarctic
 esper_sel = esper_sel[esper_sel.G2depth < esper_sel.surface_depth] # do surface values (< 25 m) only
 #esper_sel = esper_sel[esper_sel['Ensemble_Mean_TA_LIR_1-8'].notna()] # needed when doing ensemble mean that doesn't include eqn. 16
 #esper_sel = esper_sel[esper_sel.dectime >= 2000]
@@ -312,7 +363,8 @@ esper_type = 'Ensemble_Mean_TA_LIR' # LIR, NN, or Mixed
 #esper_type = 'Ensemble_Mean_TA_LIR_9-16' # LIR, NN, or Mixed
 #esper_type = 'LIRtalk16'
 #esper_sel = all_trimmed # full depth
-esper_sel = summer
+esper_sel = all_trimmed
+#esper_sel = subarctic
 #esper_sel = esper_sel[esper_sel['Ensemble_Mean_TA_LIR_1-8'].notna()] # needed when doing ensemble mean that doesn't include eqn. 16
 #esper_sel = esper_sel[esper_sel.dectime >= 2000]
 p1.plot2dhist(esper_sel, esper_type, fig, axs[1,0], 'C', 0)
@@ -323,20 +375,21 @@ esper_type = 'Ensemble_Mean_TA_NN' # LIR, NN, or Mixed
 #esper_type = 'Ensemble_Mean_TA_NN_9-16' # LIR, NN, or Mixed
 #esper_type = 'NNtalk16'
 #esper_sel = all_trimmed
-esper_sel = summer
+esper_sel = all_trimmed
+#esper_sel = subarctic
 esper_sel = esper_sel[esper_sel.G2depth < esper_sel.surface_depth] # do surface values (< 25 m) only
 #esper_sel = esper_sel[esper_sel['Ensemble_Mean_TA_NN_1-8'].notna()] # needed when doing ensemble mean that doesn't include eqn. 16
 #esper_sel = esper_sel[esper_sel.dectime >= 2000]
 p1.plot2dhist(esper_sel, esper_type, fig, axs[0,1], 'B', 1)
 #p1.plot2dhist(esper_sel, esper_type, fig, axs[0,1], 'Surface (< 25 m), NN', 1)
 
-
 # full ocean NN
 esper_type = 'Ensemble_Mean_TA_NN' # LIR, NN, or Mixed
 #esper_type = 'Ensemble_Mean_TA_NN_9-16' # LIR, NN, or Mixed
 #esper_type = 'NNtalk16'
 #esper_sel = all_trimmed # full depth
-esper_sel = summer
+esper_sel = all_trimmed
+#esper_sel = subarctic
 #esper_sel = esper_sel[esper_sel['Ensemble_Mean_TA_NN_1-8'].notna()] # needed when doing ensemble mean that doesn't include eqn. 16
 #esper_sel = esper_sel[esper_sel.dectime >= 2000]
 p1.plot2dhist(esper_sel, esper_type, fig, axs[1,1], 'D', 1)
@@ -344,7 +397,7 @@ p1.plot2dhist(esper_sel, esper_type, fig, axs[1,1], 'D', 1)
 
 ax.set_xlabel('Year')
 ax.xaxis.set_label_coords(0.17,-0.65) # for 2d histogram
-ax.set_ylabel('Measured $A_{T}$ - ESPER-Estimated $A_{T}$ ($µmol\;kg^{-1}$)')
+ax.set_ylabel('$∆A_\mathrm{T}$ ($µmol\;kg^{-1}$)')
 ax.yaxis.set_label_coords(-0.62,0.28)
 
 #%% calculate metrics
@@ -412,50 +465,57 @@ plt.tick_params(labelcolor='none', which='both', top=False, bottom=False, left=F
 esper_type = 'Ensemble_Mean_TA_LIR' # LIR, NN, or Mixed
 esper_sel = winter
 esper_sel = esper_sel[esper_sel.G2depth < esper_sel.surface_depth] # do surface values (< 25 m) only
-p1.plot2dhist_1d(esper_sel, esper_type, fig, axs[0,0], 'A', 0, 1)
+p1.plot2dhist_1d(esper_sel, esper_type, fig, axs[0,0], 'A: Winter (< 25 m)', 0, 1)
 
 # winter full ocean LIR
 esper_type = 'Ensemble_Mean_TA_LIR' # LIR, NN, or Mixed
 esper_sel = winter
-p1.plot2dhist_1d(esper_sel, esper_type, fig, axs[1,0], 'E', 0, 0)
+p1.plot2dhist_1d(esper_sel, esper_type, fig, axs[1,0], 'E: Winter', 0, 0)
 
 # spring surface LIR
 esper_type = 'Ensemble_Mean_TA_LIR' # LIR, NN, or Mixed
 esper_sel = spring
 esper_sel = esper_sel[esper_sel.G2depth < esper_sel.surface_depth] # do surface values (< 25 m) only
-p1.plot2dhist_1d(esper_sel, esper_type, fig, axs[0,1], 'B', 0, 1)
+p1.plot2dhist_1d(esper_sel, esper_type, fig, axs[0,1], 'B: Spring (< 25 m)', 0, 1)
 
 # spring full ocean LIR
 esper_type = 'Ensemble_Mean_TA_LIR' # LIR, NN, or Mixed
 esper_sel = spring
-p1.plot2dhist_1d(esper_sel, esper_type, fig, axs[1,1], 'F', 0, 0)
+p1.plot2dhist_1d(esper_sel, esper_type, fig, axs[1,1], 'F: Spring', 0, 0)
 
 # summer surface LIR
 esper_type = 'Ensemble_Mean_TA_LIR' # LIR, NN, or Mixed
 esper_sel = summer
 esper_sel = esper_sel[esper_sel.G2depth < esper_sel.surface_depth] # do surface values (< 25 m) only
-p1.plot2dhist_1d(esper_sel, esper_type, fig, axs[0,2], 'C', 0, 1)
+p1.plot2dhist_1d(esper_sel, esper_type, fig, axs[0,2], 'C: Summer (< 25 m)', 0, 1)
 
 # summer full ocean LIR
 esper_type = 'Ensemble_Mean_TA_LIR' # LIR, NN, or Mixed
 esper_sel = summer
-p1.plot2dhist_1d(esper_sel, esper_type, fig, axs[1,2], 'G', 0, 0)
+p1.plot2dhist_1d(esper_sel, esper_type, fig, axs[1,2], 'G: Summer', 0, 0)
 
 # fall surface LIR
 esper_type = 'Ensemble_Mean_TA_LIR' # LIR, NN, or Mixed
 esper_sel = fall
 esper_sel = esper_sel[esper_sel.G2depth < esper_sel.surface_depth] # do surface values (< 25 m) only
-p1.plot2dhist_1d(esper_sel, esper_type, fig, axs[0,3], 'D', 1, 1)
+p1.plot2dhist_1d(esper_sel, esper_type, fig, axs[0,3], 'D: Autumn (< 25 m)', 1, 1)
 
 # fall full ocean LIR
 esper_type = 'Ensemble_Mean_TA_LIR' # LIR, NN, or Mixed
 esper_sel = fall
-p1.plot2dhist_1d(esper_sel, esper_type, fig, axs[1,3], 'H', 1, 0)
+p1.plot2dhist_1d(esper_sel, esper_type, fig, axs[1,3], 'H: Autumn', 1, 0)
 
 ax.set_xlabel('Year')
-ax.xaxis.set_label_coords(0.25,-0.62) # for 2d histogram
-ax.set_ylabel('Measured $A_{T}$ - ESPER-Estimated $A_{T}$ ($µmol\;kg^{-1}$)')
+ax.xaxis.set_label_coords(0.22,-0.62) # for 2d histogram
+ax.set_ylabel('$∆A_\mathrm{T}$ ($µmol\;kg^{-1}$)')
 ax.yaxis.set_label_coords(-0.52,0.28)
+
+# remove "1e3" and "1e4" from axis bc included in axis label
+fig.patches.extend([plt.Rectangle((0.8,0.974),0.1,0.02, fill=True, color='w',
+                                  zorder=1000, transform=fig.transFigure, figure=fig)])
+
+fig.patches.extend([plt.Rectangle((0.8,0.485),0.1,0.02, fill=True, color='w',
+                                  zorder=1000, transform=fig.transFigure, figure=fig)])
 
 #%% (∆TA/S) 2D histogram for global ensemble mean regression for all trimmed GO-SHIP
 # with robust regression (statsmodels rlm)
@@ -506,20 +566,22 @@ plt.tick_params(labelcolor='none', which='both', top=False, bottom=False, left=F
 esper_type = 'Ensemble_Mean_TA_LIR' # LIR, NN, or Mixed
 #esper_sel = all_trimmed # full depth
 esper_sel = all_trimmed[all_trimmed.G2depth < all_trimmed.surface_depth] # do surface values (< 25 m) only
-p1.plot2dhist(esper_sel, esper_type, fig, axs[0], 'A', 1)
+#esper_sel = all_trimmed[(all_trimmed.G2depth > 1000) & (all_trimmed.G2depth < 2000)] # subsurface only
+p1.plot2dhist(esper_sel, esper_type, fig, axs[0], 'A: Surface (< 25 m)', 1)
 
 # full ocean LIR
 esper_type = 'Ensemble_Mean_TA_LIR' # LIR, NN, or Mixed
 esper_sel = all_trimmed # full depth
 #esper_type = 'Ensemble_Mean_TA_NN' # LIR, NN, or Mixed
 #esper_sel = all_trimmed[all_trimmed.G2depth < all_trimmed.surface_depth] # do surface values (< 25 m) only
-p1.plot2dhist(esper_sel, esper_type, fig, axs[1], 'B', 1)
+#esper_sel = all_trimmed[(all_trimmed.G2depth > 1000) & (all_trimmed.G2depth < 2000)] # subsurface only
+p1.plot2dhist(esper_sel, esper_type, fig, axs[1], 'B: Full Depth', 1)
 
 ax.set_xlabel('Year')
 ax.xaxis.set_label_coords(0.25,-0.65) # for 2d histogram
-ax.set_ylabel('Measured $A_{T}$ - ESPER-Estimated $A_{T}$\n($µmol\;kg^{-1}$)')
+ax.set_ylabel('$∆A_\mathrm{T}$ ($µmol\;kg^{-1}$)')
 ###ax.set_ylabel('Measured $A_{T}$ ($µmol\;kg^{-1}$)')
-ax.yaxis.set_label_coords(-0.62,0.28)
+ax.yaxis.set_label_coords(-0.57,0.28)
 
 #%% data points colored by weight assigned by robust regression (statsmodels rlm)
 # surface LIR
@@ -534,27 +596,27 @@ plt.tick_params(labelcolor='none', which='both', top=False, bottom=False, left=F
 # surface LIR
 esper_type = 'Ensemble_Mean_TA_LIR' # LIR, NN, or Mixed
 esper_sel = all_trimmed[all_trimmed.G2depth < all_trimmed.surface_depth] # do surface values (< 25 m) only
-p1.plot_rlm_weights(esper_sel, esper_type, fig, axs[0,0], 'A', 0)
+p1.plot_rlm_weights(esper_sel, esper_type, fig, axs[0,0], 'A: ESPER_LIR (< 25 m)', 0)
 
 # full ocean LIR
 esper_type = 'Ensemble_Mean_TA_LIR' # LIR, NN, or Mixed
 esper_sel = all_trimmed # full depth
-p1.plot_rlm_weights(esper_sel, esper_type, fig, axs[1,0], 'C', 0)
+p1.plot_rlm_weights(esper_sel, esper_type, fig, axs[1,0], 'C: ESPER_LIR', 0)
 
 # surface NN
 esper_type = 'Ensemble_Mean_TA_NN' # LIR, NN, or Mixed
 esper_sel = all_trimmed[all_trimmed.G2depth < all_trimmed.surface_depth] # do surface values (< 25 m) only
-p1.plot_rlm_weights(esper_sel, esper_type, fig, axs[0,1], 'B', 0)
+p1.plot_rlm_weights(esper_sel, esper_type, fig, axs[0,1], 'B: ESPER_NN (< 25 m)', 0)
 
 # full ocean NN
 esper_type = 'Ensemble_Mean_TA_NN' # LIR, NN, or Mixed
 esper_sel = all_trimmed # full depth
-pts = p1.plot_rlm_weights(esper_sel, esper_type, fig, axs[1,1], 'D', 0)
+pts = p1.plot_rlm_weights(esper_sel, esper_type, fig, axs[1,1], 'D: ESPER_NN', 0)
 
 # adjust figure
 ax.set_xlabel('Year')
 ax.xaxis.set_label_coords(0.4,-0.1)
-ax.set_ylabel('Measured $A_{T}$ - ESPER-Estimated $A_{T}$ ($µmol\;kg^{-1}$)', labelpad=15)
+ax.set_ylabel('$∆A_\mathrm{T}$ ($µmol\;kg^{-1}$)', labelpad=15)
 
 # add single colorbar
 fig.colorbar(pts, ax=axs.ravel().tolist(), label='Weight Assigned by RLM')
@@ -574,6 +636,7 @@ mc_sel = all_trimmed_mc
 #mc_sel = fall_mc
 #mc_sel = mc_sel[mc_sel['Ensemble_Mean_TA_LIR_1-8'].notna()] # needed when doing ensemble mean that doesn't include eqn. 16
 mc_sel_surf = mc_sel[mc_sel.G2depth < mc_sel.surface_depth]
+#mc_sel_surf = mc_sel[(mc_sel.G2depth > 1000) & (mc_sel.G2depth < 2000)]
 x = mc_sel.dectime
 x_surf = mc_sel_surf.dectime
 
@@ -616,35 +679,44 @@ for i in range(0,G2talk_mc.shape[1]):
 
 fig, axs = plt.subplots(nrows=2, ncols=2, figsize=(8,5), dpi=200, sharex=True, sharey=True)
 fig.add_subplot(111,frameon=False)
+fig.tight_layout(pad=1.5)
 plt.tick_params(labelcolor='none', which='both', top=False, bottom=False, left=False, right=False)
 
 axs[0,0].hist(slopes_surf_LIR, bins=100)
 axs[0,0].set_xlim([-0.15, 0.15]) # per cruise offset
-#axs[0,0].set_xlim([-0.075, 0.075]) # individual offset
+axs[0,0].set_xlim([-0.075, 0.075]) # individual offset
 mu = slopes_surf_LIR.mean()
 sigma = slopes_surf_LIR.std()
-fig.text(0.14, 0.825, 'A', fontsize=14)
-fig.text(0.236, 0.84, '$\mu={:.4f}, \sigma={:.4f}$'.format(mu, sigma), fontsize=12)
+axs[0,0].text(-0.145, 31.5, 'A: ESPER_LIR (< 25 m)', fontsize=11) # per cruise offset
+axs[0,0].text(-0.145, 23.5,'$\mu={:.4f}$\n$\sigma={:.4f}$'.format(mu, sigma), fontsize=11) # per cruise offset
+#axs[0,0].text(-0.071, 34.2, 'A: ESPER_LIR (< 25 m)', fontsize=11) # individual offset
+#axs[0,0].text(-0.071, 26.2,'$\mu={:.4f}$\n$\sigma={:.4f}$'.format(mu, sigma), fontsize=11) # individual offset
 
 axs[1,0].hist(slopes_LIR, bins=100)
 mu = slopes_LIR.mean()
 sigma = slopes_LIR.std()
-fig.text(0.14, 0.415, 'C', fontsize=14)
-fig.text(0.236, 0.43, '$\mu={:.4f}, \sigma={:.4f}$'.format(mu, sigma), fontsize=12)
+axs[1,0].text(-0.145, 31.5, 'C: ESPER_LIR', fontsize=11) # per cruise offset
+axs[1,0].text(-0.145, 23.5,'$\mu={:.4f}$\n$\sigma={:.4f}$'.format(mu, sigma), fontsize=11) # per cruise offset
+#axs[1,0].text(-0.071, 34.2, 'C: ESPER_LIR', fontsize=11) # individual offset
+#axs[1,0].text(-0.071, 26.2,'$\mu={:.4f}$\n$\sigma={:.4f}$'.format(mu, sigma), fontsize=11) # individual offset
 
 axs[0,1].hist(slopes_surf_NN, bins=100)
 mu = slopes_surf_NN.mean()
 sigma = slopes_surf_NN.std()
-fig.text(0.56, 0.825, 'B', fontsize=14)
-fig.text(0.661, 0.84, '$\mu={:.4f}, \sigma={:.4f}$'.format(mu, sigma), fontsize=12)
+axs[0,1].text(-0.145, 31.5, 'B: ESPER_NN (< 25 m)', fontsize=11) # per cruise offset
+axs[0,1].text(-0.145, 23.5,'$\mu={:.4f}$\n$\sigma={:.4f}$'.format(mu, sigma), fontsize=11) # per cruise offset
+#axs[0,1].text(-0.071, 34.2, 'B: ESPER_NN (< 25 m)', fontsize=11) # individual offset
+#axs[0,1].text(-0.071, 26.2,'$\mu={:.4f}$\n$\sigma={:.4f}$'.format(mu, sigma), fontsize=11) # individual offset
 
 axs[1,1].hist(slopes_NN, bins=100)
 mu = slopes_NN.mean()
 sigma = slopes_NN.std()
-fig.text(0.56, 0.415, 'D', fontsize=14)
-fig.text(0.661, 0.43, '$\mu={:.4f}, \sigma={:.4f}$'.format(mu, sigma), fontsize=12)
+axs[1,1].text(-0.145, 31.5, 'D: ESPER_NN', fontsize=11) # per cruise offset
+axs[1,1].text(-0.145, 23.5,'$\mu={:.4f}$\n$\sigma={:.4f}$'.format(mu, sigma), fontsize=11) # per cruise offset
+#axs[1,1].text(-0.071, 34.2, 'D: ESPER_NN', fontsize=11) # individual offset
+#axs[1,1].text(-0.071, 26.2,'$\mu={:.4f}$\n$\sigma={:.4f}$'.format(mu, sigma), fontsize=11) # individual offset
 
-plt.xlabel('Slope of Measured $A_{T}$ - ESPER-Estimated $A_{T}$ over Time ($µmol\;kg^{-1}\;yr^{-1}$)')
+plt.xlabel('Temporal Trend in $∆A_\mathrm{T}$ ($µmol\;kg^{-1}\;yr^{-1}$)')
 plt.ylabel('Number of Occurrences')
 
 #%% print statistics
@@ -708,19 +780,19 @@ plt.tick_params(labelcolor='none', which='both', top=False, bottom=False, left=F
 axs[0].boxplot(all_slopes_surf, vert=True, labels=list(trimmed_mc.keys()))
 axs[0].axhline(y=0, color='r', linestyle='--')
 axs[0].set_ylim(-5, 5)
-axs[0].text(1.25, 3.8, 'A', fontsize=12)
+axs[0].text(1, 3.9, 'A: Surface (< 25 m)', fontsize=11)
 
 # make box plot for full depth
 axs[1].boxplot(all_slopes_full, vert=True, labels=list(trimmed_mc.keys()))
 axs[1].axhline(y=0, color='r', linestyle='--')
 axs[1].set_ylim(-5, 5)
-axs[1].text(1.25, 3.8, 'B', fontsize=12)
+axs[1].text(1, 3.9, 'B: Full Depth', fontsize=11)
 axs[1].tick_params(axis='x', labelrotation=90)
 
-ax.set_ylabel('Slope of Measured $A_{T}$ - ESPER-Estimated $A_{T}$ over Time\n($µmol$ $kg^{-1}$ $yr^{-1}$)')
+ax.set_ylabel('Temporal Trend in $∆A_\mathrm{T}$ ($µmol$ $kg^{-1}$ $yr^{-1}$)')
 #ax.set_ylabel('Slope of Measured $A_{T}$ over Time\n($µmol$ $kg^{-1}$ $yr^{-1}$)')
 
-ax.yaxis.set_label_coords(-0.63,0.55)
+ax.yaxis.set_label_coords(-0.57,0.55)
 
 #%% calculate error: error in TREND, not point
 # u_esper = standard deviation in slope across all 16 equations
@@ -735,6 +807,7 @@ esper_sel = all_trimmed
 #esper_sel = fall_mc
 #esper_sel = esper_sel[esper_sel['Ensemble_Mean_TA_LIR_1-8'].notna()] # needed when doing ensemble mean that doesn't include eqn. 16
 esper_sel = esper_sel[esper_sel.G2depth < esper_sel.surface_depth] # do surface values (< 25 m) only
+#esper_sel = esper_sel[(esper_sel.G2depth > 5000) & (esper_sel.G2depth < 10000)] # do surface values (< 25 m) only
 slopes_rlm = np.zeros(16)
 slopes_ols = np.zeros(16)
 #slopes_rlm = np.zeros(8) # if doing equations 1-8 or 9-16
@@ -760,10 +833,10 @@ for i in range(0,16):
     ols_model = sm.OLS(y, x_model)
     ols_results = ols_model.fit()
 
-    #slopes_rlm[i] = rlm_results.params[1]
-    #slopes_ols[i] = ols_results.params[1]
-    slopes_rlm[i-8] = rlm_results.params[1] # if doing equations 9-16 only
-    slopes_ols[i-8] = ols_results.params[1] # if doing equations 9-16 only
+    slopes_rlm[i] = rlm_results.params[1]
+    slopes_ols[i] = ols_results.params[1]
+    #slopes_rlm[i-8] = rlm_results.params[1] # if doing equations 9-16 only
+    #slopes_ols[i-8] = ols_results.params[1] # if doing equations 9-16 only
 
 u_esper = slopes_rlm.std() # change if RLM or OLS used for u_esper here
 
@@ -771,7 +844,7 @@ u_esper = slopes_rlm.std() # change if RLM or OLS used for u_esper here
 u_sample = slopes_surf_LIR.std() # for SURFACE, LIR
 #u_sample = slopes_LIR.std() # for FULL DEPTH, LIR
 #u_sample = slopes_surf_NN.std() # for SURFACE, NN
-#u_sample = slopes_NN.std() # for FULL DEPTH, NN
+u_sample = slopes_NN.std() # for FULL DEPTH, NN
 
 U = np.sqrt(u_esper**2 + u_sample**2)
 print(round(U,3))
@@ -1010,11 +1083,11 @@ axs[0].axhline(y=0.0, ls='--', c='k')
 axs[1].axhline(y=0.0, ls='--', c='k')
 
 axs[1].set_xlabel('Equation Number')
-axs[1].set_ylabel('Slope of Difference between $A_{T}$ Predicted\nby Each Eqn. and Eqn. 16 over Time\n($µmol\;kg^{-1}\;yr^{-1}$)')
+axs[1].set_ylabel('Difference between $A_\mathrm{T}$ Predicted\nby Each Eqn. and Eqn. 16 over Time\n($µmol\;kg^{-1}\;yr^{-1}$)')
 axs[1].yaxis.set_label_coords(-0.1,1.1)
 
-axs[0].text(0.4, -0.024, 'A', fontsize=12)
-axs[1].text(0.4, -0.024, 'B', fontsize=12)
+axs[0].text(0.45, -0.024, 'A: ESPER_LIR', fontsize=11)
+axs[1].text(0.45, -0.024, 'B: ESPER_NN', fontsize=11)
 
 axs[0].set_ylim([-0.027, 0.027])
 axs[1].set_ylim([-0.027, 0.027])
@@ -1103,13 +1176,13 @@ south_pacific = south_pacific[south_pacific['G2latitude'] > -60] # keep only abo
 south_pacific = south_pacific[south_pacific['G2latitude'] <= 0] # keep only below 0º latitude
 
 # indian ocean
-indian = {key: value for key, value in trimmed.items() if key in {'I01', 'I03', 'I05', 'I06S', 'I07', 'I08N', 'I08S', 'I09N', 'I09S', 'I10'}}
+indian = {key: value for key, value in trimmed.items() if key in {'I01', 'I03', 'I05', 'I06', 'I07', 'I08N', 'I08S', 'I09N', 'I09S', 'I10'}}
 indian = pd.concat(indian.values(), ignore_index=True) # flatten from dict of dataframes into one large dataframe
 indian = indian.drop_duplicates(ignore_index=True) # drop duplicates
 indian = indian[indian['G2latitude'] > -60] # keep only above -60º latitude
 
 # southern ocean
-southern = {key: value for key, value in trimmed.items() if key in {'A12', 'A135', 'I06S', 'I07', 'I08S', 'I09S', 'P14', 'P15', 'P16S', 'P18', 'S04I', 'S04P', 'SR01', 'SR03', 'SR04'}}
+southern = {key: value for key, value in trimmed.items() if key in {'A12', 'A135', 'I06', 'I07', 'I08S', 'I09S', 'P14', 'P15', 'P16S', 'P18', 'S04I', 'S04P', 'SR01', 'SR03', 'SR04'}}
 southern = pd.concat(southern.values(), ignore_index=True) # flatten from dict of dataframes into one large dataframe
 southern = southern.drop_duplicates(ignore_index=True) # drop duplicates
 southern = southern[southern['G2latitude'] <= -60] # keep only below -60º latitude
@@ -1171,6 +1244,8 @@ plt.tick_params(labelcolor='none', which='both', top=False, bottom=False, left=F
 esper_type = 'Ensemble_Mean_TA_LIR' # LIR, NN, or Mixed
 #esper_type = 'Ensemble_Mean_TA_NN' # LIR, NN, or Mixed
 basin_sel = basin[basin.G2depth < basin.surface_depth] # do surface values (< 25 m) only
+#basin_sel = basin[basin.G2latitude > 45]
+#basin_sel = basin_sel[basin_sel.G2depth < 1000] 
 #basin_sel = basin_sel[basin_sel.dectime >= 2010]
 p1.plot2dhist(basin_sel, esper_type, fig, axs[0], 'Surface (< 25 m)', 1)
 
@@ -1220,11 +1295,39 @@ for season, name in zip(seasons, season_names):
 ax.legend(bbox_to_anchor = (0.8, -0.1), ncol=4)
 ax.set_ylabel('Number of $A_{T}$ Measurements')
 
+#%% look at alkalinity in each region over time
+basins = [north_atlantic, south_atlantic, north_pacific, south_pacific, indian, southern, arctic]
+basin_names = ['North Atlantic', 'South Atlantic', 'North Pacific', 'South Pacific', 'Indian', 'Southern', 'Arctic']
+
+# calculate trend in AT over time for each region
+#ax.scatter(north_atlantic.dectime,north_atlantic.G2talk)
+
+for basin, name in zip(basins, basin_names):
+
+    x = basin.dectime
+    y = basin.G2talk
+    
+    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(7,4), dpi=200, sharex=True, sharey=True, layout='constrained')
+    ax.scatter(x,y)
+    ax.set_ylabel('$A_{T}$ ($µmol\;kg^{-1}$)')
+    ax.set_title(name)
+    
+    x_model = sm.add_constant(x) # this is required in statsmodels to get an intercept
+    rlm_model = sm.RLM(y, x_model, M=sm.robust.norms.HuberT())
+    rlm_results = rlm_model.fit()
+    ols_model = sm.OLS(y, x_model)
+    ols_results = ols_model.fit()
+    
+    ax.plot(x_model.iloc[:,1], rlm_results.fittedvalues, ls='-', color='black', label='RLM')
+    
+    print(name)
+    print('ols slope, p value: ' + str(ols_results.params.iloc[1]) + ', ' + str(ols_results.pvalues.iloc[1]))
+    print('rlm slope, p value: ' + str(rlm_results.params.iloc[1]) + ', ' + str(rlm_results.pvalues.iloc[1]))
+    print('')
 # %% run (or upload) MC simulation FOR EACH REGION to create array of simulated G2talk values (by cruise offset)
 #num_mc_runs = 1000
 #basins = [north_atlantic, south_atlantic, north_pacific, south_pacific, indian, southern, arctic]
 #basin_abbr = ['NA', 'SA', 'NP', 'SP', 'IO', 'SO', 'AO']
-
 #for basin, abbr in zip(basins, basin_abbr):
 #    print(abbr)
 #    G2talk_mc = p1.create_mc_cruise_offset(basin, num_mc_runs)
@@ -1257,14 +1360,17 @@ G2talk_mc_regions = [G2talk_mc_NA, G2talk_mc_SA, G2talk_mc_NP, G2talk_mc_SP, G2t
 G2talk_std_regions = [G2talk_std_NA, G2talk_std_SA, G2talk_std_NP, G2talk_std_SP, G2talk_std_IO, G2talk_std_SO, G2talk_std_AO]
 
 # %% loop through monte carlo simulation-produced G2talk to do global ensemble mean regression
-all_trimmed_basin = north_atlantic
-G2talk_mc_basin = G2talk_mc_NA
+all_trimmed_basin = north_pacific
+G2talk_mc_basin = G2talk_mc_NP
 
 # plot surface values and do regular linear regression
 all_trimmed_basin.reset_index(drop=True, inplace=True)
 G2talk_mc_basin.reset_index(drop=True, inplace=True)
 all_trimmed_mc_basin = pd.concat([all_trimmed_basin, G2talk_mc_basin], axis=1)
-all_trimmed_mc_basin_surf = all_trimmed_mc_basin[all_trimmed_mc_basin.G2depth < all_trimmed_mc_basin.surface_depth]
+#all_trimmed_mc_basin_surf = all_trimmed_mc_basin[all_trimmed_mc_basin.G2depth < all_trimmed_mc_basin.surface_depth]
+all_trimmed_mc_basin = all_trimmed_mc_basin[all_trimmed_mc_basin.G2latitude > 45]
+all_trimmed_mc_basin_surf = all_trimmed_mc_basin[all_trimmed_mc_basin.G2depth < 1000]
+
 x = all_trimmed_mc_basin.dectime
 x_surf = all_trimmed_mc_basin_surf.dectime
 
@@ -1392,6 +1498,14 @@ mc_basins = [df_empty, G2talk_mc_NA, G2talk_mc_SA, G2talk_mc_NP, G2talk_mc_SP,
              df_empty, df_empty, df_empty, df_empty, df_empty, df_empty,
              df_empty, df_empty, df_empty, df_empty, df_empty]
 
+# test out subarctic north pacific
+#north_pacific.reset_index(drop=True, inplace=True)
+#G2talk_mc_NP.reset_index(drop=True, inplace=True)
+#all_trimmed_mc_NP = pd.concat([all_trimmed_basin, G2talk_mc_basin], axis=1)
+#subarctic_north_pacific_mc = all_trimmed_mc_NP[all_trimmed_mc_NP.G2latitude > 45]
+#basins = [subarctic_north_pacific_mc.iloc[:,0:124]]
+#mc_basins = [subarctic_north_pacific_mc.iloc[:,-1000:]]
+
 basin_U_surf_LIR = np.zeros(len(basins))
 basin_U_surf_NN = np.zeros(len(basins))
 basin_U_LIR = np.zeros(len(basins))
@@ -1412,6 +1526,7 @@ for basin, mc_basin, j in zip(basins, mc_basins, range(0,len(basins))):
     # calculate u_esper
     esper = basin
     esper_surf = basin[basin.G2depth < basin.surface_depth] # do surface values (< 25 m) only
+    #esper_surf = basin[basin.G2depth < 1000]
     
     slopes_rlm_LIR = np.zeros(16)
     slopes_rlm_NN = np.zeros(16)
@@ -1638,10 +1753,55 @@ for basin, j in zip(basins, range(0,len(basins))):
     
 #%% print trend ± uncertainty
 for i in range(0,8):
-    print(round(basin_trend_surf_LIR[i],3), '±', round(basin_U_surf_LIR[i],3))
+    #print(round(basin_trend_surf_LIR[i],3), '±', round(basin_U_surf_LIR[i],3))
     #print(round(basin_trend_LIR[i],3), '±', round(basin_U_LIR[i],3))
     #print(round(basin_trend_surf_NN[i],3), '±', round(basin_U_surf_NN[i],3))
-    #print(round(basin_trend_NN[i],3), '±', round(basin_U_NN[i],3))
+    print(round(basin_trend_NN[i],3), '±', round(basin_U_NN[i],3))
+
+#%% plot trends with error bars - TRANSECTS ONLY
+fig, axs = plt.subplots(nrows=2, ncols=1, figsize=(8,4.5), dpi=200, sharex=True, sharey=True, layout='constrained')
+fig.add_subplot(111,frameon=False)
+ax = fig.gca()
+plt.tick_params(labelcolor='none', which='both', top=False, bottom=False, left=False, right=False)
+
+x = np.array(range(0,len(basin_trend_LIR[8:])))
+
+axs[0].errorbar(x-0.15, basin_trend_surf_LIR[8:], yerr=basin_U_surf_LIR[8:], fmt="o", c='indigo', alpha = 0.5)
+axs[0].errorbar(x+0.15, basin_trend_surf_NN[8:], yerr=basin_U_surf_NN[8:], fmt="o", c='dodgerblue', alpha = 0.5)
+
+axs[1].errorbar(x-0.15, basin_trend_LIR[8:], yerr=basin_U_LIR[8:], fmt="o", c='indigo', label='ESPER LIR', alpha = 0.5)
+axs[1].errorbar(x+0.15, basin_trend_NN[8:], yerr=basin_U_NN[8:], fmt="o", c='dodgerblue', label='ESPER NN', alpha = 0.5)
+
+axs[0].axhline(y=0, color='k', linestyle='--')
+axs[1].axhline(y=0, color='k', linestyle='--')
+
+axs[0].set_ylim([-0.5, 0.5])   
+axs[1].set_ylim([-0.5, 0.5]) 
+#axs[0].set_ylim([-7.5, 7.5])   
+#axs[1].set_ylim([-7.5, 7.5])    
+axs[1].set_xlim(-0.5, len(basin_trend_LIR[8:]) - 0.5) 
+ 
+basin_abbr = ['A02', 'A05', 'A10',
+              'A12', 'A135', 'A16N', 'A16S', 'A17', 'A20', 'A22', 'A25', 'A29',
+              'AR07E', 'AR07W', 'ARC01E', 'I03', 'I05', 'I06', 'I07', 'I08N', 'I08S',
+              'I09N', 'I09S', 'I10', 'P01', 'P02', 'P03', 'P06', 'P09', 'P10', 'P13',
+              'P14', 'P15', 'P16N', 'P16S', 'P17N', 'P18', 'P21', 'S04I',
+              'SR04', 'S04P', 'SR01', 'SR03']
+axs[1].set_xticks(x, basin_abbr)
+
+ax.set_ylabel('Temporal Trend in $∆A_\mathrm{T}$ ($µmol$ $kg^{-1}$ $yr^{-1}$)')
+#ax.set_ylabel('Temporal Trend in Measured $A_{T}$ - (Ensemble Mean\nESPER-Estimated $A_{T}$ - Eqn. 16 Estimate), ($µmol$ $kg^{-1}$ $yr^{-1}$)')
+ax.yaxis.set_label_coords(-0.57,0.55)
+axs[1].tick_params(axis='x', labelrotation=90)
+axs[0].text(0, -0.45, 'A', fontsize=12)
+axs[1].text(0, -0.45, 'B', fontsize=12)
+axs[1].legend(bbox_to_anchor = (0.6, 0.21), ncol=2)
+
+#axs[0].text(0, -2, 'A', fontsize=12)
+#axs[1].text(0, -2, 'B', fontsize=12)
+#axs[1].legend(bbox_to_anchor = (1, 0.21), ncol=2)
+#axs[0].text(0, -7, 'Surface (< 25 m)', fontsize=12)
+#axs[1].text(0, -7, 'Full Depth', fontsize=12)
 
 #%% plot trends with error bars
 fig, axs = plt.subplots(nrows=2, ncols=1, figsize=(8,4.5), dpi=200, sharex=True, sharey=True, layout='constrained')
@@ -1660,8 +1820,8 @@ axs[1].errorbar(x+0.15, basin_trend_NN, yerr=basin_U_NN, fmt="o", c='dodgerblue'
 axs[0].axhline(y=0, color='k', linestyle='--')
 axs[1].axhline(y=0, color='k', linestyle='--')
 
-axs[0].set_ylim([-0.5, 0.5])   
-axs[1].set_ylim([-0.5, 0.5]) 
+#axs[0].set_ylim([-0.5, 0.5])   
+#axs[1].set_ylim([-0.5, 0.5]) 
 #axs[0].set_ylim([-7.5, 7.5])   
 #axs[1].set_ylim([-7.5, 7.5])    
 axs[1].set_xlim(-0.5, len(basin_trend_LIR) - 0.5) 
@@ -1674,19 +1834,64 @@ basin_abbr = ['Global', 'NAO', 'SAO', 'NPO', 'SPO', 'IO', 'SO', 'AO', 'A02', 'A0
               'SR04', 'S04P', 'SR01', 'SR03']
 axs[1].set_xticks(x, basin_abbr)
 
-ax.set_ylabel('Temporal Trend in Measured $A_{T}$ - ESPER-Estimated $A_{T}$\n($µmol$ $kg^{-1}$ $yr^{-1}$)')
+ax.set_ylabel('Temporal Trend in $∆A_\mathrm{T}$ ($µmol$ $kg^{-1}$ $yr^{-1}$)')
 #ax.set_ylabel('Temporal Trend in Measured $A_{T}$ - (Ensemble Mean\nESPER-Estimated $A_{T}$ - Eqn. 16 Estimate), ($µmol$ $kg^{-1}$ $yr^{-1}$)')
-ax.yaxis.set_label_coords(-0.62,0.55)
+ax.yaxis.set_label_coords(-0.57,0.55)
 axs[1].tick_params(axis='x', labelrotation=90)
-axs[0].text(0, -0.45, 'A', fontsize=12)
-axs[1].text(0, -0.45, 'B', fontsize=12)
-axs[1].legend(bbox_to_anchor = (0.6, 0.21), ncol=2)
+#axs[0].text(0, -0.45, 'A', fontsize=12)
+#axs[1].text(0, -0.45, 'B', fontsize=12)
+#axs[1].legend(bbox_to_anchor = (0.6, 0.21), ncol=2)
 
-#axs[0].text(0, -2, 'A', fontsize=12)
-#axs[1].text(0, -2, 'B', fontsize=12)
-#axs[1].legend(bbox_to_anchor = (1, 0.21), ncol=2)
+axs[0].text(0, -2, 'A: Surface (< 25 m)', fontsize=12)
+axs[1].text(0, -2, 'B: Full Depth', fontsize=12)
+axs[1].legend(bbox_to_anchor = (1, 0.21), ncol=2)
 #axs[0].text(0, -7, 'Surface (< 25 m)', fontsize=12)
 #axs[1].text(0, -7, 'Full Depth', fontsize=12)
+
+#%% plot trends with error bars: 3 panel (surface, depth, surface - depth)
+fig, axs = plt.subplots(nrows=1, ncols=3, figsize=(7.5,3.5), dpi=200, sharex=True, sharey=True, layout='constrained')
+fig.add_subplot(111,frameon=False)
+ax = fig.gca()
+plt.tick_params(labelcolor='none', which='both', top=False, bottom=False, left=False, right=False)
+
+x = np.array(range(0,len(basin_trend_LIR[0:8])))
+
+# surface
+axs[0].errorbar(x-0.15, basin_trend_surf_LIR[0:8], yerr=basin_U_surf_LIR[0:8], fmt="o", c='indigo', label='ESPER LIR', alpha = 0.5)
+axs[0].errorbar(x+0.15, basin_trend_surf_NN[0:8], yerr=basin_U_surf_NN[0:8], fmt="o", c='dodgerblue', label='ESPER NN', alpha = 0.5)
+axs[0].axhline(y=0, color='k', linestyle='--')
+
+# depth
+axs[1].errorbar(x-0.15, basin_trend_LIR[0:8], yerr=basin_U_LIR[0:8], fmt="o", c='indigo', label='ESPER LIR', alpha = 0.5)
+axs[1].errorbar(x+0.15, basin_trend_NN[0:8], yerr=basin_U_NN[0:8], fmt="o", c='dodgerblue', label='ESPER NN', alpha = 0.5)
+axs[1].axhline(y=0, color='k', linestyle='--')
+
+# surface - depth
+trend_diff_LIR = basin_trend_surf_LIR - basin_trend_LIR
+trend_diff_NN = basin_trend_surf_NN - basin_trend_NN
+error_summed_LIR = np.sqrt(basin_U_surf_LIR**2 + basin_U_LIR**2)
+error_summed_NN = np.sqrt(basin_U_surf_NN**2 + basin_U_NN**2)
+
+axs[2].errorbar(x-0.15, trend_diff_LIR[0:8], yerr=error_summed_LIR[0:8], fmt="o", c='indigo', label='ESPER LIR', alpha = 0.5)
+axs[2].errorbar(x+0.15, trend_diff_NN[0:8], yerr=error_summed_NN[0:8], fmt="o", c='dodgerblue', label='ESPER NN', alpha = 0.5)
+axs[2].axhline(y=0, color='k', linestyle='--')
+
+axs[0].set_ylim([-0.25, 0.25])   
+axs[0].set_xlim(-0.5, len(basin_trend_LIR[0:8]) - 0.5) 
+ 
+basin_abbr = ['Global', 'N. Atlantic', 'S. Atlantic', 'N. Pacific', 'S. Pacific', 'Indian', 'Southern', 'Arctic']
+axs[0].set_xticks(x, basin_abbr)
+axs[0].tick_params(axis='x', labelrotation=90)
+axs[1].tick_params(axis='x', labelrotation=90)
+axs[2].tick_params(axis='x', labelrotation=90)
+
+ax.set_ylabel('Temporal Trend in $∆A_\mathrm{T}$ ($µmol$ $kg^{-1}$ $yr^{-1}$)',fontsize=11)
+ax.yaxis.set_label_coords(-0.55,0.5)
+axs[0].text(-0.35, -0.23, 'A: Surface (< 25 m)', fontsize=11)
+axs[1].text(-0.35, -0.23, 'B: Full Depth', fontsize=11)
+axs[2].text(-0.35, -0.23, 'C: Surface - Full Depth', fontsize=11)
+axs[0].legend(bbox_to_anchor = (0.58, 0.32), ncol=1)
+
 
 #%% plot trends with error bars - REGIONS ONLY (for presentation)
 fig, axs = plt.subplots(nrows=2, ncols=1, figsize=(5,4), dpi=200, sharex=True, sharey=True, layout='constrained')
@@ -1719,6 +1924,84 @@ axs[0].text(-0.35, -0.22, 'Surface (< 25 m)', fontsize=10)
 axs[1].text(-0.35, -0.22, 'Full Depth', fontsize=10)
 #axs[1].legend(bbox_to_anchor = (0.8, -0.75), ncol=2)
 axs[1].legend(bbox_to_anchor = (1.0, 0.25), ncol=2)
+
+
+#axs[0].text(0, -2, 'A', fontsize=12)
+#axs[1].text(0, -2, 'B', fontsize=12)
+#axs[1].legend(bbox_to_anchor = (1, 0.21), ncol=2)
+
+#%% plot trends with error bars (surface - depth)
+fig, axs = plt.subplots(nrows=1, ncols=1, figsize=(8,4.5), dpi=200, sharex=True, sharey=True, layout='constrained')
+fig.add_subplot(111,frameon=False)
+plt.tick_params(labelcolor='none', which='both', top=False, bottom=False, left=False, right=False)
+
+x = np.array(range(0,len(basin_trend_LIR)))
+
+trend_diff_LIR = basin_trend_surf_LIR - basin_trend_LIR
+trend_diff_NN = basin_trend_surf_NN - basin_trend_NN
+error_summed_LIR = np.sqrt(basin_U_surf_LIR**2 + basin_U_LIR**2)
+error_summed_NN = np.sqrt(basin_U_surf_NN**2 + basin_U_NN**2)
+
+axs.errorbar(x-0.15, trend_diff_LIR, yerr=error_summed_LIR, fmt="o", c='indigo', label='ESPER LIR', alpha = 0.5)
+axs.errorbar(x+0.15, trend_diff_NN, yerr=error_summed_NN, fmt="o", c='dodgerblue', label='ESPER NN', alpha = 0.5)
+
+axs.axhline(y=0, color='k', linestyle='--')
+
+#axs[0].set_ylim([-0.5, 0.5])   
+#axs[1].set_ylim([-0.5, 0.5]) 
+#axs[0].set_ylim([-7.5, 7.5])   
+#axs[1].set_ylim([-7.5, 7.5])    
+axs.set_xlim(-0.5, len(basin_trend_LIR) - 0.5) 
+ 
+basin_abbr = ['Global', 'NAO', 'SAO', 'NPO', 'SPO', 'IO', 'SO', 'AO', 'A02', 'A05', 'A10',
+              'A12', 'A135', 'A16N', 'A16S', 'A17', 'A20', 'A22', 'A25', 'A29',
+              'AR07E', 'AR07W', 'ARC01E', 'I03', 'I05', 'I06', 'I07', 'I08N', 'I08S',
+              'I09N', 'I09S', 'I10', 'P01', 'P02', 'P03', 'P06', 'P09', 'P10', 'P13',
+              'P14', 'P15', 'P16N', 'P16S', 'P17N', 'P18', 'P21', 'S04I',
+              'SR04', 'S04P', 'SR01', 'SR03']
+axs.set_xticks(x, basin_abbr)
+
+axs.set_ylabel('Temporal Trend in Measured $A_{T}$ - ESPER-Estimated $A_{T}$\n($µmol$ $kg^{-1}$ $yr^{-1}$)')
+#ax.set_ylabel('Temporal Trend in Measured $A_{T}$ - (Ensemble Mean\nESPER-Estimated $A_{T}$ - Eqn. 16 Estimate), ($µmol$ $kg^{-1}$ $yr^{-1}$)')
+#axs.yaxis.set_label_coords(-0.62,0.55)
+axs.tick_params(axis='x', labelrotation=90)
+#axs[0].text(0, -0.45, 'A', fontsize=12)
+#axs[1].text(0, -0.45, 'B', fontsize=12)
+#axs[1].legend(bbox_to_anchor = (0.6, 0.21), ncol=2)
+
+axs.text(0, -2, 'A', fontsize=12)
+axs.legend(bbox_to_anchor = (1, 0.21), ncol=2)
+#axs[0].text(0, -7, 'Surface (< 25 m)', fontsize=12)
+#axs[1].text(0, -7, 'Full Depth', fontsize=12)
+
+#%% plot trends with error bars - surface - depth, REGIONS ONLY
+fig, axs = plt.subplots(nrows=1, ncols=1, figsize=(5,4), dpi=200, sharex=True, sharey=True, layout='constrained')
+fig.add_subplot(111,frameon=False)
+plt.tick_params(labelcolor='none', which='both', top=False, bottom=False, left=False, right=False)
+
+x = np.array(range(0,len(basin_trend_LIR[0:8])))
+
+trend_diff_LIR = basin_trend_surf_LIR - basin_trend_LIR
+trend_diff_NN = basin_trend_surf_NN - basin_trend_NN
+error_summed_LIR = np.sqrt(basin_U_surf_LIR**2 + basin_U_LIR**2)
+error_summed_NN = np.sqrt(basin_U_surf_NN**2 + basin_U_NN**2)
+
+axs.errorbar(x-0.15, trend_diff_LIR[0:8], yerr=error_summed_LIR[0:8], fmt="o", c='indigo', label='ESPER LIR', alpha = 0.5)
+axs.errorbar(x+0.15, trend_diff_NN[0:8], yerr=error_summed_NN[0:8], fmt="o", c='dodgerblue', label='ESPER NN', alpha = 0.5)
+
+axs.axhline(y=0, color='k', linestyle='--')
+
+axs.set_ylim([-0.25, 0.25])   
+axs.set_xlim(-0.5, len(basin_trend_LIR[0:8]) - 0.5) 
+ 
+basin_abbr = ['Global', 'N. Atlantic', 'S. Atlantic', 'N. Pacific', 'S. Pacific', 'Indian', 'Southern', 'Arctic']
+axs.set_xticks(x, basin_abbr)
+
+axs.set_ylabel('Temporal Trend in Surface $∆A_{T}$ - Trend\nin Full Depth $∆A_{T}$ ($µmol$ $kg^{-1}$ $yr^{-1}$)',fontsize=10)
+axs.tick_params(axis='x', labelrotation=45)
+#axs.text(-0.35, -0.18, 'Surface  - Full Depth' , fontsize=10)
+#axs[1].legend(bbox_to_anchor = (0.8, -0.75), ncol=2)
+axs.legend(bbox_to_anchor = (0.68, 0.12), ncol=2)
 
 
 #axs[0].text(0, -2, 'A', fontsize=12)
@@ -1789,28 +2072,28 @@ plt.tick_params(labelcolor='none', which='both', top=False, bottom=False, left=F
 axs[0,0].boxplot(all_slopes_surf_LIR, vert=True, labels=list(trimmed_mc_basin_surf.keys()))
 axs[0,0].axhline(y=0, color='r', linestyle='--')
 axs[0,0].set_ylim(-1.5, 1.5)
-axs[0,0].text(0.67, -1.35, 'A', fontsize=12)
+axs[0,0].text(0.67, -1.35, 'A: ESPER_LIR (< 25 m)', fontsize=11)
 
 # make box plot for full depth
 axs[1,0].boxplot(all_slopes_full_LIR, vert=True, labels=list(trimmed_mc_basin.keys()))
 axs[1,0].axhline(y=0, color='r', linestyle='--')
 axs[1,0].set_ylim(-1.5, 1.5)
-axs[1,0].text(0.67, -1.35, 'C', fontsize=12)
+axs[1,0].text(0.67, -1.35, 'C:  ESPER_LIR', fontsize=11)
 
 axs[0,1].boxplot(all_slopes_surf_NN, vert=True, labels=list(trimmed_mc_basin_surf.keys()))
 axs[0,1].axhline(y=0, color='r', linestyle='--')
 axs[0,1].set_ylim(-1.5, 1.5)
-axs[0,1].text(0.67, -1.35, 'B', fontsize=12)
+axs[0,1].text(0.67, -1.35, 'B: ESPER_NN (< 25 m)', fontsize=11)
 
 # make box plot for full depth
 axs[1,1].boxplot(all_slopes_full_NN, vert=True, labels=list(trimmed_mc_basin.keys()))
 axs[1,1].axhline(y=0, color='r', linestyle='--')
 axs[1,1].set_ylim(-1.5, 1.5)
-axs[1,1].text(0.67, -1.35, 'D', fontsize=12)
+axs[1,1].text(0.67, -1.35, 'D: ESPER_NN', fontsize=11)
 
-ax.set_ylabel('Slope of Measured $A_{T}$ - ESPER-Estimated $A_{T}$\nover Time ($µmol$ $kg^{-1}$ $yr^{-1}$)')
+ax.set_ylabel('Temporal Trend in $∆A_\mathrm{T}$ ($µmol$ $kg^{-1}$ $yr^{-1}$)')
 
-ax.yaxis.set_label_coords(-0.63,0.55)
+ax.yaxis.set_label_coords(-0.54,0.55)
 axs[1,0].tick_params(axis='x', labelrotation=90)
 axs[1,1].tick_params(axis='x', labelrotation=90)
 

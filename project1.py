@@ -18,6 +18,7 @@ import pandas as pd
 from scipy import special
 import statsmodels.api as sm
 import cmocean.cm as cmo
+import cmocean
 from scipy import stats
 from scipy.interpolate import LinearNDInterpolator
 
@@ -1045,7 +1046,9 @@ def plot2dhist(esper_sel, esper_type, fig, ax, subplot_label, colorbar_flag):
     h = ax.hist2d(x, y, bins=100, norm='log', cmap=cmo.matter) # for 2d histogram
     ax.plot(x_model[:,1], rlm_results.fittedvalues, lw=2.5, ls='--', color='gainsboro', label='RLM')
     #ax.plot(x_model[:,1], ols_results.fittedvalues, lw=1, ls='-', color='gainsboro', label='OLS')
-    ax.set_ylim([-80, 120])
+    #ax.set_ylim([-80, 120])
+    ax.set_ylim([-50, 50])
+    ##ax.set_ylim([-60, 60]) # for LIR-trained only
     ###ax.set_ylim([2100, 2500])
     if colorbar_flag == 1:
         fig.colorbar(h[3],label='Number of Occurrences')
@@ -1053,17 +1056,20 @@ def plot2dhist(esper_sel, esper_type, fig, ax, subplot_label, colorbar_flag):
         fig.colorbar(h[3],label=' ')
 
     # print equations & p values for each regression type
-    ##ax.text(1992.5, 100, 'OLS: m$={:+.3f}$, p$={:.1e}$'.format(ols_results.params[1],ols_results.pvalues[1]), fontsize=10)
-    ##ax.text(1992.5, 80, 'RLM: m$={:+.3f}$, p$={:.1e}$'.format(rlm_results.params[1],rlm_results.pvalues[1]), fontsize=10)
+    ax.text(1992.5, 41, 'OLS: $m={:+.3f}$, $p={:.1e}$'.format(ols_results.params[1],ols_results.pvalues[1]), fontsize=10)
+    ax.text(1992.5, 32, 'RLM: $m={:+.3f}$, $p={:.1e}$'.format(rlm_results.params[1],rlm_results.pvalues[1]), fontsize=10)
+    ax.text(1992.5, -45, subplot_label, fontsize=12)
+    ####ax.text(1992.5, 100, 'OLS: m$={:+.3f}$, p$={:.1e}$'.format(ols_results.params[1],ols_results.pvalues[1]), fontsize=10)
+    ####ax.text(1992.5, 80, 'RLM: m$={:+.3f}$, p$={:.1e}$'.format(rlm_results.params[1],rlm_results.pvalues[1]), fontsize=10)
     print('ols slope, p value: ' + str(ols_results.params[1]) + ', ' + str(ols_results.pvalues[1]))
     print('rlm slope, p value: ' + str(rlm_results.params[1]) + ', ' + str(rlm_results.pvalues[1]))
     frac_above_zero = len(del_alk[del_alk > 0])/len(del_alk) * 100
     print('% of data above zero: ' + str(round(frac_above_zero,2)) + '%')
-    ax.text(1992.5, 105, 'OLS: $m={:+.3f}$, $p={:.1e}$'.format(ols_results.params[1],ols_results.pvalues[1]), fontsize=10) # for LIR-trained only
-    ax.text(1992.5, 90, 'RLM: $m={:+.3f}$, $p={:.1e}$'.format(rlm_results.params[1],rlm_results.pvalues[1]), fontsize=10) # for LIR-trained only
-    ax.text(1992.5, -70, subplot_label, fontsize=12)
-    ###ax.text(1992.5, 2135, 'OLS: m$={:+.3f}$, p$={:.1e}$'.format(ols_results.params[1],ols_results.pvalues[1]), fontsize=10) # for LIR-trained only
-    ###ax.text(1992.5, 2110, 'RLM: m$={:+.3f}$, p$={:.1e}$'.format(rlm_results.params[1],rlm_results.pvalues[1]), fontsize=10) # for LIR-trained only
+    ##ax.text(1992.5, 51, 'OLS: $m={:+.3f}$, $p={:.1e}$'.format(ols_results.params[1],ols_results.pvalues[1]), fontsize=11) # for LIR-trained only
+    ##ax.text(1992.5, 42, 'RLM: $m={:+.3f}$, $p={:.1e}$'.format(rlm_results.params[1],rlm_results.pvalues[1]), fontsize=11) # for LIR-trained only
+    ##ax.text(1992.5, -55, subplot_label, fontsize=12) # for LIR-trained only
+    ###ax.text(1992.5, 2135, 'OLS: m$={:+.3f}$, p$={:.1e}$'.format(ols_results.params[1],ols_results.pvalues[1]), fontsize=10)
+    ###ax.text(1992.5, 2110, 'RLM: m$={:+.3f}$, p$={:.1e}$'.format(rlm_results.params[1],rlm_results.pvalues[1]), fontsize=10)
     ax.set_xlim([1991.66753234399, 2021.75842656012])
 
 def plot2dhist_1d(esper_sel, esper_type, fig, ax, subplot_label, colorbar_flag, surf_flag):
@@ -1099,8 +1105,12 @@ def plot2dhist_1d(esper_sel, esper_type, fig, ax, subplot_label, colorbar_flag, 
         ax2.set_ylim([0, 30000])
     ax2.ticklabel_format(axis='y',style='sci',scilimits=(0,0))
     ###ax.set_ylim([2100, 2500])
-    if colorbar_flag == 1:
+    if colorbar_flag == 1 and subplot_label == 'D: Autumn (< 25 m)':
         fig.colorbar(h[3],label='Number of Occurrences')
+        ax2.set_ylabel('Number of $A_\mathrm{T}$ Measurements ($x$ $10^{3}$)')
+    elif colorbar_flag == 1 and subplot_label == 'H: Autumn':
+        fig.colorbar(h[3],label='Number of Occurrences')
+        ax2.set_ylabel('Number of $A_\mathrm{T}$ Measurements ($x$ $10^{4}$)')
     elif colorbar_flag == 2:
         fig.colorbar(h[3],label=' ')
     else:
@@ -1113,9 +1123,9 @@ def plot2dhist_1d(esper_sel, esper_type, fig, ax, subplot_label, colorbar_flag, 
     print('rlm slope, p value: ' + str(rlm_results.params[1]) + ', ' + str(rlm_results.pvalues[1]))
     frac_above_zero = len(del_alk[del_alk > 0])/len(del_alk) * 100
     print('% of data above zero: ' + str(round(frac_above_zero,2)) + '%')
-    ax.text(1992.5, 105, 'OLS: $m={:+.3f}$, $p={:.1e}$'.format(ols_results.params[1],ols_results.pvalues[1]), fontsize=10) # for LIR-trained only
-    ax.text(1992.5, 90, 'RLM: $m={:+.3f}$, $p={:.1e}$'.format(rlm_results.params[1],rlm_results.pvalues[1]), fontsize=10) # for LIR-trained only
-    ax.text(1992.5, -60, subplot_label, fontsize=12)
+    ax.text(1992.5, 90, 'OLS: $m={:+.3f}$, $p={:.1e}$'.format(ols_results.params[1],ols_results.pvalues[1]), fontsize=10) # for LIR-trained only
+    ax.text(1992.5, 75, 'RLM: $m={:+.3f}$, $p={:.1e}$'.format(rlm_results.params[1],rlm_results.pvalues[1]), fontsize=10) # for LIR-trained only
+    ax.text(1992.5, 105, subplot_label, fontsize=11)
     ###ax.text(1992.5, 2135, 'OLS: m$={:+.3f}$, p$={:.1e}$'.format(ols_results.params[1],ols_results.pvalues[1]), fontsize=10) # for LIR-trained only
     ###ax.text(1992.5, 2110, 'RLM: m$={:+.3f}$, p$={:.1e}$'.format(rlm_results.params[1],rlm_results.pvalues[1]), fontsize=10) # for LIR-trained only
     ax.set_xlim([1991.66753234399, 2021.75842656012])
@@ -1169,7 +1179,7 @@ def plot_rlm_weights(esper_sel, esper_type, fig, ax, subplot_label, colorbar_fla
     _ = rlm_model.fit()
     
     # plot figure
-    cmap = cmo.dense
+    cmap = cmocean.tools.crop_by_percent(cmo.dense, 10, which='min', N=None)
     pts = ax.scatter(x,y,s=15,c=rlm_model.weights,cmap=cmap,alpha=0.8,edgecolors='none')
     if colorbar_flag == 1:
         fig.colorbar(pts, label='Weight Assigned by RLM')
@@ -1177,7 +1187,7 @@ def plot_rlm_weights(esper_sel, esper_type, fig, ax, subplot_label, colorbar_fla
         fig.colorbar(pts, label='   ')
         
     ax.set_xlim([x.min(), x.max()])
-    ax.text(1992.5, 160, subplot_label, fontsize=12)
+    ax.text(1992.5, -350, subplot_label, fontsize=11)
     
     return pts
     
