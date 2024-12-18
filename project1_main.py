@@ -2394,7 +2394,29 @@ ax.xaxis.set_label_coords(0.17,-0.65) # for 2d histogram
 ax.set_ylabel('$∆A_\mathrm{T}$ ($µmol\;kg^{-1}$)')
 ax.yaxis.set_label_coords(-0.62,0.28)
 
-#%% make figure (bats)
+#%% plot hot data against salinity
+fig, axs = plt.subplots(nrows=1, ncols=2, figsize=(6.5,3), dpi=200, sharex=True, sharey=True, layout='constrained')
+fig.add_subplot(111,frameon=False)
+ax = fig.gca()
+plt.tick_params(labelcolor='none', which='both', top=False, bottom=False, left=False, right=False)
+
+# full ocean LIR
+esper_type = 'Ensemble_Mean_TA_LIR' # LIR, NN, or Mixed
+esper_sel = espers_HOT
+p1.plot2dhist_S_HOT(esper_sel, esper_type, fig, axs[0], 'ESPER_LIR (Full Depth)', 0)
+
+# full ocean NN
+esper_type = 'Ensemble_Mean_TA_NN' # LIR, NN, or Mixed
+esper_sel = espers_HOT
+p1.plot2dhist_S_HOT(esper_sel, esper_type, fig, axs[1], 'ESPER_NN (Full Depth)', 1)
+
+ax.set_xlabel('Salinity (PSU)')
+ax.xaxis.set_label_coords(0.17,-0.65) # for 2d histogram
+ax.set_ylabel('$∆A_\mathrm{T}$ ($µmol\;kg^{-1}$)')
+ax.yaxis.set_label_coords(-0.62,0.28)
+
+
+#%% make figure (different bats depth levels)
 fig, axs = plt.subplots(nrows=2, ncols=2, figsize=(6.5,4), dpi=200, sharex=True, sharey=True, layout='constrained')
 fig.add_subplot(111,frameon=False)
 ax = fig.gca()
@@ -2404,33 +2426,56 @@ plt.tick_params(labelcolor='none', which='both', top=False, bottom=False, left=F
 esper_type = 'Ensemble_Mean_TA_LIR' # LIR, NN, or Mixed
 esper_sel = espers_BATS
 esper_sel = esper_sel[esper_sel.Depth < esper_sel.surface_depth] # do surface values (< 25 m) only
+esper_sel = esper_sel[esper_sel.decy < 2012]
 p1.plot2dhist_BATS(esper_sel, esper_type, fig, axs[0,0], 'ESPER_LIR (< 25 m)', 0)
 
 # full ocean LIR
 esper_type = 'Ensemble_Mean_TA_LIR' # LIR, NN, or Mixed
 esper_sel = espers_BATS
+esper_sel = esper_sel[esper_sel.decy < 2012]
 p1.plot2dhist_BATS(esper_sel, esper_type, fig, axs[1,0], 'ESPER_LIR (Full Depth)', 0)
 
 # surface NN
 esper_type = 'Ensemble_Mean_TA_NN' # LIR, NN, or Mixed
 esper_sel = espers_BATS
 esper_sel = esper_sel[esper_sel.Depth < esper_sel.surface_depth] # do surface values (< 25 m) only
+esper_sel = esper_sel[esper_sel.decy < 2012]
 p1.plot2dhist_BATS(esper_sel, esper_type, fig, axs[0,1], 'ESPER_NN (< 25 m)', 1)
 
 # full ocean NN
 esper_type = 'Ensemble_Mean_TA_NN' # LIR, NN, or Mixed
 esper_sel = espers_BATS
+esper_sel = esper_sel[esper_sel.decy < 2012]
 p1.plot2dhist_BATS(esper_sel, esper_type, fig, axs[1,1], 'ESPER_NN (Full Depth)', 1)
 
 ax.set_xlabel('Year')
 ax.xaxis.set_label_coords(0.17,-0.65) # for 2d histogram
 ax.set_ylabel('$∆A_\mathrm{T}$ ($µmol\;kg^{-1}$)')
 ax.yaxis.set_label_coords(-0.62,0.28)
+fig, axs = plt.subplots(nrows=1, ncols=2, figsize=(6.5,3), dpi=200, sharex=True, sharey=True, layout='constrained')
+fig.add_subplot(111,frameon=False)
+ax = fig.gca()
+plt.tick_params(labelcolor='none', which='both', top=False, bottom=False, left=False, right=False)
 
+# LIR
+esper_type = 'Ensemble_Mean_TA_LIR' # LIR, NN, or Mixed
+esper_sel = espers_BATS
+esper_sel = esper_sel[(esper_sel.Depth > 0) & (esper_sel.Depth < 500)]
+p1.plot2dhist_BATS(esper_sel, esper_type, fig, axs[0], 'ESPER_LIR (500 - 1000 m)', 0)
 
+# NN
+esper_type = 'Ensemble_Mean_TA_NN' # LIR, NN, or Mixed
+esper_sel = espers_BATS
+esper_sel = esper_sel[(esper_sel.Depth > 0) & (esper_sel.Depth < 500)]
+p1.plot2dhist_BATS(esper_sel, esper_type, fig, axs[1], 'ESPER_NN (500 - 1000 m)', 1)
 
-
-
+# scatter bats data depth vs. time
+plt.figure(figsize=(6,6))
+plt.scatter(espers_BATS.decy, espers_BATS.Depth, marker='o')
+plt.gca().invert_yaxis()
+plt.title('$∆A_\mathrm{T}$ measurement depth at BATS')
+plt.xlabel('Year')
+plt.ylabel('Depth (m)')
 
 
 
