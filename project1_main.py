@@ -12,25 +12,30 @@ Description: Main script for Project 1, calls functions written in project1.py
 import project1 as p1
 import pandas as pd
 import matplotlib.pyplot as plt
-import matplotlib.patches as patches
+from datetime import datetime as dt
 import numpy as np
 from scipy import stats
 from scipy.io import loadmat
+from sklearn import linear_model
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 import statsmodels.api as sm
 import cmocean
 import cmocean.cm as cmo
 import PyCO2SYS as pyco2
+import xarray as xr
 
 
 filepath = '/Users/Reese_1/Documents/Research Projects/project1/data/' # where GLODAP data is stored
+gridded_filepath = '/Users/Reese_1/Documents/Research Projects/project2/GLODAPv2.2016b.MappedProduct/' # where GLODAP gridded data is stored
 #input_GLODAP_file = 'GLODAPv2.2022_Merged_Master_File.csv' # GLODAP data filename (2022)
 input_GLODAP_file = 'GLODAPv2.2023_Merged_Master_File.csv' # GLODAP data filename (2023)
 input_mc_cruise_file = 'G2talk_mc_simulated.csv' # MC (per cruise) simulated data
 input_mc_individual_file = 'G2talk_mc_individual_simulated.csv' # MC (per cruise) simulated data
 coeffs_file = 'ESPER_LIR_coeffs.csv' # ESPER LIR coefficients saved from MATLAB
 monthly_clim_file = 'monthlyclim.mat'
+input_bats_file = 'bats_bottle.txt'
+input_hot_file = 'niskin_v2.txt'
 
 # %% import GLODAP data file
 glodap = pd.read_csv(filepath + input_GLODAP_file, na_values = -9999)
@@ -75,8 +80,8 @@ glodap_out = go_ship[['G2expocode','G2cruise','G2station','G2region','G2cast',
 glodap_out.to_csv(filepath + 'GLODAPv2.2023_for_Brendan.csv', index=False) # for 2023
  
 # %% upload ESPERs outputs to here
-#espers = pd.read_csv(filepath + 'GLODAP_with_ESPER_TA.csv') # to do the normal ESPER
-espers = pd.read_csv(filepath + 'GLODAP_with_ESPER_TA_GO-SHIP_LIR.csv') # to do the GO-SHIP trained ESPER
+espers = pd.read_csv(filepath + 'GLODAP_with_ESPER_TA.csv') # to do the normal ESPER
+#espers = pd.read_csv(filepath + 'GLODAP_with_ESPER_TA_GO-SHIP_LIR.csv') # to do the GO-SHIP trained ESPER
 espers['datetime'] = pd.to_datetime(espers['datetime']) # recast datetime as datetime data type
 
 # %% set depth to use as boundary between surface and deep ocean
@@ -85,16 +90,70 @@ espers['datetime'] = pd.to_datetime(espers['datetime']) # recast datetime as dat
 espers['surface_depth'] = 25
 
 # to use dynamic mixed layer depth
-#monthly_clim = loadmat(filepath + monthly_clim_file)
-#MLD_da_max = monthly_clim['mld_da_max']
-#MLD_da_mean = monthly_clim['mld_da_mean']
-#latm = monthly_clim['latm']
-#lonm = monthly_clim['lonm']
+monthly_clim = loadmat(filepath + monthly_clim_file)
+MLD_da_max = monthly_clim['mld_da_max']
+MLD_da_mean = monthly_clim['mld_da_mean']
+latm = monthly_clim['latm']
+lonm = monthly_clim['lonm']
 
-#max_MLDs = p1.find_MLD(espers.G2longitude, espers.G2latitude, MLD_da_max, latm, lonm, 0)
-#mean_MLDs = p1.find_MLD(espers.G2longitude, espers.G2latitude, MLD_da_mean, latm, lonm, 1)
+max_MLDs = p1.find_MLD(espers.G2longitude, espers.G2latitude, MLD_da_max, latm, lonm, 0)
+mean_MLDs = p1.find_MLD(espers.G2longitude, espers.G2latitude, MLD_da_mean, latm, lonm, 1)
 
 #espers['surface_depth'] = max_MLDs
+
+#%% calculate percentage of the ocean where max MLD is greater than saturation horizon
+OmegaA_data = xr.open_dataset(gridded_filepath + 'GLODAPv2.2016b.OmegaA.nc')
+OmegaA_data = OmegaA_data.set_coords('Depth').rename({'Depth':'depth'}) # change depth from data variable to coordinate
+OmegaA_data = OmegaA_data.rename({'depth_surface': 'depth'})
+
+OmegaC_data = xr.open_dataset(gridded_filepath + 'GLODAPv2.2016b.OmegaC.nc')
+OmegaC_data = OmegaC_data.set_coords('Depth').rename({'Depth':'depth'}) # change depth from data variable to coordinate
+OmegaC_data = OmegaC_data.rename({'depth_surface': 'depth'})
+
+lon_name = 'lon'
+
+# convert glodap longitude to -180 to 180 (first, subtract 20 from everything greater than 360)
+OmegaA_data.coords['lon'] = xr.where(OmegaA_data.coords['lon'] > 360, OmegaA_data.coords['lon'], OmegaA_data.coords['lon'] - 20)
+OmegaA_data.coords['lon'] = (OmegaA_data.coords['lon'] + 180) % 360 - 180
+OmegaA_data = OmegaA_data.sortby(OmegaA_data.lon)
+
+OmegaC_data.coords['lon'] = xr.where(OmegaC_data.coords['lon'] > 360, OmegaC_data.coords['lon'], OmegaC_data.coords['lon'] - 20)
+OmegaC_data.coords['lon'] = (OmegaC_data.coords['lon'] + 180) % 360 - 180
+OmegaC_data = OmegaC_data.sortby(OmegaC_data.lon)
+
+# find deepest depth of each Omega array where Omega is > 1
+# where the water column has a value for saturation state, get the index of the shallowest depth level where saturation state < 1
+OmegaA = OmegaA_data['OmegaA'].to_numpy() # convert from xarray to numpy
+valid_mask = np.isnan(OmegaA) # mask out NaNs
+undersaturated_mask = (OmegaA < 1) & ~valid_mask # find places where the water is undersaturated (skipping NaNs)
+lowest_undersaturated_idx = np.argmax(undersaturated_mask, axis=0) # find the index of the shallowest undersaturated value
+lowest_undersaturated_idx = np.where(np.any(undersaturated_mask, axis=0), lowest_undersaturated_idx, np.nan) # set NaNs in place of zero (array above returns 0 where values are NaN)
+
+# convert depth indicies to actual depths
+depths = OmegaA_data['depth'].to_numpy() # array relating indices to depths
+nan_mask = np.isnan(lowest_undersaturated_idx)
+shallowest_undersaturated_depth = np.copy(lowest_undersaturated_idx)
+shallowest_undersaturated_depth[~nan_mask] = depths[lowest_undersaturated_idx[~nan_mask].astype(int)]  # Convert indices to depth levels
+
+# loop through months, count number of instances MMMLD is deeper than saturation horizon
+avg_percent_undersat = 0
+for i in range(0, 12):
+    monthly_MLD_da_max = MLD_da_max[i, :, :].T
+    nan_mask = ~np.isnan(monthly_MLD_da_max) & ~np.isnan(shallowest_undersaturated_depth)
+    
+    # calculate number of instances where undersaturated water is within the max monthly MLD
+    num_undersat = np.sum((monthly_MLD_da_max[nan_mask] > shallowest_undersaturated_depth[nan_mask]))
+    
+    # calculate number of instances where this is not true
+    num_supersat = np.sum((monthly_MLD_da_max[nan_mask] < shallowest_undersaturated_depth[nan_mask]))
+    
+    # calculate percentage of lat/lon points where the mixed layer is deeper than the saturation horizon
+    percent_undersat = num_undersat / (num_undersat + num_supersat) * 100
+    print(str(round(percent_undersat, 4)) + ' %')
+    
+    avg_percent_undersat += percent_undersat
+
+print('annual average percent undersat: ' + str(round(avg_percent_undersat/12, 4)) + ' %')
 
 # %% use KL divergence to determine which equations predict best (lower KL divergence = two datasets are closer)
 kl_div = p1.kl_divergence(espers)
@@ -217,7 +276,7 @@ fig.patches.extend([plt.Rectangle((0.125,0.48),0.1,0.031, fill=True, color='w',
 handles, labels = ax2.get_legend_handles_labels()
 ax2.legend(handles[::-1], labels[::-1], bbox_to_anchor = (1.05, 2.35), loc='upper left')
 
-# %% USEFUL FOR VISUALIZING DATA LOCATIONS
+# %% plot cruises colored by measurement density
 # set up map
 # atlantic-centered view
 #fig = plt.figure(figsize=(6.2,4.1))
@@ -287,6 +346,114 @@ ax.add_feature(cfeature.LAND,color='k', zorder=12)
 #lat = df.G2latitude
 #plot = ax.scatter(lon,lat,transform=ccrs.PlateCarree(),marker='o',edgecolors='none',s=10,color='crimson')
 
+#%% plot normal distribution and one cruise colored
+mean = 0
+std_dev = 2
+highlight = 0.43 # mark with dot for presentation
+
+x = np.linspace(mean - 4*std_dev, mean + 4*std_dev, 1000)
+y = stats.norm.pdf(x, mean, std_dev)
+
+plt.figure(figsize=(6,1.5), dpi=200)
+plt.plot(x, y, label='Normal Distribution')
+plt.plot(highlight, stats.norm.pdf(highlight, mean, std_dev), 'o', c='#c1375b', label=f'Value = {highlight}')
+
+# Move axes to the center
+plt.axhline(0, color='black',linewidth=0.5)
+plt.axvline(0, color='black',linewidth=0.5)
+
+# make custom axis spines
+plt.gca().spines['left'].set_position('zero')
+plt.gca().spines['bottom'].set_position('zero')
+
+# hide the right and top spines
+plt.gca().spines['right'].set_color('none')
+plt.gca().spines['top'].set_color('none')
+
+# hide tick marks
+plt.gca().set_yticklabels([])
+
+# move x axis tick marks down slightly
+for tick in plt.gca().get_xticklabels():
+    tick.set_y(-0.008)  # Adjust this value to control the distance
+
+# plot cruises with one cruise colored
+fig = plt.figure(figsize=(5,3), dpi=200)
+ax = plt.axes(projection=ccrs.PlateCarree())
+extent = [-180, 180, -90, 90]
+ax.set_extent(extent)
+
+ax.coastlines(resolution='110m',color='k')
+g1 = ax.gridlines(crs=ccrs.PlateCarree(),draw_labels=False,alpha=0)
+g1.bottom_labels = True
+g1.left_labels = True
+ax.add_feature(cfeature.LAND,color='k', zorder=12)
+
+# plot all cruises 
+df = all_trimmed
+lon = df.G2longitude
+lat = df.G2latitude
+plot = ax.scatter(lon,lat,transform=ccrs.PlateCarree(),marker='o',edgecolors='none',s=5,color='steelblue')
+
+# plot one cruise colored
+df = all_trimmed
+df = df.loc[df.G2cruise == 1030]
+lon = df.G2longitude
+lat = df.G2latitude
+plot = ax.scatter(lon,lat,transform=ccrs.PlateCarree(),marker='o',edgecolors='none',s=15,color='#c1375b')
+
+# create map of MC run 2 as an example
+offsets = all_trimmed_mc['G2talk'] - all_trimmed_mc['2']
+
+fig = plt.figure(figsize=(5,4), dpi=200)
+ax = plt.axes(projection=ccrs.PlateCarree())
+extent = [-180, 180, -90, 90]
+ax.set_extent(extent)
+
+ax.coastlines(resolution='110m',color='k')
+g1 = ax.gridlines(crs=ccrs.PlateCarree(),draw_labels=False,alpha=0)
+g1.bottom_labels = True
+g1.left_labels = True
+ax.add_feature(cfeature.LAND,color='k', zorder=12)
+
+# plot all cruises 
+df = all_trimmed
+lon = df.G2longitude
+lat = df.G2latitude
+
+im = ax.scatter(lon,lat,c=offsets, cmap=cmo.balance, transform=ccrs.PlateCarree(), marker='o', edgecolors='none', s=5)
+fig.colorbar(im, label='Offset', pad=0.05)
+
+# plot trend in AT for MC run 2
+plt.figure(figsize=(3.9,2.5), dpi=200)
+ax = plt.gca()
+all_trimmed_mc['2']
+# sort by time
+esper_sel = all_trimmed.sort_values(by=['dectime'],ascending=True)
+
+# calculate the difference in TA betwen GLODAP and ESPERS, store for regression
+del_alk = all_trimmed_mc['2'] - esper_sel.loc[:,'Ensemble_Mean_TA_LIR']
+x = esper_sel['dectime'].to_numpy()
+y = del_alk.to_numpy()
+
+# fit model and print summary
+x_model = sm.add_constant(x) # this is required in statsmodels to get an intercept
+rlm_model = sm.RLM(y, x_model, M=sm.robust.norms.HuberT())
+rlm_results = rlm_model.fit()
+
+ols_model = sm.OLS(y, x_model)
+ols_results = ols_model.fit()
+
+h = ax.hist2d(x, y, bins=100, norm='log', cmap=cmo.matter) # for 2d histogram
+ax.plot(x_model[:,1], ols_results.fittedvalues, lw=2.5, ls='--', color='gainsboro', label='OLS')
+ax.set_ylim([-60, 60]) # for LIR-trained only
+
+# print equations & p values for each regression type
+ax.text(1992.5, 45, str('OLS: $m={:+.3f}$'.format(ols_results.params[1]) + str(' $µmol$ $kg^{-1}$ $yr^{-1}$')), fontsize=12) # for LIR-trained only
+ax.set_xlim([1991.66753234399, 2021.75842656012])
+ax.set_yticklabels([])
+ax.set_xticklabels([])
+
 #%% plot difference between measured and espers on a map
 
 # set up figure
@@ -353,6 +520,7 @@ esper_type = 'Ensemble_Mean_TA_LIR' # LIR, NN, or Mixed
 esper_sel = all_trimmed
 #esper_sel = subarctic
 esper_sel = esper_sel[esper_sel.G2depth < esper_sel.surface_depth] # do surface values (< 25 m) only
+#esper_sel = esper_sel[(esper_sel.G2depth > 200) & (esper_sel.G2depth < 2000)]
 #esper_sel = esper_sel[esper_sel['Ensemble_Mean_TA_LIR_1-8'].notna()] # needed when doing ensemble mean that doesn't include eqn. 16
 #esper_sel = esper_sel[esper_sel.dectime >= 2000]
 p1.plot2dhist(esper_sel, esper_type, fig, axs[0,0], 'A', 0)
@@ -378,6 +546,7 @@ esper_type = 'Ensemble_Mean_TA_NN' # LIR, NN, or Mixed
 esper_sel = all_trimmed
 #esper_sel = subarctic
 esper_sel = esper_sel[esper_sel.G2depth < esper_sel.surface_depth] # do surface values (< 25 m) only
+#esper_sel = esper_sel[(esper_sel.G2depth > 200) & (esper_sel.G2depth < 2000)]
 #esper_sel = esper_sel[esper_sel['Ensemble_Mean_TA_NN_1-8'].notna()] # needed when doing ensemble mean that doesn't include eqn. 16
 #esper_sel = esper_sel[esper_sel.dectime >= 2000]
 p1.plot2dhist(esper_sel, esper_type, fig, axs[0,1], 'B', 1)
@@ -415,6 +584,25 @@ print('Average ∆TA with ESPER LIR (± standard deviation):', del_alk.mean(skip
 # average ∆TA with ESPER NN (± standard deviation)
 del_alk = all_trimmed.loc[:,'G2talk'] - all_trimmed.loc[:,'Ensemble_Mean_TA_NN']
 print('Average ∆TA with ESPER NN (± standard deviation):', del_alk.mean(skipna=True), '±', del_alk.std(skipna=True))
+
+#%% test MLR idea --> TA = a * T + b * S + c * oxygen + d * nitrate + e * silicate + f * time
+clf = linear_model.LinearRegression()
+
+no_nans = all_trimmed[['G2temperature', 'G2salinity', 'G2oxygen', 'G2nitrate', 'G2silicate', 'dectime', 'G2talk']]
+no_nans = no_nans.dropna()
+
+x = no_nans[['G2salinity', 'G2silicate', 'dectime']]
+y = no_nans['G2talk']
+
+clf.fit(x, y)
+
+#print('TA = ' + str(round(clf.coef_[0],4)) + '*T + ' + str(round(clf.coef_[1], 4)) + '*S + ' + str(round(clf.coef_[2], 4)) + '*O2 + ' + str(round(clf.coef_[3], 4)) + '*N + ' + str(round(clf.coef_[4], 4)) + '*Si + ' + str(round(clf.coef_[5], 4)) + '*time + ' + str(round(clf.intercept_, 4))) 
+#print('TA = ' + str(round(clf.coef_[0],4)) + '*T + ' + str(round(clf.coef_[1], 4)) + '*S + ' + str(round(clf.coef_[2], 4)) + '*O2 + ' + str(round(clf.coef_[3], 4)) + '*N + ' + str(round(clf.coef_[4], 4)) + '*time + ' + str(round(clf.intercept_, 4)))
+#print('TA = ' + str(round(clf.coef_[0],4)) + '*T + ' + str(round(clf.coef_[1], 4)) + '*S + ' + str(round(clf.coef_[2], 4)) + '*O2 + ' + str(round(clf.coef_[3], 4)) + '*time + ' + str(round(clf.intercept_, 4))) 
+#print('TA = ' + str(round(clf.coef_[0],4)) + '*T + ' + str(round(clf.coef_[1], 4)) + '*S + ' + str(round(clf.coef_[2], 4)) + '*time + ' + str(round(clf.intercept_, 4))) 
+#print('TA = ' + str(round(clf.coef_[0], 4)) + '*S + ' + str(round(clf.coef_[1], 4)) + '*time + ' + str(round(clf.intercept_, 4))) 
+
+print('TA = ' + str(round(clf.coef_[0], 4)) + '*S + ' + str(round(clf.coef_[1], 4)) + '*Si + ' + str(round(clf.coef_[2], 4)) + '*time + ' + str(round(clf.intercept_, 4))) 
 
 #%% plot data by season
 # set up map
@@ -635,7 +823,8 @@ data_not_used_for_espers_mc =  all_trimmed_mc.loc[((all_trimmed_mc['G2cruise'] >
 mc_sel = all_trimmed_mc
 #mc_sel = fall_mc
 #mc_sel = mc_sel[mc_sel['Ensemble_Mean_TA_LIR_1-8'].notna()] # needed when doing ensemble mean that doesn't include eqn. 16
-mc_sel_surf = mc_sel[mc_sel.G2depth < mc_sel.surface_depth]
+#mc_sel_surf = mc_sel[mc_sel.G2depth < mc_sel.surface_depth]
+mc_sel_surf = mc_sel[(mc_sel.G2depth > 200) & (mc_sel.G2depth < 2000)]
 #mc_sel_surf = mc_sel[(mc_sel.G2depth > 1000) & (mc_sel.G2depth < 2000)]
 x = mc_sel.dectime
 x_surf = mc_sel_surf.dectime
@@ -753,7 +942,7 @@ sigma = slopes_LIR.std()
 axs[1].text(-0.14, 45, 'ESPER_LIR (Full Depth)', fontsize=14)
 axs[1].text(-0.14, 35, '$\mu={:.4f}$\n$\sigma={:.4f}$'.format(mu, sigma), fontsize=12)
 
-plt.xlabel('Slope of Measured $A_{T}$ - ESPER-Estimated $A_{T}$ over Time ($µmol\;kg^{-1}\;yr^{-1}$)')
+plt.xlabel('Temporal Trend in $∆A_\mathrm{T}$ ($µmol\;kg^{-1}\;yr^{-1}$)')
 plt.ylabel('Number of Occurrences')
 
 # %% make box plot graph of transect slopes from mc simulation
@@ -806,8 +995,8 @@ esper_type = 'LIRtalk' # LIR, NN, or Mixed (change separately for u_sample below
 esper_sel = all_trimmed
 #esper_sel = fall_mc
 #esper_sel = esper_sel[esper_sel['Ensemble_Mean_TA_LIR_1-8'].notna()] # needed when doing ensemble mean that doesn't include eqn. 16
-esper_sel = esper_sel[esper_sel.G2depth < esper_sel.surface_depth] # do surface values (< 25 m) only
-#esper_sel = esper_sel[(esper_sel.G2depth > 5000) & (esper_sel.G2depth < 10000)] # do surface values (< 25 m) only
+#esper_sel = esper_sel[esper_sel.G2depth < esper_sel.surface_depth] # do surface values (< 25 m) only
+esper_sel = esper_sel[(esper_sel.G2depth > 200) & (esper_sel.G2depth < 2000)] # do surface values (< 25 m) only
 slopes_rlm = np.zeros(16)
 slopes_ols = np.zeros(16)
 #slopes_rlm = np.zeros(8) # if doing equations 1-8 or 9-16
@@ -844,7 +1033,7 @@ u_esper = slopes_rlm.std() # change if RLM or OLS used for u_esper here
 u_sample = slopes_surf_LIR.std() # for SURFACE, LIR
 #u_sample = slopes_LIR.std() # for FULL DEPTH, LIR
 #u_sample = slopes_surf_NN.std() # for SURFACE, NN
-u_sample = slopes_NN.std() # for FULL DEPTH, NN
+#u_sample = slopes_NN.std() # for FULL DEPTH, NN
 
 U = np.sqrt(u_esper**2 + u_sample**2)
 print(round(U,3))
@@ -2127,6 +2316,120 @@ print('% change in surface DIC:', percent_change, '%')
 mass_change = (results_2024_bc['dic'] - results_2024['dic'])*1e-6*9.2e18*12.011
 print('Mass change in surface DIC:', mass_change, 'g')
 print('Mass change in surface DIC:', mass_change/1e15, 'Pg')
+
+#%% plot hot and bats data over time (load data)
+
+# load in hot data
+HOT = pd.read_csv(filepath + 'niskin_v2.csv', na_values='nd')
+HOT['datetime'] = pd.to_datetime(HOT['ISO_DateTime_UTC'], format='%Y-%m-%dT%H:%M:%SZ', errors='coerce') # convert to datetime
+HOT = HOT.dropna(subset=['ALKALIN']) # get rid of nans
+HOT = HOT.dropna(subset=['SALINITY']) # get rid of nans
+HOT = HOT.reset_index(drop=True) # reset index
+
+# convert from datetime to decimal time
+# allocate decimal year column
+HOT.insert(0,'dectime', 0.0)
+
+for i in range(len(HOT)):
+    # convert datetime object to decimal time
+    date = HOT['datetime'].iloc[i]
+    year = date.year
+    this_year_start = dt(year=year, month=1, day=1)
+    next_year_start = dt(year=year+1, month=1, day=1)
+    year_elapsed = date - this_year_start
+    year_duration = next_year_start - this_year_start
+    fraction = year_elapsed / year_duration
+    decimal_time = date.year + fraction
+    
+    # save to glodap dataset
+    HOT.loc[i,'dectime'] = decimal_time
+
+HOT = HOT[['EXPOCODE','WHPID','STNNBR','CASTNO',
+           'dectime','datetime','Latitude','Longitude','Depth_max',
+           'CTDTMP','SALINITY','OXYGEN','NO2_NO3',
+           'SILCAT','PHSPHT','ALKALIN','pH']]
+        
+#HOT.to_csv(filepath + 'HOT_for_ESPERs.csv', index=False)
+
+# load in BATS data
+headers = ['Id', 'yyyymmdd', 'decy', 'time', 'latN', 'lonW', 'QF', 'Depth', 'Temp', 'CTD_S', 'Sal1', 'Sig-th', 'O2(1)', 'OxFixT', 'Anom1', 'CO2', 'Alk', 'NO31', 'NO21', 'PO41', 'Si1', 'POC', 'PON', 'TOC', 'TN', 'Bact', 'POP', 'TDP', 'SRP', 'BSi', 'LSi', 'Pro', 'Syn', 'Piceu', 'Naneu']
+BATS = pd.read_csv(filepath + 'bats_bottle.txt', skiprows=59, header=None, names=headers, delimiter='\t')
+BATS['datetime'] = pd.to_datetime(BATS['yyyymmdd'], format='%Y%m%d', errors='coerce') # convert to datetime
+BATS.replace(-999, np.nan, inplace=True) # set nan values correctly
+BATS = BATS.dropna(subset=['Alk']) # get rid of nans
+BATS = BATS.dropna(subset=['Sal1']) # get rid of nans
+BATS = BATS[BATS['QF'] == 2] # get rid of QF not equal to 2
+BATS = BATS.reset_index(drop=True) # reset index
+
+BATS = BATS[['Id','decy','datetime','latN','lonW','Depth','Temp','Sal1',
+             'O2(1)','NO31','Si1','PO41','Alk']]
+#BATS.to_csv(filepath + 'BATS_for_ESPERs.csv', index=False)
+
+#%% plot hot and bats data over time (load in ESPERs, analyze)
+espers_HOT = pd.read_csv(filepath + 'HOT_with_ESPER_TA.csv') # to do the normal ESPER
+espers_BATS = pd.read_csv(filepath + 'BATS_with_ESPER_TA.csv') # to do the normal ESPER
+
+espers_HOT['surface_depth'] = 25
+espers_HOT = p1.ensemble_mean(espers_HOT)
+espers_BATS['surface_depth'] = 25
+espers_BATS = p1.ensemble_mean(espers_BATS)
+#%% make figure (hot)
+fig, axs = plt.subplots(nrows=1, ncols=2, figsize=(6.5,3), dpi=200, sharex=True, sharey=True, layout='constrained')
+fig.add_subplot(111,frameon=False)
+ax = fig.gca()
+plt.tick_params(labelcolor='none', which='both', top=False, bottom=False, left=False, right=False)
+
+# full ocean LIR
+esper_type = 'Ensemble_Mean_TA_LIR' # LIR, NN, or Mixed
+esper_sel = espers_HOT
+p1.plot2dhist_HOT(esper_sel, esper_type, fig, axs[0], 'ESPER_LIR (Full Depth)', 0)
+
+# full ocean NN
+esper_type = 'Ensemble_Mean_TA_NN' # LIR, NN, or Mixed
+esper_sel = espers_HOT
+p1.plot2dhist_HOT(esper_sel, esper_type, fig, axs[1], 'ESPER_NN (Full Depth)', 1)
+
+ax.set_xlabel('Year')
+ax.xaxis.set_label_coords(0.17,-0.65) # for 2d histogram
+ax.set_ylabel('$∆A_\mathrm{T}$ ($µmol\;kg^{-1}$)')
+ax.yaxis.set_label_coords(-0.62,0.28)
+
+#%% make figure (bats)
+fig, axs = plt.subplots(nrows=2, ncols=2, figsize=(6.5,4), dpi=200, sharex=True, sharey=True, layout='constrained')
+fig.add_subplot(111,frameon=False)
+ax = fig.gca()
+plt.tick_params(labelcolor='none', which='both', top=False, bottom=False, left=False, right=False)
+
+# surface LIR
+esper_type = 'Ensemble_Mean_TA_LIR' # LIR, NN, or Mixed
+esper_sel = espers_BATS
+esper_sel = esper_sel[esper_sel.Depth < esper_sel.surface_depth] # do surface values (< 25 m) only
+p1.plot2dhist_BATS(esper_sel, esper_type, fig, axs[0,0], 'ESPER_LIR (< 25 m)', 0)
+
+# full ocean LIR
+esper_type = 'Ensemble_Mean_TA_LIR' # LIR, NN, or Mixed
+esper_sel = espers_BATS
+p1.plot2dhist_BATS(esper_sel, esper_type, fig, axs[1,0], 'ESPER_LIR (Full Depth)', 0)
+
+# surface NN
+esper_type = 'Ensemble_Mean_TA_NN' # LIR, NN, or Mixed
+esper_sel = espers_BATS
+esper_sel = esper_sel[esper_sel.Depth < esper_sel.surface_depth] # do surface values (< 25 m) only
+p1.plot2dhist_BATS(esper_sel, esper_type, fig, axs[0,1], 'ESPER_NN (< 25 m)', 1)
+
+# full ocean NN
+esper_type = 'Ensemble_Mean_TA_NN' # LIR, NN, or Mixed
+esper_sel = espers_BATS
+p1.plot2dhist_BATS(esper_sel, esper_type, fig, axs[1,1], 'ESPER_NN (Full Depth)', 1)
+
+ax.set_xlabel('Year')
+ax.xaxis.set_label_coords(0.17,-0.65) # for 2d histogram
+ax.set_ylabel('$∆A_\mathrm{T}$ ($µmol\;kg^{-1}$)')
+ax.yaxis.set_label_coords(-0.62,0.28)
+
+
+
+
 
 
 

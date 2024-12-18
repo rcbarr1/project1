@@ -218,6 +218,7 @@ def ensemble_mean(espers):
                                  'NNtalk9', 'NNtalk10', 'NNtalk11', 'NNtalk12',
                                  'NNtalk13', 'NNtalk14', 'NNtalk15', 'NNtalk16']]
     
+    if 'Mtalk1' in espers.columns:
         talk_subset_M = espers[['Mtalk1', 'Mtalk2', 'Mtalk3', 'Mtalk4',
                                 'Mtalk5', 'Mtalk6', 'Mtalk7', 'Mtalk8', 
                                 'Mtalk9', 'Mtalk10', 'Mtalk11', 'Mtalk12',
@@ -242,6 +243,7 @@ def ensemble_mean(espers):
                                         'NNtalk_uncert13', 'NNtalk_uncert14',
                                         'NNtalk_uncert15', 'NNtalk_uncert16']]
     
+    if 'Mtalk_uncert1' in espers.columns:
         uncertainty_subset_M = espers[['Mtalk_uncert1', 'Mtalk_uncert2',
                                        'Mtalk_uncert3', 'Mtalk_uncert4',
                                        'Mtalk_uncert5', 'Mtalk_uncert6',
@@ -258,6 +260,8 @@ def ensemble_mean(espers):
         espers['Ensemble_Mean_TA_NN'] = talk_subset_NN.mean(axis=1)
         espers['Ensemble_Std_TA_NN'] = talk_subset_NN.std(axis=1)
         espers['Ensemble_Mean_TA_Uncert_NN'] = uncertainty_subset_NN.mean(axis=1)
+    
+    if 'Mtalk1' in espers.columns:
         espers['Ensemble_Mean_TA_Mixed'] = talk_subset_M.mean(axis=1)
         espers['Ensemble_Std_TA_Mixed'] = talk_subset_M.std(axis=1)
         espers['Ensemble_Mean_TA_Uncert_Mixed'] = uncertainty_subset_M.mean(axis=1)
@@ -1047,8 +1051,8 @@ def plot2dhist(esper_sel, esper_type, fig, ax, subplot_label, colorbar_flag):
     ax.plot(x_model[:,1], rlm_results.fittedvalues, lw=2.5, ls='--', color='gainsboro', label='RLM')
     #ax.plot(x_model[:,1], ols_results.fittedvalues, lw=1, ls='-', color='gainsboro', label='OLS')
     #ax.set_ylim([-80, 120])
-    ax.set_ylim([-50, 50])
-    ##ax.set_ylim([-60, 60]) # for LIR-trained only
+    ##ax.set_ylim([-50, 50])
+    ax.set_ylim([-60, 60]) # for LIR-trained only
     ###ax.set_ylim([2100, 2500])
     if colorbar_flag == 1:
         fig.colorbar(h[3],label='Number of Occurrences')
@@ -1056,21 +1060,98 @@ def plot2dhist(esper_sel, esper_type, fig, ax, subplot_label, colorbar_flag):
         fig.colorbar(h[3],label=' ')
 
     # print equations & p values for each regression type
-    ax.text(1992.5, 41, 'OLS: $m={:+.3f}$, $p={:.1e}$'.format(ols_results.params[1],ols_results.pvalues[1]), fontsize=10)
-    ax.text(1992.5, 32, 'RLM: $m={:+.3f}$, $p={:.1e}$'.format(rlm_results.params[1],rlm_results.pvalues[1]), fontsize=10)
-    ax.text(1992.5, -45, subplot_label, fontsize=12)
+    ##ax.text(1992.5, 41, 'OLS: $m={:+.3f}$, $p={:.1e}$'.format(ols_results.params[1],ols_results.pvalues[1]), fontsize=10)
+    ##ax.text(1992.5, 32, 'RLM: $m={:+.3f}$, $p={:.1e}$'.format(rlm_results.params[1],rlm_results.pvalues[1]), fontsize=10)
+    ##ax.text(1992.5, -45, subplot_label, fontsize=12)
     ####ax.text(1992.5, 100, 'OLS: m$={:+.3f}$, p$={:.1e}$'.format(ols_results.params[1],ols_results.pvalues[1]), fontsize=10)
     ####ax.text(1992.5, 80, 'RLM: m$={:+.3f}$, p$={:.1e}$'.format(rlm_results.params[1],rlm_results.pvalues[1]), fontsize=10)
     print('ols slope, p value: ' + str(ols_results.params[1]) + ', ' + str(ols_results.pvalues[1]))
     print('rlm slope, p value: ' + str(rlm_results.params[1]) + ', ' + str(rlm_results.pvalues[1]))
     frac_above_zero = len(del_alk[del_alk > 0])/len(del_alk) * 100
     print('% of data above zero: ' + str(round(frac_above_zero,2)) + '%')
-    ##ax.text(1992.5, 51, 'OLS: $m={:+.3f}$, $p={:.1e}$'.format(ols_results.params[1],ols_results.pvalues[1]), fontsize=11) # for LIR-trained only
-    ##ax.text(1992.5, 42, 'RLM: $m={:+.3f}$, $p={:.1e}$'.format(rlm_results.params[1],rlm_results.pvalues[1]), fontsize=11) # for LIR-trained only
-    ##ax.text(1992.5, -55, subplot_label, fontsize=12) # for LIR-trained only
+    ax.text(1992.5, 51, 'OLS: $m={:+.3f}$, $p={:.1e}$'.format(ols_results.params[1],ols_results.pvalues[1]), fontsize=11) # for LIR-trained only
+    ax.text(1992.5, 42, 'RLM: $m={:+.3f}$, $p={:.1e}$'.format(rlm_results.params[1],rlm_results.pvalues[1]), fontsize=11) # for LIR-trained only
+    ax.text(1992.5, -55, subplot_label, fontsize=12) # for LIR-trained only
     ###ax.text(1992.5, 2135, 'OLS: m$={:+.3f}$, p$={:.1e}$'.format(ols_results.params[1],ols_results.pvalues[1]), fontsize=10)
     ###ax.text(1992.5, 2110, 'RLM: m$={:+.3f}$, p$={:.1e}$'.format(rlm_results.params[1],rlm_results.pvalues[1]), fontsize=10)
     ax.set_xlim([1991.66753234399, 2021.75842656012])
+
+def plot2dhist_HOT(esper_sel, esper_type, fig, ax, subplot_label, colorbar_flag):
+    # sort by time
+    esper_sel = esper_sel.sort_values(by=['dectime'],ascending=True)
+
+    # calculate the difference in TA betwen GLODAP and ESPERS, store for regression
+    del_alk = esper_sel.loc[:,'ALKALIN'] - esper_sel.loc[:,esper_type]
+    x = esper_sel['dectime'].to_numpy()
+    y = del_alk.to_numpy()
+    
+    print("average ∆TA: " + str(np.nanmean(y)))
+    print("std: " + str(np.nanstd(y)))
+
+    # fit model and print summary
+    x_model = sm.add_constant(x) # this is required in statsmodels to get an intercept
+    rlm_model = sm.RLM(y, x_model, M=sm.robust.norms.HuberT())
+    rlm_results = rlm_model.fit()
+
+    ols_model = sm.OLS(y, x_model)
+    ols_results = ols_model.fit()
+
+    h = ax.hist2d(x, y, bins=100, norm='log', cmap=cmo.matter) # for 2d histogram
+    ax.plot(x_model[:,1], rlm_results.fittedvalues, lw=2.5, ls='--', color='gainsboro', label='RLM')
+    ax.set_ylim([-700, 250])
+    #ax.set_ylim([-100, 30])
+    if colorbar_flag == 1:
+        fig.colorbar(h[3],label='Number of Occurrences')
+    elif colorbar_flag == 2:
+        fig.colorbar(h[3],label=' ')
+
+    # print equations & p values for each regression type
+    print('ols slope, p value: ' + str(ols_results.params[1]) + ', ' + str(ols_results.pvalues[1]))
+    print('rlm slope, p value: ' + str(rlm_results.params[1]) + ', ' + str(rlm_results.pvalues[1]))
+    frac_above_zero = len(del_alk[del_alk > 0])/len(del_alk) * 100
+    print('% of data above zero: ' + str(round(frac_above_zero,2)) + '%')
+    ax.text(esper_sel['dectime'].min() + 1, 190, 'OLS: $m={:+.3f}$, $p={:.1e}$'.format(ols_results.params[1],ols_results.pvalues[1]), fontsize=10) # for LIR-trained only
+    ax.text(esper_sel['dectime'].min() + 1, 130, 'RLM: $m={:+.3f}$, $p={:.1e}$'.format(rlm_results.params[1],rlm_results.pvalues[1]), fontsize=10) # for LIR-trained only
+    ax.text(esper_sel['dectime'].min() + 1, -660, subplot_label, fontsize=12) # for LIR-trained only
+    ax.set_xlim([esper_sel['dectime'].min(), esper_sel['dectime'].max()])
+
+def plot2dhist_BATS(esper_sel, esper_type, fig, ax, subplot_label, colorbar_flag):
+    # sort by time
+    esper_sel = esper_sel.sort_values(by=['decy'],ascending=True)
+
+    # calculate the difference in TA betwen GLODAP and ESPERS, store for regression
+    del_alk = esper_sel.loc[:,'Alk'] - esper_sel.loc[:,esper_type]
+    x = esper_sel['decy'].to_numpy()
+    y = del_alk.to_numpy()
+    
+    print("average ∆TA: " + str(np.nanmean(y)))
+    print("std: " + str(np.nanstd(y)))
+
+    # fit model and print summary
+    x_model = sm.add_constant(x) # this is required in statsmodels to get an intercept
+    rlm_model = sm.RLM(y, x_model, M=sm.robust.norms.HuberT())
+    rlm_results = rlm_model.fit()
+
+    ols_model = sm.OLS(y, x_model)
+    ols_results = ols_model.fit()
+
+    h = ax.hist2d(x, y, bins=100, norm='log', cmap=cmo.matter) # for 2d histogram
+    ax.plot(x_model[:,1], rlm_results.fittedvalues, lw=2.5, ls='--', color='gainsboro', label='RLM')
+    ax.set_ylim([-60, 60])
+    if colorbar_flag == 1:
+        fig.colorbar(h[3],label='Number of Occurrences')
+    elif colorbar_flag == 2:
+        fig.colorbar(h[3],label=' ')
+
+    # print equations & p values for each regression type
+    print('ols slope, p value: ' + str(ols_results.params[1]) + ', ' + str(ols_results.pvalues[1]))
+    print('rlm slope, p value: ' + str(rlm_results.params[1]) + ', ' + str(rlm_results.pvalues[1]))
+    frac_above_zero = len(del_alk[del_alk > 0])/len(del_alk) * 100
+    print('% of data above zero: ' + str(round(frac_above_zero,2)) + '%')
+    ax.text(1992.5, 51, 'OLS: $m={:+.3f}$, $p={:.1e}$'.format(ols_results.params[1],ols_results.pvalues[1]), fontsize=10) # for LIR-trained only
+    ax.text(1992.5, 42, 'RLM: $m={:+.3f}$, $p={:.1e}$'.format(rlm_results.params[1],rlm_results.pvalues[1]), fontsize=10) # for LIR-trained only
+    ax.text(1992.5, -55, subplot_label, fontsize=12) # for LIR-trained only
+    ax.set_xlim([esper_sel['decy'].min(), esper_sel['decy'].max()])
 
 def plot2dhist_1d(esper_sel, esper_type, fig, ax, subplot_label, colorbar_flag, surf_flag):
     # sort by time
