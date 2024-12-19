@@ -2351,7 +2351,41 @@ HOT = HOT[['EXPOCODE','WHPID','STNNBR','CASTNO',
         
 #HOT.to_csv(filepath + 'HOT_for_ESPERs.csv', index=False)
 
-# load in BATS data
+#%% load in HOT DOGS data
+headers = ['botid', 'date', 'time', 'press', 'temp', 'bsal', 'boxy', 'alk', 'phos', 'nit', 'sil']
+def parse_mmddyy(date_str):
+    try:
+        return pd.to_datetime(date_str.strip(), format='%m%d%y')
+    except ValueError:
+        # Return NaT (Not a Time) if parsing fails
+        return pd.NaT
+HOT = pd.read_csv(filepath + 'hot_dogs_data.txt', na_values=['-00009','-9.0','-9.00'], converters={'date': parse_mmddyy}, skiprows=5, header=None, names=headers, index_col=False)
+HOT.replace(-9, np.nan, inplace=True) # set nan values correctly
+HOT = HOT.dropna(subset=['date'])
+
+# convert from datetime to decimal time
+# allocate decimal year column
+HOT.insert(0,'dectime', 0.0)
+
+for i in range(len(HOT)):
+    # convert datetime object to decimal time
+    date = HOT['date'].iloc[i]
+    year = date.year
+    this_year_start = dt(year=year, month=1, day=1)
+    next_year_start = dt(year=year+1, month=1, day=1)
+    year_elapsed = date - this_year_start
+    year_duration = next_year_start - this_year_start
+    fraction = year_elapsed / year_duration
+    decimal_time = date.year + fraction
+    
+    # save to glodap dataset
+    HOT.loc[i,'dectime'] = decimal_time
+
+HOT = HOT[['botid', 'dectime', 'press', 'temp', 'bsal', 'boxy', 'alk', 'phos', 'nit', 'sil']]
+        
+#HOT.to_csv(filepath + 'HOT_DOGS_for_ESPERs.csv', index=False)
+
+#%% load in BATS data
 headers = ['Id', 'yyyymmdd', 'decy', 'time', 'latN', 'lonW', 'QF', 'Depth', 'Temp', 'CTD_S', 'Sal1', 'Sig-th', 'O2(1)', 'OxFixT', 'Anom1', 'CO2', 'Alk', 'NO31', 'NO21', 'PO41', 'Si1', 'POC', 'PON', 'TOC', 'TN', 'Bact', 'POP', 'TDP', 'SRP', 'BSi', 'LSi', 'Pro', 'Syn', 'Piceu', 'Naneu']
 BATS = pd.read_csv(filepath + 'bats_bottle.txt', skiprows=59, header=None, names=headers, delimiter='\t')
 BATS['datetime'] = pd.to_datetime(BATS['yyyymmdd'], format='%Y%m%d', errors='coerce') # convert to datetime
@@ -2367,10 +2401,13 @@ BATS = BATS[['Id','decy','datetime','latN','lonW','Depth','Temp','Sal1',
 
 #%% plot hot and bats data over time (load in ESPERs, analyze)
 espers_HOT = pd.read_csv(filepath + 'HOT_with_ESPER_TA.csv') # to do the normal ESPER
+espers_HOT_DOGS = pd.read_csv(filepath + 'HOT_DOGS_with_ESPER_TA.csv') # to do the normal ESPER
 espers_BATS = pd.read_csv(filepath + 'BATS_with_ESPER_TA.csv') # to do the normal ESPER
 
 espers_HOT['surface_depth'] = 25
 espers_HOT = p1.ensemble_mean(espers_HOT)
+espers_HOT_DOGS['surface_depth'] = 25
+espers_HOT_DOGS = p1.ensemble_mean(espers_HOT_DOGS)
 espers_BATS['surface_depth'] = 25
 espers_BATS = p1.ensemble_mean(espers_BATS)
 #%% make figure (hot)
@@ -2381,13 +2418,62 @@ plt.tick_params(labelcolor='none', which='both', top=False, bottom=False, left=F
 
 # full ocean LIR
 esper_type = 'Ensemble_Mean_TA_LIR' # LIR, NN, or Mixed
+#esper_type = 'LIRtalk1' # LIR, NN, or Mixed
 esper_sel = espers_HOT
+#esper_sel = espers_HOT.dropna(subset=['LIRtalk1'])
 p1.plot2dhist_HOT(esper_sel, esper_type, fig, axs[0], 'ESPER_LIR (Full Depth)', 0)
 
 # full ocean NN
 esper_type = 'Ensemble_Mean_TA_NN' # LIR, NN, or Mixed
+#esper_type = 'NNtalk1' # LIR, NN, or Mixed
 esper_sel = espers_HOT
+#esper_sel = espers_HOT.dropna(subset=['NNtalk1'])
 p1.plot2dhist_HOT(esper_sel, esper_type, fig, axs[1], 'ESPER_NN (Full Depth)', 1)
+
+ax.set_xlabel('Year')
+ax.xaxis.set_label_coords(0.17,-0.65) # for 2d histogram
+ax.set_ylabel('$∆A_\mathrm{T}$ ($µmol\;kg^{-1}$)')
+ax.yaxis.set_label_coords(-0.62,0.28)
+
+#%% make figure (hot dogs)
+fig, axs = plt.subplots(nrows=2, ncols=2, figsize=(6.5,4), dpi=200, sharex=True, sharey=True, layout='constrained')
+fig.add_subplot(111,frameon=False)
+ax = fig.gca()
+plt.tick_params(labelcolor='none', which='both', top=False, bottom=False, left=False, right=False)
+
+# surface ocean LIR
+esper_type = 'Ensemble_Mean_TA_LIR' # LIR, NN, or Mixed
+esper_sel = espers_HOT_DOGS
+esper_sel = esper_sel[esper_sel.press < esper_sel.surface_depth]
+esper_sel = esper_sel[esper_sel.dectime != 0]
+esper_sel = esper_sel.dropna(subset=['alk'])
+esper_sel = esper_sel.dropna(subset=['Ensemble_Mean_TA_LIR'])
+p1.plot2dhist_HOT_DOGS(esper_sel, esper_type, fig, axs[0,0], 'ESPER_LIR (< 25 m)', 0)
+
+# surface ocean NN
+esper_type = 'Ensemble_Mean_TA_NN' # LIR, NN, or Mixed
+esper_sel = espers_HOT_DOGS
+esper_sel = esper_sel[esper_sel.press < esper_sel.surface_depth]
+esper_sel = esper_sel[esper_sel.dectime != 0]
+esper_sel = esper_sel.dropna(subset=['alk'])
+esper_sel = esper_sel.dropna(subset=['Ensemble_Mean_TA_NN'])
+p1.plot2dhist_HOT_DOGS(esper_sel, esper_type, fig, axs[0,1], 'ESPER_NN (< 25 m)', 1)
+
+# full ocean LIR
+esper_type = 'Ensemble_Mean_TA_LIR' # LIR, NN, or Mixed
+esper_sel = espers_HOT_DOGS
+esper_sel = esper_sel[esper_sel.dectime != 0]
+esper_sel = esper_sel.dropna(subset=['alk'])
+esper_sel = esper_sel.dropna(subset=['Ensemble_Mean_TA_LIR'])
+p1.plot2dhist_HOT_DOGS(esper_sel, esper_type, fig, axs[1,0], 'ESPER_LIR (Full Depth)', 0)
+
+# full ocean NN
+esper_type = 'Ensemble_Mean_TA_NN' # LIR, NN, or Mixed
+esper_sel = espers_HOT_DOGS
+esper_sel = esper_sel[esper_sel.dectime != 0]
+esper_sel = esper_sel.dropna(subset=['alk'])
+esper_sel = esper_sel.dropna(subset=['Ensemble_Mean_TA_NN'])
+p1.plot2dhist_HOT_DOGS(esper_sel, esper_type, fig, axs[1, 1], 'ESPER_NN (Full Depth)', 1)
 
 ax.set_xlabel('Year')
 ax.xaxis.set_label_coords(0.17,-0.65) # for 2d histogram
@@ -2403,18 +2489,19 @@ plt.tick_params(labelcolor='none', which='both', top=False, bottom=False, left=F
 # full ocean LIR
 esper_type = 'Ensemble_Mean_TA_LIR' # LIR, NN, or Mixed
 esper_sel = espers_HOT
+esper_sel = espers_HOT.dropna(subset=['SILCAT'])
 p1.plot2dhist_S_HOT(esper_sel, esper_type, fig, axs[0], 'ESPER_LIR (Full Depth)', 0)
 
 # full ocean NN
 esper_type = 'Ensemble_Mean_TA_NN' # LIR, NN, or Mixed
 esper_sel = espers_HOT
+esper_sel = espers_HOT.dropna(subset=['SILCAT'])
 p1.plot2dhist_S_HOT(esper_sel, esper_type, fig, axs[1], 'ESPER_NN (Full Depth)', 1)
 
-ax.set_xlabel('Salinity (PSU)')
+ax.set_xlabel('Silicate')
 ax.xaxis.set_label_coords(0.17,-0.65) # for 2d histogram
 ax.set_ylabel('$∆A_\mathrm{T}$ ($µmol\;kg^{-1}$)')
 ax.yaxis.set_label_coords(-0.62,0.28)
-
 
 #%% make figure (different bats depth levels)
 fig, axs = plt.subplots(nrows=2, ncols=2, figsize=(6.5,4), dpi=200, sharex=True, sharey=True, layout='constrained')

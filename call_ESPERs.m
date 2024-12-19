@@ -17,15 +17,18 @@ filepath = '/Users/Reese_1/Documents/Research Projects/project1/data/';
 % input_file = 'GLODAPv2.2022_for_ESPERs.csv';
 input_file = 'GLODAPv2.2023_for_ESPERs.csv';
 input_file_HOT = 'HOT_for_ESPERs.csv';
+input_file_HOT_DOGS = 'HOT_DOGS_for_ESPERs.csv';
 input_file_BATS = 'BATS_for_ESPERs.csv';
 output_file = 'GLODAP_with_ESPER_TA.csv';
 output_file1 = 'GLODAP_with_ESPER_TA_GO-SHIP_LIR.csv';
 output_file_HOT = 'HOT_with_ESPER_TA.csv';
+output_file_HOT_DOGS = 'HOT_DOGS_with_ESPER_TA.csv';
 output_file_BATS = 'BATS_with_ESPER_TA.csv';
 output_coeffs = 'ESPER_LIR_coeffs.csv';
 
 glodap = readtable([filepath input_file]);
 HOT = readtable([filepath input_file_HOT]);
+HOT_DOGS = readtable([filepath input_file_HOT_DOGS]);
 BATS = readtable([filepath input_file_BATS]);
 
 %% call ESPER_LIR
@@ -150,9 +153,9 @@ writetable(output,[filepath output_file1])
 % calls all 16 equations representing all possible combinations of input
 % variables used to calculate TA (Salinity, Temperature, Nitrate, Silicate,
 % and Oxygen)
-[output_estimates_LIR, uncertainty_estimates_LIR, CoefficientsUsed] = ESPER_LIR(1, ...
+[output_estimates_LIR, uncertainty_estimates_LIR] = ESPER_LIR(1, ...
     [HOT.Longitude, HOT.Latitude, HOT.Depth_max], ...
-    [HOT.SALINITY, HOT.CTDTMP, HOT.NO2_NO3, ...
+    [HOT.SALINITY, HOT.CTDTMP, HOT.NO2_NO3,...
     HOT.SILCAT, HOT.OXYGEN], [1 2 4 5 6], ...
     'Equations', [1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16], ...
     'EstDates',[HOT.dectime]);
@@ -172,11 +175,10 @@ for i = 1:16
 end
 
 % call ESPER_NN
-
 [output_estimates_NN, uncertainty_estimates_NN] = ESPER_NN(1, ...
      [HOT.Longitude, HOT.Latitude, HOT.Depth_max], ...
-     [HOT.SALINITY, HOT.CTDTMP, ...
-     HOT.SILCAT, HOT.OXYGEN], [1 2 5 6], ...
+     [HOT.SALINITY, HOT.CTDTMP, HOT.NO2_NO3,...
+     HOT.SILCAT, HOT.OXYGEN], [1 2 4 5 6], ...
     'Equations', [1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16], ...
     'EstDates',[HOT.dectime]);
 
@@ -197,6 +199,60 @@ end
 % concatenate tables together and output as a .csv file for analysis in Python
 output = [HOT output_LIR output_NN];
 writetable(output,[filepath output_file_HOT])
+
+%% call ESPER LIR and ESPER NN for HOT DOGS
+
+% call ESPER_LIR
+% calls all 16 equations representing all possible combinations of input
+% variables used to calculate TA (Salinity, Temperature, Nitrate, Silicate,
+% and Oxygen)
+[output_estimates_LIR, uncertainty_estimates_LIR] = ESPER_LIR(1, ...
+    [-158*ones(length(HOT_DOGS.press),1), 22.45*ones(length(HOT_DOGS.press),1), HOT_DOGS.press], ...
+    [HOT_DOGS.bsal, HOT_DOGS.temp, HOT_DOGS.nit,...
+    HOT_DOGS.sil, HOT_DOGS.boxy], [1 2 4 5 6], ...
+    'Equations', [1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16], ...
+    'EstDates',[HOT_DOGS.dectime]);
+
+% format ESPER_LIR output
+
+% create output table
+output_LIR = table;
+
+% store outputs in table with each column representing the TA estimate
+% and uncertainty created by the corresponding equation number
+for i = 1:16
+    TA_col_name = 'LIRtalk' + string(i);
+    TA_uncert_col_name = 'LIRtalk_uncert' + string(i);
+    output_LIR.(TA_col_name) = output_estimates_LIR.TA(:,i);
+    output_LIR.(TA_uncert_col_name) = uncertainty_estimates_LIR.TA(:,i);
+end
+
+% call ESPER_NN
+[output_estimates_NN, uncertainty_estimates_NN] = ESPER_NN(1, ...
+     [-158*ones(length(HOT_DOGS.press),1), 22.45*ones(length(HOT_DOGS.press),1), HOT_DOGS.press], ...
+     [HOT_DOGS.bsal, HOT_DOGS.temp, HOT_DOGS.nit,...
+    HOT_DOGS.sil, HOT_DOGS.boxy], [1 2 4 5 6], ...
+    'Equations', [1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16], ...
+    'EstDates',[HOT_DOGS.dectime]);
+
+% format ESPER_NN output
+
+% create output table
+output_NN = table;
+
+% store outputs in table with each column representing the TA estimate
+% and uncertainty created by the corresponding equation number
+for i = 1:16
+    TA_col_name = 'NNtalk' + string(i);
+    TA_uncert_col_name = 'NNtalk_uncert' + string(i);
+    output_NN.(TA_col_name) = output_estimates_NN.TA(:,i);
+    output_NN.(TA_uncert_col_name) = uncertainty_estimates_NN.TA(:,i);
+end
+
+% concatenate tables together and output as a .csv file for analysis in Python
+output = [HOT_DOGS output_LIR output_NN];
+writetable(output,[filepath output_file_HOT_DOGS])
+
 
 %% call ESPER LIR and ESPER NN for BATS
 
